@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dotfiles Evolution - one repo, two platforms, an agent control plane</title>
+<style>
+  :root { --ink:#1a1a1a; --paper:#fdfdfd; --accent:#0a7d4a; --accent2:#1d4ed8; --warn:#b45309; --danger:#b91c1c; --muted:#666; --border:#ddd; --surface:#f5f5f5; --radius:8px;
+          --font-display:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-utility:ui-monospace,SFMono-Regular,Menlo,monospace;
+          --weight-display:600; --weight-body:400; --weight-utility:500;
+          --text-s:13px; --text-m:16px; --text-l:20px; --text-xl:25px; --text-xxl:31px;
+          --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-6:24px; --space-8:32px; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink:#e4e4e4; --paper:#1a1a1a; --accent:#4ade80; --accent2:#60a5fa; --warn:#fbbf24; --danger:#f87171; --muted:#999; --border:#333; --surface:#262626; }
+  }
+  * { box-sizing:border-box; }
+  body { font:var(--text-m)/1.6 var(--font-body); font-weight:var(--weight-body); color:var(--ink); background:var(--paper); max-width:980px; margin:1.5em auto; padding:0 var(--space-6) var(--space-8); }
+  h1,h2,h3 { font-family:var(--font-display); font-weight:var(--weight-display); line-height:1.25; margin:1.4em 0 .4em; }
+  h1 { font-size:var(--text-xxl); margin-bottom:.1em; }
+  h2 { font-size:var(--text-xl); border-bottom:1px solid var(--border); padding-bottom:.2em; }
+  h3 { font-size:var(--text-l); }
+  a { color:var(--accent2); overflow-wrap:anywhere; }
+  code { background:var(--surface); padding:.15em .35em; border-radius:3px; font-size:.92em; font-family:var(--font-utility); font-weight:var(--weight-utility); overflow-wrap:anywhere; }
+  .tscroll { overflow-x:auto; margin:.8em 0; }
+  .tscroll table { margin:0; }
+  table { border-collapse:collapse; width:100%; font-size:var(--text-s); }
+  th,td { border:1px solid var(--border); padding:.45em .7em; vertical-align:top; text-align:left; overflow-wrap:anywhere; }
+  th { font-weight:600; background:var(--surface); }
+  .meta { color:var(--muted); font-size:var(--text-s); }
+  .lede { font-size:var(--text-l); color:var(--muted); margin:.3em 0 1em; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:var(--space-3); margin:var(--space-4) 0; }
+  .stat { border:1px solid var(--border); border-radius:var(--radius); padding:var(--space-3) var(--space-4); }
+  .stat .n { font-size:1.9em; font-weight:var(--weight-display); line-height:1.1; color:var(--accent); }
+  .stat .l { font-size:.8em; font-family:var(--font-utility); text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+  .stat p { margin:.3em 0 0; font-size:.85em; }
+  .figure { border:1px solid var(--border); border-radius:var(--radius); padding:1em; margin:1.2em 0; }
+  .figure .scroll { overflow-x:auto; }
+  .figure svg { height:auto; display:block; }
+  .figure figcaption { color:var(--muted); font-size:var(--text-s); margin-top:.6em; }
+  .callout { border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:4px; padding:.7em 1em; margin:1em 0; font-size:.93em; background:color-mix(in srgb, var(--accent) 5%, var(--paper)); }
+  ol.timeline { list-style:none; padding-left:0; }
+  ol.timeline li { border-left:2px solid var(--accent); padding:.2em 0 .8em 1em; margin-left:.4em; position:relative; }
+  ol.timeline li::before { content:""; position:absolute; left:-6px; top:.55em; width:10px; height:10px; border-radius:50%; background:var(--accent); }
+  ol.timeline .when { font-family:var(--font-utility); font-size:var(--text-s); color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+  ol.timeline .count { float:right; font-family:var(--font-utility); font-size:var(--text-s); color:var(--accent); font-weight:600; }
+  footer { border-top:1px solid var(--border); margin-top:2.5em; padding-top:.8em; color:var(--muted); font-size:.85em; }
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <h1>Dotfiles Evolution</h1>
+  <div class="lede">How one Tuckr-managed repo grew from a two-commit skeleton into a cross-platform control plane for four AI agent harnesses - and how the macOS/Linux split actually works.</div>
+  <div class="meta">As of 2026-08-09 19:22 UTC &middot; repo: ~/.dotfiles (Shearerbeard/dotfiles)</div>
+</header>
+
+<main>
+
+  <section id="stats">
+    <div class="stats">
+      <div class="stat"><div class="n">220</div><div class="l">commits</div><p>2026-04-30 to today; peak month June with 97.</p></div>
+      <div class="stat"><div class="n">26</div><div class="l">tuckr groups</div><p>19 shared, 4 macOS-only, 3 Linux-only.</p></div>
+      <div class="stat"><div class="n">24</div><div class="l">env exports</div><p>15 resolved from 1Password at shell startup; zero secrets in git.</p></div>
+      <div class="stat"><div class="n">2</div><div class="l">machines</div><p>This Mac (darwin/arm64) and notanton (Linux, GNOME Wayland).</p></div>
+      <div class="stat"><div class="n">4</div><div class="l">agent harnesses</div><p>Claude Code, OpenCode, Kimi Code, and Pi share one skill store.</p></div>
+    </div>
+  </section>
+
+  <section id="seq">
+    <h2>Initiatives and wins over time</h2>
+    <ol class="timeline">
+      <li><span class="count">2 commits</span><span class="when">2026-04 - Birth</span><br>
+        Initial repo with the Tuckr group structure, plus the foundational decision: a multi-account 1Password hook resolves secrets at shell startup instead of committing them. Every later env-var win builds on this.</li>
+      <li><span class="count">33 commits</span><span class="when">2026-05 - Foundation</span><br>
+        README and architecture docs land; drifted configs adopted into version control. First platform-split fix: tmux's CSI-u keyboard protocol moved into platform.conf, unbreaking Cmd+V paste on macOS without touching Linux. OpenCode gains LSP diagnostics.</li>
+      <li><span class="count">97 commits</span><span class="when">2026-06 - Expansion (peak month)</span><br>
+        The agent toolchain arrives: tmux pane-pop (per-session popups in a floax-style frame), nvim's show_file float for surfacing files from chat, the sesh dashboard, and codecompanion's move to Fireworks-hosted models. Tuckr coverage completes with global gitignore and cargo config.</li>
+      <li><span class="count">74 commits</span><span class="when">2026-07 - Process and mobile</span><br>
+        The tracking system ships: BOARD.md plus session threads plus changelog, with a conformance audit script. Vale prose gates start biting every commit. Herdr spiked as a tmux successor; collie brings phone notifications and approvals over tailscale. Kimi K2.7 becomes the default coding model; the opencode wait_for port is researched and staged.</li>
+      <li><span class="count">14 commits</span><span class="when">2026-08 - Hardening</span><br>
+        Ghostty F12 dropdown diagnostics (read-only failure classifier plus Spotlight launcher), collie supervision migrated to its native launchd agent (verified across reboot), the OpenCode v2 beta drive closes with parity findings, and kimi-code joins PATH on macOS. The design artifact skills land - this page is their first real output.</li>
+    </ol>
+  </section>
+
+  <section id="fig">
+    <h2>The platform split: one repo, two OSes, secrets at the edge</h2>
+    <figure class="figure">
+      <div class="scroll">
+        <svg width="900" height="400" viewBox="0 0 900 400" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+          <defs>
+            <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+              <path d="M0,0 L8,4 L0,8 Z" fill="currentColor" />
+            </marker>
+          </defs>
+          <!-- lane labels -->
+          <text x="20" y="30" fill="var(--muted)" font-size="12" font-weight="600">CONFIG LANE - tuckr symlinks groups into $HOME; suffixed groups apply only on their OS</text>
+          <text x="20" y="290" fill="var(--muted)" font-size="12" font-weight="600">SECRETS LANE - runs at shell startup on both machines; values never touch git</text>
+          <!-- repo -->
+          <rect x="20" y="80" width="140" height="56" rx="8" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="90" y="104" text-anchor="middle" fill="var(--ink)" font-size="14" font-weight="600">~/.dotfiles</text>
+          <text x="90" y="124" text-anchor="middle" fill="var(--muted)" font-size="11">26 tuckr groups</text>
+          <line x1="160" y1="108" x2="228" y2="108" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+          <!-- tuckr -->
+          <rect x="232" y="80" width="130" height="56" rx="8" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="297" y="104" text-anchor="middle" fill="var(--ink)" font-size="14" font-weight="600">tuckr set</text>
+          <text x="297" y="124" text-anchor="middle" fill="var(--muted)" font-size="11">symlink deploy</text>
+          <!-- three branches -->
+          <line x1="362" y1="108" x2="400" y2="56" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+          <line x1="362" y1="108" x2="400" y2="128" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+          <line x1="362" y1="108" x2="400" y2="200" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+          <rect x="404" y="28" width="220" height="56" rx="8" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="514" y="52" text-anchor="middle" fill="var(--ink)" font-size="13" font-weight="600">19 shared groups</text>
+          <text x="514" y="70" text-anchor="middle" fill="var(--muted)" font-size="11">shell, nvim, tmux, git, opencode, claude...</text>
+          <rect x="404" y="100" width="220" height="56" rx="8" fill="var(--surface)" stroke="var(--accent2)" stroke-width="2"/>
+          <text x="514" y="124" text-anchor="middle" fill="var(--ink)" font-size="13" font-weight="600">4 _macos groups</text>
+          <text x="514" y="142" text-anchor="middle" fill="var(--muted)" font-size="11">ghostty, git, shell, tmux</text>
+          <rect x="404" y="172" width="220" height="56" rx="8" fill="var(--surface)" stroke="var(--warn)" stroke-width="2"/>
+          <text x="514" y="196" text-anchor="middle" fill="var(--ink)" font-size="13" font-weight="600">3 _linux groups</text>
+          <text x="514" y="214" text-anchor="middle" fill="var(--muted)" font-size="11">git, shell, tmux</text>
+          <!-- hosts -->
+          <line x1="624" y1="56" x2="692" y2="76" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+          <line x1="624" y1="128" x2="692" y2="88" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+          <line x1="624" y1="200" x2="692" y2="196" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+          <rect x="696" y="52" width="184" height="56" rx="8" fill="var(--accent)"/>
+          <text x="788" y="76" text-anchor="middle" fill="var(--paper)" font-size="13" font-weight="600">This Mac</text>
+          <text x="788" y="94" text-anchor="middle" fill="var(--paper)" font-size="11">darwin/arm64 - shared + _macos</text>
+          <rect x="696" y="168" width="184" height="56" rx="8" fill="var(--warn)"/>
+          <text x="788" y="192" text-anchor="middle" fill="var(--paper)" font-size="13" font-weight="600">notanton</text>
+          <text x="788" y="210" text-anchor="middle" fill="var(--paper)" font-size="11">Linux Wayland - shared + _linux</text>
+          <!-- secrets lane -->
+          <rect x="20" y="308" width="200" height="56" rx="8" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="120" y="332" text-anchor="middle" fill="var(--ink)" font-size="13" font-weight="600">Hooks/shell/post_shell</text>
+          <text x="120" y="350" text-anchor="middle" fill="var(--muted)" font-size="11">runs on every shell start</text>
+          <line x1="220" y1="336" x2="268" y2="336" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+          <rect x="272" y="308" width="200" height="56" rx="8" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="372" y="332" text-anchor="middle" fill="var(--ink)" font-size="13" font-weight="600">1Password (2 accounts)</text>
+          <text x="372" y="350" text-anchor="middle" fill="var(--muted)" font-size="11">Employee + Developer vaults</text>
+          <line x1="472" y1="336" x2="520" y2="336" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+          <rect x="524" y="308" width="220" height="56" rx="8" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="634" y="332" text-anchor="middle" fill="var(--ink)" font-size="13" font-weight="600">24 env exports</text>
+          <text x="634" y="350" text-anchor="middle" fill="var(--muted)" font-size="11">15 secrets resolved; 8 OSTYPE gates in .zshrc</text>
+        </svg>
+      </div>
+      <figcaption>Tuckr's platform-suffix convention carries the OS split: a group named with a _macos or _linux suffix only links on that OS, so shared groups stay OS-neutral. Secrets never live in a group at all - the post-shell hook resolves them from 1Password at startup, identically on both machines.</figcaption>
+    </figure>
+  </section>
+
+  <section id="detail">
+    <h2>Breakdown: what each split piece carries</h2>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:170px">Piece</th><th>What it carries</th><th style="width:230px">Why it is split (or not)</th></tr>
+      <tr><td>19 shared groups</td><td>shell, nvim, tmux, git, ghostty, opencode, claude, pi, vale, sesh, herdr, mise, cargo, and more</td><td>Config is identical on both OSes; any difference is pushed down into a suffixed group or an OSTYPE gate</td></tr>
+      <tr><td><code>_macos</code> x4</td><td>ghostty_macos (F12 tap diagnostics + Spotlight launcher), git_macos, shell_macos (.zprofile), tmux_macos (platform.conf: CSI-u paste fix)</td><td>macOS-only binaries, keychain-adjacent behavior, and keyboard protocols</td></tr>
+      <tr><td><code>_linux</code> x3</td><td>git_linux, shell_linux (.zprofile), tmux_linux (platform.conf)</td><td>Different credential helpers, paths (/usr/bin fallbacks), and terminal behavior on Wayland</td></tr>
+      <tr><td>OSTYPE gates x8</td><td>In-.zshrc conditionals: starship/zoxide path fallbacks, direnv, gcloud path, macOS-only aliases</td><td>One-liners too small to earn their own group</td></tr>
+      <tr><td>post_shell hook</td><td>24 exports: AWS creds, GitHub/Gemini/Mezmo/Baseten tokens (Employee vault), Anthropic/OpenAI keys (Developer vault), plus WORKSPACE/DEV paths</td><td>Secrets resolve at runtime from 1Password; the repo stores only op:// references</td></tr>
+      <tr><td>Machine-local escapes</td><td>~/.claude/settings.json (drift snapshot kept), collie .env (chmod 600, key backed up in 1Password), GNOME dconf for the notanton dropdown</td><td>State that is per-machine by nature stays out of tuckr and is documented instead</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <section id="src">
+    <h2>Sources</h2>
+    <ul>
+      <li>git history of ~/.dotfiles: commit counts and monthly themes (2026-08-09)</li>
+      <li>CHANGELOG.md [Unreleased] entries (2026-08-09)</li>
+      <li>Configs/ group listing and Hooks/shell/post_shell.sh export inventory (2026-08-09)</li>
+    </ul>
+    <div class="callout">Commit counts measure activity, not value - June's 97 commits include churn that July's tracking system was built to tame. Monthly themes are inferred from commit subjects and changelog entries, not from tagged releases (the repo keeps a single rolling Unreleased section).</div>
+  </section>
+
+</main>
+
+<footer>
+  Default theme (no design system yet) &middot; As of 2026-08-09 19:22 UTC &middot; built by the web-artifact skill
+</footer>
+
+<script type="application/json" id="artifact-state">
+{"as_of": "2026-08-09 19:22 UTC", "sections": ["stats", "seq", "fig", "detail", "src"], "design_system": null, "dotfiles": {"commits": 220, "groups_total": 26, "groups_shared": 19, "groups_macos": 4, "groups_linux": 3, "env_exports": 24, "op_secrets": 15, "ostype_gates": 8, "months": {"2026-04": 2, "2026-05": 33, "2026-06": 97, "2026-07": 74, "2026-08": 14}}}
+</script>
+
+</body>
+</html>

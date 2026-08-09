@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Design Skills Pipeline — sample artifact</title>
+<style>
+  :root { --ink:#1a1a1a; --paper:#fdfdfd; --accent:#0a7d4a; --accent2:#1d4ed8; --warn:#b45309; --danger:#b91c1c; --muted:#666; --border:#ddd; --surface:#f5f5f5; --radius:8px;
+          --font-display:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-utility:ui-monospace,SFMono-Regular,Menlo,monospace;
+          --text-s:13px; --text-m:16px; --text-l:20px; --text-xl:25px; --text-xxl:31px; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink:#e4e4e4; --paper:#1a1a1a; --accent:#4ade80; --accent2:#60a5fa; --warn:#fbbf24; --danger:#f87171; --muted:#999; --border:#333; --surface:#262626; }
+  }
+  * { box-sizing:border-box; }
+  body { font:var(--text-m)/1.6 var(--font-body); color:var(--ink); background:var(--paper); max-width:980px; margin:1.5em auto; padding:0 1.5em 3em; }
+  h1,h2,h3 { font-family:var(--font-display); font-weight:600; line-height:1.25; margin:1.4em 0 .4em; }
+  h1 { font-size:var(--text-xxl); margin-bottom:.1em; }
+  h2 { font-size:var(--text-xl); border-bottom:1px solid var(--border); padding-bottom:.2em; }
+  a { color:var(--accent2); overflow-wrap:anywhere; }
+  .tscroll { overflow-x:auto; margin:.8em 0; }
+  .tscroll table { margin:0; }
+  table { border-collapse:collapse; width:100%; font-size:var(--text-s); }
+  th,td { border:1px solid var(--border); padding:.45em .7em; vertical-align:top; text-align:left; overflow-wrap:anywhere; }
+  th { font-weight:600; background:var(--surface); }
+  .meta { color:var(--muted); font-size:var(--text-s); }
+  .lede { font-size:var(--text-l); color:var(--muted); margin:.3em 0 1em; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:.8em; margin:1.2em 0; }
+  .stat { border:1px solid var(--border); border-radius:var(--radius); padding:.8em 1em; }
+  .stat .n { font-size:1.9em; font-weight:700; line-height:1.1; color:var(--accent); }
+  .stat .l { font-size:.8em; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+  .stat p { margin:.3em 0 0; font-size:.85em; }
+  .figure { border:1px solid var(--border); border-radius:var(--radius); padding:1em; margin:1.2em 0; }
+  .figure .scroll { overflow-x:auto; }
+  .figure svg { height:auto; display:block; }
+  .figure figcaption { color:var(--muted); font-size:var(--text-s); margin-top:.6em; }
+  .callout { border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:4px; padding:.7em 1em; margin:1em 0; font-size:.93em; background:color-mix(in srgb, var(--accent) 5%, var(--paper)); }
+  footer { border-top:1px solid var(--border); margin-top:2.5em; padding-top:.8em; color:var(--muted); font-size:.85em; }
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <h1>Design Skills Pipeline</h1>
+  <div class="lede">How a design system becomes a published team infographic.</div>
+  <div class="meta">As of 2026-08-09 00:00 UTC</div>
+</header>
+
+<main>
+
+  <section id="stats">
+    <div class="stats">
+      <div class="stat"><div class="n">2</div><div class="l">skills</div><p>design-system authors tokens; web-artifact renders and publishes.</p></div>
+      <div class="stat"><div class="n">4</div><div class="l">harnesses</div><p>Claude Code, OpenCode, Codex, and Kimi Code share one skill store.</p></div>
+      <div class="stat"><div class="n">1</div><div class="l">stable URL</div><p>Every redeploy lands on the same address; refreshes report deltas.</p></div>
+    </div>
+  </section>
+
+  <section id="fig">
+    <h2>The pipeline</h2>
+    <figure class="figure">
+      <div class="scroll">
+        <svg width="720" height="180" viewBox="0 0 720 180" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+          <defs>
+            <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+              <path d="M0,0 L8,4 L0,8 Z" fill="currentColor" />
+            </marker>
+          </defs>
+          <g color="var(--muted)">
+            <rect x="10" y="60" width="150" height="60" rx="8" fill="var(--surface)" stroke="var(--border)"/>
+            <text x="85" y="85" text-anchor="middle" fill="var(--ink)" font-size="14" font-weight="600">philosophy</text>
+            <text x="85" y="105" text-anchor="middle" fill="var(--muted)" font-size="11">manifesto first</text>
+            <line x1="160" y1="90" x2="200" y2="90" stroke="currentColor" stroke-width="2" marker-end="url(#arr)"/>
+            <rect x="205" y="60" width="150" height="60" rx="8" fill="var(--surface)" stroke="var(--border)"/>
+            <text x="280" y="85" text-anchor="middle" fill="var(--ink)" font-size="14" font-weight="600">tokens</text>
+            <text x="280" y="105" text-anchor="middle" fill="var(--muted)" font-size="11">json + css, light/dark</text>
+            <line x1="355" y1="90" x2="395" y2="90" stroke="currentColor" stroke-width="2" marker-end="url(#arr)"/>
+            <rect x="400" y="60" width="150" height="60" rx="8" fill="var(--surface)" stroke="var(--accent)" stroke-width="2"/>
+            <text x="475" y="85" text-anchor="middle" fill="var(--ink)" font-size="14" font-weight="600">artifact</text>
+            <text x="475" y="105" text-anchor="middle" fill="var(--muted)" font-size="11">one html file, svg inline</text>
+            <line x1="550" y1="90" x2="590" y2="90" stroke="currentColor" stroke-width="2" marker-end="url(#arr)"/>
+            <rect x="595" y="60" width="115" height="60" rx="8" fill="var(--accent)"/>
+            <text x="652" y="85" text-anchor="middle" fill="var(--paper)" font-size="14" font-weight="600">publish</text>
+            <text x="652" y="105" text-anchor="middle" fill="var(--paper)" font-size="11">pages / netlify</text>
+          </g>
+        </svg>
+      </div>
+      <figcaption>Four stages: the manifesto constrains the tokens; the tokens style the artifact; the artifact deploys to a stable URL.</figcaption>
+    </figure>
+  </section>
+
+  <section id="detail">
+    <h2>Breakdown</h2>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:140px">Stage</th><th>What happens</th><th style="width:160px">Notes</th></tr>
+      <tr><td>philosophy</td><td>A short manifesto names subject, audience, mood, and what the system refuses to look like.</td><td>3–6 sentences</td></tr>
+      <tr><td>tokens</td><td>Nine color roles in light and dark, three type roles, a 4px spacing grid, one signature element.</td><td>tokens.json is source; tokens.css is generated</td></tr>
+      <tr><td>artifact</td><td>The template's token block is replaced with the system's tokens.css; content fills the FILL slots.</td><td>state block embedded for refresh diffs</td></tr>
+      <tr><td>publish</td><td>GitHub Pages (default) or Netlify; first publish of a slug needs user confirmation.</td><td>same URL on every redeploy</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <section id="src">
+    <h2>Sources</h2>
+    <ul>
+      <li>Anthropic public skills: project-artifact, frontend-design, theme-factory, web-artifacts-builder (2026-08-09)</li>
+      <li>Kimi Code skill loader: packages/agent-core/src/skill/ (2026-08-09)</li>
+    </ul>
+    <div class="callout">This sample is hand-built to smoke-test the template; it was not produced by running the skills end to end yet.</div>
+  </section>
+
+</main>
+
+<footer>
+  Default theme (no design system) &middot; As of 2026-08-09 00:00 UTC
+</footer>
+
+<script type="application/json" id="artifact-state">
+{"as_of": "2026-08-09 00:00 UTC", "sections": ["stats", "fig", "detail", "src"], "design_system": null}
+</script>
+
+</body>
+</html>

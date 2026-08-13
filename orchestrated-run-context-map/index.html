@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Orchestrated Run Context Injection Map</title>
+<style>
+  :root { --ink:#1a1a1a; --paper:#fdfdfd; --accent:#0a7d4a; --accent2:#1d4ed8; --warn:#b45309; --danger:#b91c1c; --muted:#666; --border:#ddd; --surface:#f5f5f5; --radius:8px;
+          --font-display:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-utility:ui-monospace,SFMono-Regular,Menlo,monospace;
+          --weight-display:600; --weight-body:400; --weight-utility:500;
+          --text-s:13px; --text-m:16px; --text-l:20px; --text-xl:25px; --text-xxl:31px;
+          --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-6:24px; --space-8:32px; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink:#e4e4e4; --paper:#1a1a1a; --accent:#4ade80; --accent2:#60a5fa; --warn:#fbbf24; --danger:#f87171; --muted:#999; --border:#333; --surface:#262626; }
+  }
+  * { box-sizing:border-box; }
+  body { font:var(--text-m)/1.6 var(--font-body); font-weight:var(--weight-body); color:var(--ink); background:var(--paper); max-width:980px; margin:1.5em auto; padding:0 var(--space-6) var(--space-8); }
+  h1,h2,h3 { font-family:var(--font-display); font-weight:var(--weight-display); line-height:1.25; margin:1.4em 0 .4em; }
+  h1 { font-size:var(--text-xxl); margin-bottom:.1em; }
+  h2 { font-size:var(--text-xl); border-bottom:1px solid var(--border); padding-bottom:.2em; }
+  h3 { font-size:var(--text-l); margin-top:1.8em; }
+  a { color:var(--accent2); overflow-wrap:anywhere; }
+  code { background:var(--surface); padding:.15em .35em; border-radius:3px; font-size:.88em; font-family:var(--font-utility); font-weight:var(--weight-utility); overflow-wrap:anywhere; }
+  .tscroll { overflow-x:auto; margin:.8em 0; }
+  .tscroll table { margin:0; }
+  table { border-collapse:collapse; width:100%; font-size:var(--text-s); }
+  th,td { border:1px solid var(--border); padding:.45em .7em; vertical-align:top; text-align:left; overflow-wrap:anywhere; }
+  th { font-weight:600; background:var(--surface); }
+  .meta { color:var(--muted); font-size:var(--text-s); }
+  .lede { font-size:var(--text-l); color:var(--muted); margin:.3em 0 1em; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:var(--space-3); margin:var(--space-4) 0; }
+  .stat { border:1px solid var(--border); border-radius:var(--radius); padding:var(--space-3) var(--space-4); }
+  .stat .n { font-size:1.9em; font-weight:var(--weight-display); line-height:1.1; color:var(--accent); }
+  .stat .l { font-size:.8em; font-family:var(--font-utility); text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+  .stat p { margin:.3em 0 0; font-size:.85em; }
+  .figure { border:1px solid var(--border); border-radius:var(--radius); padding:1em; margin:1.2em 0; }
+  .figure .scroll { overflow-x:auto; }
+  .figure svg { height:auto; display:block; }
+  .figure figcaption { color:var(--muted); font-size:var(--text-s); margin-top:.6em; }
+  .pill { display:inline-block; font-size:var(--text-s); padding:var(--space-1) var(--space-2); border-radius:10px; background:var(--surface); color:var(--muted); vertical-align:1px; }
+  .callout { border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:4px; padding:.7em 1em; margin:1em 0; font-size:.93em; background:color-mix(in srgb, var(--accent) 5%, var(--paper)); }
+  ol.timeline { list-style:none; padding-left:0; }
+  ol.timeline li { border-left:2px solid var(--accent); padding:.2em 0 .8em 1em; margin-left:.4em; position:relative; }
+  ol.timeline li::before { content:""; position:absolute; left:-6px; top:.55em; width:10px; height:10px; border-radius:50%; background:var(--accent); }
+  footer { border-top:1px solid var(--border); margin-top:2.5em; padding-top:.8em; color:var(--muted); font-size:.85em; }
+
+  /* Context window diagram blocks */
+  .ctx-window {
+    border:2px solid var(--border);
+    border-radius:var(--radius);
+    padding:var(--space-4);
+    margin:var(--space-4) 0;
+  }
+  .ctx-window-title {
+    font-family:var(--font-utility);
+    font-size:var(--text-s);
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    margin-bottom:var(--space-3);
+  }
+  .ctx-block {
+    border-radius:var(--radius);
+    padding:var(--space-3) var(--space-4);
+    margin-bottom:var(--space-2);
+  }
+  .ctx-block-system {
+    background:color-mix(in srgb, var(--accent) 8%, var(--paper));
+    border-left:3px solid var(--accent);
+  }
+  .ctx-block-user {
+    background:color-mix(in srgb, var(--accent2) 5%, var(--paper));
+    border-left:3px solid var(--accent2);
+  }
+  .ctx-block-assistant {
+    background:var(--surface);
+    border-left:3px solid var(--muted);
+  }
+  .ctx-role-label {
+    font-family:var(--font-utility);
+    font-size:.72em;
+    font-weight:var(--weight-utility);
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    color:var(--muted);
+    margin-bottom:var(--space-1);
+  }
+  .ctx-content {
+    font-family:var(--font-utility);
+    font-size:var(--text-s);
+    line-height:1.55;
+    white-space:pre-wrap;
+    overflow-wrap:anywhere;
+  }
+  .ctx-session-history {
+    border:1px dashed var(--accent);
+    border-radius:var(--radius);
+    padding:var(--space-2) var(--space-3);
+    margin:var(--space-3) 0;
+    background:color-mix(in srgb, var(--accent) 3%, var(--paper));
+  }
+  .ctx-session-history-title {
+    font-family:var(--font-utility);
+    font-size:.78em;
+    font-weight:var(--weight-utility);
+    color:var(--accent);
+    margin-bottom:var(--space-1);
+  }
+  .ctx-annotation {
+    font-family:var(--font-utility);
+    font-size:.72em;
+    color:var(--muted);
+    font-style:italic;
+    margin-top:var(--space-2);
+    line-height:1.5;
+  }
+  .ctx-absent {
+    border:1px dashed var(--border);
+    border-radius:var(--radius);
+    padding:var(--space-2) var(--space-3);
+    margin:var(--space-2) 0;
+    color:var(--muted);
+    font-family:var(--font-utility);
+    font-size:var(--text-s);
+    line-height:1.5;
+  }
+  .ctx-legend {
+    display:flex;
+    gap:var(--space-4);
+    flex-wrap:wrap;
+    margin:var(--space-3) 0 var(--space-6);
+  }
+  .ctx-legend-item {
+    display:flex;
+    align-items:center;
+    gap:var(--space-2);
+    font-size:var(--text-s);
+  }
+  .ctx-legend-swatch {
+    width:14px;
+    height:14px;
+    border-radius:3px;
+  }
+  .ctx-legend-swatch.system { background:color-mix(in srgb, var(--accent) 8%, var(--paper)); border-left:3px solid var(--accent); }
+  .ctx-legend-swatch.user { background:color-mix(in srgb, var(--accent2) 5%, var(--paper)); border-left:3px solid var(--accent2); }
+  .ctx-legend-swatch.assistant { background:var(--surface); border-left:3px solid var(--muted); }
+  .ctx-legend-swatch.history { border:1px dashed var(--accent); background:color-mix(in srgb, var(--accent) 3%, var(--paper)); }
+  .ctx-legend-swatch.absent { border:1px dashed var(--border); background:transparent; }
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <h1>Orchestrated Run Context Injection Map</h1>
+  <div class="lede">Where prior-run context, within-run iteration context, and worker task context enter the LLM's context window in an orchestrated aura run.</div>
+  <div class="meta">As of 2026-08-13 19:30 UTC &middot; branch <code>mshearer/421-memory-dir-network-storage</code></div>
+</header>
+
+<main>
+
+  <section id="stats">
+    <div class="stats">
+      <div class="stat"><div class="n">5</div><div class="l">Context windows</div><p>Coordinator preamble, coordinator conversation, worker preamble, worker task prompt, tool output transforms</p></div>
+      <div class="stat"><div class="n">3</div><div class="l">Default history</div><p>Prior runs loaded into the coordinator system prompt (<code>session_history_turns</code>)</p></div>
+      <div class="stat"><div class="n">20</div><div class="l">Max session runs</div><p>Run directories retained per session before pruning (<code>max_session_runs</code>)</p></div>
+      <div class="stat"><div class="n">50</div><div class="l">Max prior runs (tool)</div><p>Runs discoverable via <code>list_prior_runs</code> coordinator tool (<code>MAX_PRIOR_RUNS</code>)</p></div>
+    </div>
+  </section>
+
+  <section id="fig">
+    <h2>Context Window Diagrams</h2>
+
+    <div class="ctx-legend">
+      <div class="ctx-legend-item"><div class="ctx-legend-swatch system"></div> role: system (preamble)</div>
+      <div class="ctx-legend-item"><div class="ctx-legend-swatch user"></div> role: user</div>
+      <div class="ctx-legend-item"><div class="ctx-legend-swatch assistant"></div> role: assistant</div>
+      <div class="ctx-legend-item"><div class="ctx-legend-swatch history"></div> session history (nested in system)</div>
+      <div class="ctx-legend-item"><div class="ctx-legend-swatch absent"></div> absent (no injection)</div>
+    </div>
+
+    <div class="callout">
+      <strong>Key distinction:</strong> Session history (prior runs) lands in <code>role:system</code> — it is the system prompt, built once at run start and frozen for the entire run. Within-run iteration context lands in <code>role:user</code> as continuation prompts that grow monotonically. Worker context is <code>role:user</code> per-task and ephemeral. Workers never see session history or the coordinator conversation.
+    </div>
+
+    <h3>A. Coordinator &mdash; Subsequent Run (session history present)</h3>
+    <p class="meta">Built once at <code>create_coordinator()</code> (orchestrator.rs:2162). The preamble is frozen for the entire run &mdash; iterations 2+ do not re-load session history.</p>
+    <div class="ctx-window">
+      <div class="ctx-window-title">Coordinator Context Window</div>
+
+      <div class="ctx-block ctx-block-system">
+        <div class="ctx-role-label">role: system (preamble) &mdash; built once, frozen for entire run</div>
+        <div class="ctx-content"># Orchestration Coordinator
+You are a coordinator agent in a multi-agent orchestration system.
+
+## Your Tools
+{{tools_section}} &mdash; routing + recon + read_artifact + list_prior_runs
+
+## Custom Instructions
+{{user_system_prompt}}
+
+## Reconnaissance Guidance
+{{recon_guidance}}</div>
+        <div class="ctx-session-history">
+          <div class="ctx-session-history-title">SESSION HISTORY &mdash; from prior run manifests</div>
+          <div class="ctx-content">## Session History
+You have context from previous orchestration run(s) in this session.
+
+**CRITICAL: Workers have NO access to session history. Every value
+a worker needs from a prior turn MUST appear as a concrete value
+in its task description.**
+
+### Turn 1 (2026-08-13T16:00:00Z) &mdash; Success
+Goal: "Investigate auth failures in production"
+Outcome: 3/3 tasks completed
+Tasks:
+  Task 0 [rca-worker] &mdash; Complete (high)
+    "Found 3 failure groups: auth-timeout, db-connection, oom-kill"
+  (use run_id="0191a3b2..." with read_artifact for cross-run access)
+
+### Turn 2 (2026-08-13T17:30:00Z) &mdash; PartialSuccess
+Goal: "Investigate the auth-timeout failure group"
+Outcome: 1/2 tasks completed
+Tasks:
+  Task 0 [log-analyzer] &mdash; Complete (medium)
+  Task 1 [deploy-tracker] &mdash; Failed (SoftFailure)
+
+(3 prior run(s) shown above)</div>
+        </div>
+        <div class="ctx-annotation">load_session_manifests() reads {memory_dir}/{session_id}/*/manifest.json
+build_session_context() formats into SESSION_HISTORY_TEMPLATE
+Appended to preamble via preamble.push_str() at orchestrator.rs:2261
+Frozen for the entire run &mdash; never re-loaded, even on re-plan</div>
+      </div>
+
+      <div class="ctx-block ctx-block-user">
+        <div class="ctx-role-label">role: user &mdash; iteration 1, planning prompt</div>
+        <div class="ctx-content">Current time: 2026-08-13T19:00:00Z
+
+Analyze this user query and decide on the best approach.
+
+USER QUERY: What caused the auth failures from last time?
+
+AVAILABLE WORKERS:
+## rca-worker
+Root cause analysis specialist
+Tools: query_logs, analyze_patterns
+## log-analyzer
+Log analysis worker
+Tools: grep_logs, summarize
+
+Call the appropriate routing tool now.</div>
+        <div class="ctx-annotation">build_planning_wrapper() at orchestrator.rs:1385
+query + worker section + routing tool enumeration</div>
+      </div>
+
+      <div class="ctx-block ctx-block-assistant">
+        <div class="ctx-role-label">role: assistant</div>
+        <div class="ctx-content">[tool_call: create_plan(goal="Investigate auth failures", steps=[...])]</div>
+      </div>
+
+      <div class="ctx-block ctx-block-user">
+        <div class="ctx-role-label">role: user &mdash; iteration 1, continuation prompt</div>
+        <div class="ctx-content">ITERATION 1 of 3
+
+Goal: What caused the auth failures from last time?
+Outcome: 2 of 3 tasks succeeded.
+
+COMPLETED TASKS:
+- Task 0: Query logs for auth failures (confidence: high)
+    Summary: "Found 3 failure groups: auth-timeout, db-connection, oom-kill"
+- Task 1: Analyze failure patterns (confidence: medium)
+    Summary: "auth-timeout group shows correlated deploy spikes"
+
+FAILED TASKS:
+- Task 2: Cross-reference with deploy timeline &mdash; Error (SoftFailure)
+
+This is an end-of-iteration decision point. Choose one routing tool...</div>
+        <div class="ctx-annotation">build_continuation_wrapper() at orchestrator.rs:1417
+from IterationContext: completed/failed/blocked tasks, failure history,
+tool traces, reuse guidance. Grows monotonically with each iteration.</div>
+      </div>
+
+      <div class="ctx-block ctx-block-assistant">
+        <div class="ctx-role-label">role: assistant</div>
+        <div class="ctx-content">[tool_call: respond_directly(response="The auth failures were caused by...")]</div>
+      </div>
+    </div>
+
+    <h3>B. Coordinator &mdash; First Run (no session history)</h3>
+    <p class="meta">Same assembly, but <code>load_session_manifests()</code> returns empty &mdash; no prior manifests on disk. The system prompt is shorter; the conversation structure is identical.</p>
+    <div class="ctx-window">
+      <div class="ctx-window-title">Coordinator Context Window</div>
+
+      <div class="ctx-block ctx-block-system">
+        <div class="ctx-role-label">role: system (preamble)</div>
+        <div class="ctx-content"># Orchestration Coordinator
+You are a coordinator agent in a multi-agent orchestration system.
+
+## Your Tools
+{{tools_section}} &mdash; routing + recon + read_artifact (no list_prior_runs)
+
+## Custom Instructions
+{{user_system_prompt}}</div>
+        <div class="ctx-absent">NO session history &mdash; no prior run manifests on disk
+load_session_manifests() returns empty Vec
+(list_prior_runs tool also not registered: include_history_tools = false)</div>
+      </div>
+
+      <div class="ctx-block ctx-block-user">
+        <div class="ctx-role-label">role: user &mdash; iteration 1, planning prompt</div>
+        <div class="ctx-content">Current time: 2026-08-13T16:00:00Z
+
+USER QUERY: Investigate auth failures in production
+
+AVAILABLE WORKERS: ...
+
+Call the appropriate routing tool now.</div>
+      </div>
+
+      <div class="ctx-block ctx-block-assistant">
+        <div class="ctx-role-label">role: assistant</div>
+        <div class="ctx-content">[tool_call: create_plan(...)]</div>
+      </div>
+    </div>
+
+    <h3>C. Worker Context Window</h3>
+    <p class="meta">Built per-task, per-attempt at <code>create_worker()</code> (orchestrator.rs:538). Workers NEVER see session history, coordinator conversation, or continuation context.</p>
+    <div class="ctx-window">
+      <div class="ctx-window-title">Worker Context Window</div>
+
+      <div class="ctx-block ctx-block-system">
+        <div class="ctx-role-label">role: system (worker preamble) &mdash; built per-task, per-attempt</div>
+        <div class="ctx-content"># Worker Agent
+
+{{worker_system_prompt}}
+
+## Scope
+You are assigned ONE specific task. Complete it and stop.
+Ignore any broader goals, prior tasks, or future steps.
+
+## Critical Rules
+- DO call submit_result with your summary, findings, and confidence
+- DO NOT try to solve tasks outside your assignment
+- DO NOT re-do work described in prior results &mdash; use the provided values</div>
+        <div class="ctx-absent">NO session history
+NO coordinator conversation
+NO continuation context
+NO chat history</div>
+        <div class="ctx-annotation">WORKER_PREAMBLE_TEMPLATE + worker's custom system_prompt
++ vector store context (if assigned to this worker)
++ scratchpad preamble (if enabled)
++ skill catalog (if configured)
+NO session history, NO conversation, NO continuation</div>
+      </div>
+
+      <div class="ctx-block ctx-block-user">
+        <div class="ctx-role-label">role: user &mdash; task prompt (the only context a worker gets)</div>
+        <div class="ctx-content">YOUR TASK: Query logs for auth failures in the last 24 hours
+and identify failure groups
+
+COMPLETED &mdash; Task 0 (query_timeframe):
+"Time range: 2026-08-13T16:00:00Z to 2026-08-13T19:00:00Z"
+
+---
+
+Use your tools when the task requires fetching, generating, or
+computing new data. When you have your answer, call submit_result
+with a concise summary, your complete findings, and your confidence.</div>
+        <div class="ctx-annotation">render_worker_task_prompt() at templates.rs:115
+task_description from plan.tasks[i].description (coordinator must inline concrete values)
++ build_task_context() if task has dependencies on prior tasks in same plan
+    (dependency results only &mdash; NOT prior runs, NOT conversation)</div>
+      </div>
+
+      <div class="ctx-block ctx-block-assistant">
+        <div class="ctx-role-label">role: assistant</div>
+        <div class="ctx-content">[tool_call: query_logs(time_range="2026-08-13T16:00:00Z/19:00:00Z")]
+[tool_result: {"logs": [...]}]
+[tool_call: analyze_patterns(data=[...])]
+[tool_result: {"groups": ["auth-timeout", "db-connection", "oom-kill"]}]
+[tool_call: submit_result(summary="Found 3 failure groups...", confidence="high")]</div>
+      </div>
+    </div>
+
+    <h3>D. Injection Flow &mdash; Where Data Lands in the Context Window</h3>
+    <p class="meta">The critical asymmetry: session history enters <code>role:system</code> (frozen at run start). Iteration context enters <code>role:user</code> (grows with each iteration). Worker context enters <code>role:user</code> (per-task, ephemeral). Tool output transforms are dynamic injections during execution.</p>
+    <figure class="figure">
+      <div class="scroll">
+        <svg width="880" height="520" viewBox="0 0 880 520" xmlns="http://www.w3.org/2000/svg" style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px">
+          <!-- Title -->
+          <text x="440" y="22" text-anchor="middle" font-size="14" font-weight="600" fill="var(--ink)">Context Injection Flow: Data Source &rarr; Context Window Position</text>
+
+          <!-- Column headers -->
+          <text x="160" y="50" text-anchor="middle" font-weight="500" fill="var(--muted)">DATA SOURCE</text>
+          <text x="680" y="50" text-anchor="middle" font-weight="500" fill="var(--muted)">CONTEXT WINDOW POSITION</text>
+
+          <!-- Divider -->
+          <line x1="400" y1="60" x2="400" y2="500" stroke="var(--border)" stroke-dasharray="4,4"/>
+
+          <!-- Row 1: Session history -->
+          <rect x="20" y="70" width="340" height="80" rx="6" fill="color-mix(in srgb, var(--accent) 8%, var(--paper))" stroke="var(--accent)" stroke-width="1.5"/>
+          <text x="35" y="90" font-weight="600" fill="var(--accent)">Prior run manifests</text>
+          <text x="35" y="108" fill="var(--muted)">load_session_manifests()</text>
+          <text x="35" y="124" fill="var(--muted)">build_session_context()</text>
+          <text x="35" y="140" fill="var(--muted)">reads {memory_dir}/{session_id}/*/manifest.json</text>
+
+          <rect x="440" y="70" width="400" height="80" rx="6" fill="color-mix(in srgb, var(--accent) 8%, var(--paper))" stroke="var(--accent)" stroke-width="1.5"/>
+          <text x="455" y="90" font-weight="600" fill="var(--accent)">role: system &mdash; SESSION HISTORY</text>
+          <text x="455" y="108" fill="var(--muted)">Nested in the coordinator preamble</text>
+          <text x="455" y="124" fill="var(--muted)">Frozen at run start, never re-loaded</text>
+          <text x="455" y="140" fill="var(--muted)">Default 3 prior runs (session_history_turns)</text>
+
+          <line x1="360" y1="110" x2="440" y2="110" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrow-accent)"/>
+
+          <!-- Row 2: Iteration context -->
+          <rect x="20" y="180" width="340" height="80" rx="6" fill="color-mix(in srgb, var(--accent2) 5%, var(--paper))" stroke="var(--accent2)" stroke-width="1.5"/>
+          <text x="35" y="200" font-weight="600" fill="var(--accent2)">IterationContext</text>
+          <text x="35" y="218" fill="var(--muted)">build_continuation_wrapper()</text>
+          <text x="35" y="234" fill="var(--muted)">completed/failed/blocked tasks</text>
+          <text x="35" y="250" fill="var(--muted)">failure history, tool traces, reuse guidance</text>
+
+          <rect x="440" y="180" width="400" height="80" rx="6" fill="color-mix(in srgb, var(--accent2) 5%, var(--paper))" stroke="var(--accent2)" stroke-width="1.5"/>
+          <text x="455" y="200" font-weight="600" fill="var(--accent2)">role: user &mdash; continuation prompt</text>
+          <text x="455" y="218" fill="var(--muted)">Grows monotonically with each iteration</text>
+          <text x="455" y="234" fill="var(--muted)">Coordinator sees its own prior iterations</text>
+          <text x="455" y="250" fill="var(--muted)">NOT session history &mdash; within-run only</text>
+
+          <line x1="360" y1="220" x2="440" y2="220" stroke="var(--accent2)" stroke-width="2" marker-end="url(#arrow-accent2)"/>
+
+          <!-- Row 3: Worker task context -->
+          <rect x="20" y="290" width="340" height="80" rx="6" fill="color-mix(in srgb, var(--accent2) 5%, var(--paper))" stroke="var(--accent2)" stroke-width="1.5"/>
+          <text x="35" y="310" font-weight="600" fill="var(--accent2)">Plan tasks + dependencies</text>
+          <text x="35" y="328" fill="var(--muted)">render_worker_task_prompt()</text>
+          <text x="35" y="344" fill="var(--muted)">build_task_context() (same-plan deps only)</text>
+          <text x="35" y="360" fill="var(--muted)">Coordinator must inline concrete values</text>
+
+          <rect x="440" y="290" width="400" height="80" rx="6" fill="color-mix(in srgb, var(--accent2) 5%, var(--paper))" stroke="var(--accent2)" stroke-width="1.5"/>
+          <text x="455" y="310" font-weight="600" fill="var(--accent2)">role: user &mdash; worker task prompt</text>
+          <text x="455" y="328" fill="var(--muted)">Per-task, per-attempt, ephemeral</text>
+          <text x="455" y="344" fill="var(--muted)">NO session history, NO conversation</text>
+          <text x="455" y="360" fill="var(--muted)">Only dependency results from same plan</text>
+
+          <line x1="360" y1="330" x2="440" y2="330" stroke="var(--accent2)" stroke-width="2" marker-end="url(#arrow-accent2)"/>
+
+          <!-- Row 4: Tool output transforms -->
+          <rect x="20" y="400" width="340" height="80" rx="6" fill="color-mix(in srgb, var(--warn) 8%, var(--paper))" stroke="var(--warn)" stroke-width="1.5"/>
+          <text x="35" y="420" font-weight="600" fill="var(--warn)">Tool output transforms</text>
+          <text x="35" y="438" fill="var(--muted)">PersistenceWrapper &rarr; artifact pointer</text>
+          <text x="35" y="454" fill="var(--muted)">DuplicateCallGuard &rarr; nudge/abort</text>
+          <text x="35" y="470" fill="var(--muted)">TurnNudge &rarr; wrap-up notice</text>
+
+          <rect x="440" y="400" width="400" height="80" rx="6" fill="color-mix(in srgb, var(--warn) 8%, var(--paper))" stroke="var(--warn)" stroke-width="1.5"/>
+          <text x="455" y="420" font-weight="600" fill="var(--warn)">role: tool &mdash; transformed output</text>
+          <text x="455" y="438" fill="var(--muted)">Dynamic injection during worker execution</text>
+          <text x="455" y="454" fill="var(--muted)">Large outputs &rarr; artifact + file pointer</text>
+          <text x="455" y="470" fill="var(--muted)">Worker sees pointer, uses scratchpad tools</text>
+
+          <line x1="360" y1="440" x2="440" y2="440" stroke="var(--warn)" stroke-width="2" marker-end="url(#arrow-warn)"/>
+
+          <!-- Arrow markers -->
+          <defs>
+            <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <polygon points="0,0 8,3 0,6" fill="var(--accent)"/>
+            </marker>
+            <marker id="arrow-accent2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <polygon points="0,0 8,3 0,6" fill="var(--accent2)"/>
+            </marker>
+            <marker id="arrow-warn" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <polygon points="0,0 8,3 0,6" fill="var(--warn)"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+      <figcaption>Session history (green) enters the system prompt, frozen at run start. Iteration and worker context (blue) enter as user turns. Tool output transforms (amber) are dynamic injections during execution. The colors match the context window diagrams above.</figcaption>
+    </figure>
+  </section>
+
+  <section id="detail">
+    <h2>Injection Points</h2>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:170px">Context</th><th style="width:70px">Role</th><th style="width:120px">When</th><th>Source function</th><th style="width:130px">Scope</th></tr>
+      <tr>
+        <td><strong>Session history</strong> (prior runs)</td>
+        <td><code>system</code></td>
+        <td>Run start, once</td>
+        <td><code>load_session_manifests()</code> &rarr; <code>build_session_context()</code></td>
+        <td>Default 3 manifests</td>
+      </tr>
+      <tr>
+        <td><strong>Iteration context</strong> (within-run)</td>
+        <td><code>user</code></td>
+        <td>Each post-execute turn</td>
+        <td><code>build_continuation_wrapper()</code> from <code>IterationContext</code></td>
+        <td>All tasks from the just-completed iteration</td>
+      </tr>
+      <tr>
+        <td><strong>Worker task context</strong></td>
+        <td><code>user</code></td>
+        <td>Per-task, per-attempt</td>
+        <td><code>render_worker_task_prompt()</code> + <code>build_task_context()</code></td>
+        <td>Task description + same-plan dependency results</td>
+      </tr>
+      <tr>
+        <td><strong>list_prior_runs</strong> (on-demand)</td>
+        <td><code>tool</code></td>
+        <td>Coordinator calls it</td>
+        <td><code>ListPriorRunsTool::call()</code> &rarr; <code>load_session_manifests(limit=50)</code></td>
+        <td>Up to 50 prior run metadata records</td>
+      </tr>
+      <tr>
+        <td><strong>read_artifact</strong> (cross-run)</td>
+        <td><code>tool</code></td>
+        <td>Coordinator or worker calls it</td>
+        <td><code>ReadArtifactTool::call()</code> with optional <code>run_id</code></td>
+        <td>Any artifact from any run in the session</td>
+      </tr>
+      <tr>
+        <td><strong>Duplicate call nudge</strong></td>
+        <td><code>tool</code></td>
+        <td>When duplicate detected</td>
+        <td><code>DuplicateCallGuard::transform_output()</code></td>
+        <td>Appended to the offending tool's output</td>
+      </tr>
+      <tr>
+        <td><strong>Turn nudge</strong></td>
+        <td><code>tool</code></td>
+        <td>Near turn-depth limit</td>
+        <td><code>TurnNudgeState</code> appends wrap-up notice</td>
+        <td>Appended to any tool output</td>
+      </tr>
+      <tr>
+        <td><strong>Scratchpad pointer</strong></td>
+        <td><code>tool</code></td>
+        <td>When output &gt; context budget</td>
+        <td><code>build_file_pointer()</code> replaces inline content</td>
+        <td>File pointer + scratchpad exploration tools</td>
+      </tr>
+      <tr>
+        <td><strong>Manifest write</strong> (to disk)</td>
+        <td>&mdash;</td>
+        <td>End of run</td>
+        <td><code>write_run_manifest()</code> &rarr; <code>persistence.write_manifest()</code></td>
+        <td>Full run summary for next run's session history</td>
+      </tr>
+    </table>
+    </div>
+  </section>
+
+  <section id="seq">
+    <h2>Run Lifecycle</h2>
+    <ol class="timeline">
+      <li><strong>Run init</strong> &mdash; <code>ExecutionPersistence::new()</code> creates a UUIDv7 run_id; <code>prune_session_runs(max=20)</code> cleans old directories</li>
+      <li><strong>Coordinator preamble built</strong> &mdash; base template + skill catalog + vector store context + session history (frozen for entire run)</li>
+      <li><strong>Iteration 1: Planning</strong> &mdash; <code>build_planning_wrapper()</code> sends query + worker section + routing tools as <code>role:user</code></li>
+      <li><strong>Coordinator responds</strong> &mdash; calls <code>create_plan</code>, <code>respond_directly</code>, or <code>request_clarification</code></li>
+      <li><strong>Workers execute</strong> &mdash; each worker gets its own context window: worker preamble (<code>role:system</code>) + task prompt (<code>role:user</code>). No session history, no conversation.</li>
+      <li><strong>Persistence drain</strong> &mdash; wait for in-flight artifact writes before reading back results</li>
+      <li><strong>Iteration 1: Continuation</strong> &mdash; <code>build_continuation_wrapper()</code> sends iteration context (completed/failed/blocked tasks) as <code>role:user</code>. Coordinator conversation grows.</li>
+      <li><strong>Coordinator decides</strong> &mdash; <code>respond_directly</code> (final answer), <code>create_plan</code> (re-plan &rarr; iteration 2), or <code>request_clarification</code></li>
+      <li><strong>Manifest write</strong> &mdash; <code>write_run_manifest()</code> writes <code>manifest.json</code> to disk. This is what the NEXT run loads as session history.</li>
+    </ol>
+  </section>
+
+  <section id="src">
+    <h2>Sources</h2>
+    <ul>
+      <li><code>orchestrator.rs:2162</code> &mdash; <code>create_coordinator()</code>: builds preamble with session history</li>
+      <li><code>orchestrator.rs:2240-2261</code> &mdash; session history injection: <code>load_session_manifests()</code> &rarr; <code>preamble.push_str()</code></li>
+      <li><code>orchestrator.rs:1385</code> &mdash; <code>build_planning_wrapper()</code>: iteration 1 planning prompt</li>
+      <li><code>orchestrator.rs:1417</code> &mdash; <code>build_continuation_wrapper()</code>: post-execute continuation prompt</li>
+      <li><code>orchestrator.rs:538</code> &mdash; <code>create_worker()</code>: worker preamble (no session history)</li>
+      <li><code>orchestrator.rs:2998</code> &mdash; <code>build_task_context()</code>: same-plan dependency results</li>
+      <li><code>persistence.rs:930</code> &mdash; <code>load_session_manifests()</code>: reads prior run manifests from disk</li>
+      <li><code>persistence.rs:1018</code> &mdash; <code>build_session_context()</code>: formats manifests into session history text</li>
+      <li><code>rig-core/src/agent/builder.rs:105-107</code> &mdash; <code>AgentBuilder::preamble()</code>: sets the system prompt (confirmed <code>role:system</code>)</li>
+      <li><code>rig-core/src/agent/completion.rs:61-62,118-119</code> &mdash; preamble field documented as "System prompt", sent as <code>completion_request.preamble()</code></li>
+      <li><code>config.rs:85</code> &mdash; <code>build_coordinator_preamble()</code>: assembles base template + tools + recon</li>
+      <li><code>templates.rs:115</code> &mdash; <code>render_worker_task_prompt()</code>: worker task prompt template</li>
+      <li><code>prompts/session_history.md</code> &mdash; SESSION_HISTORY_TEMPLATE: the session history prompt template</li>
+      <li><code>prompts/continuation_prompt.md</code> &mdash; continuation prompt template for post-execute decision</li>
+    </ul>
+    <div class="callout">This map covers the <code>mshearer/421-memory-dir-network-storage</code> branch (PR #533). The session history injection path (<code>load_session_manifests</code> bounded traversal) is the code the Greptile P1 flagged &mdash; the creation-order cap is an intentional tradeoff documented in commit <code>8ddc7c05</code>. The system-prompt placement (not user turns) is the architectural answer to the question this artifact exists to clarify.</div>
+  </section>
+
+</main>
+
+<footer>
+  Default theme &middot; As of 2026-08-13 19:30 UTC
+  &middot; <a href="https://github.com/mezmo/aura">mezmo/aura</a>
+</footer>
+
+<script type="application/json" id="artifact-state">
+{"as_of": "2026-08-13 19:30 UTC", "sections": ["stats", "fig", "detail", "seq", "src"], "design_system": null}
+</script>
+
+</body>
+</html>

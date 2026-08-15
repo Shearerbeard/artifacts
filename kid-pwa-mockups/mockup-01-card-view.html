@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup 01 - Card view</title>
+<!-- Token values generated from docs/ux/design/tokens.json (chore-chart v1); inlined so this file opens standalone. -->
+<style>
+:root {
+  --ink: #191817; --paper: #FDFCF7; --accent: #2450C8; --accent2: #2F9E5B;
+  --muted: #6E6A63; --warn: #C77F0A; --danger: #C03A2B; --border: #191817;
+  --surface: #F2F1EA; --radius: 16px;
+  --font-display: ui-rounded, 'SF Pro Rounded', 'Segoe UI Rounded', system-ui, sans-serif;
+  --font-body: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-utility: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --text-s: 14px; --text-m: 18px; --text-l: 22px; --text-xl: 28px;
+  --text-xxl: 35px; --text-xxxl: 44px;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-6: 24px; --space-8: 32px; --space-12: 48px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #F4F2EC; --paper: #17181C; --accent: #8AABFF; --accent2: #62D69A;
+    --muted: #A39E94; --warn: #E5A53D; --danger: #E4695A; --border: #F4F2EC;
+    --surface: #212329;
+  }
+}
+* { margin: 0; box-sizing: border-box; }
+body { background: #3C3C3C; padding: 24px 12px 64px; font-family: var(--font-body); }
+.statetag { max-width: 390px; margin: 0 auto 8px; color: #CFCFCF; font-family: var(--font-utility); font-weight: 600; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; display: flex; justify-content: space-between; }
+.frame { max-width: 390px; margin: 0 auto 40px; border-radius: 32px; border: 4px solid #111; background: var(--paper); color: var(--ink); overflow: hidden; box-shadow: 0 18px 50px rgba(0,0,0,.45); }
+.screen { min-height: 720px; padding: var(--space-6); display: flex; flex-direction: column; gap: var(--space-6); }
+h1.app { font-family: var(--font-display); font-weight: 800; font-size: var(--text-m); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.big { font-family: var(--font-display); font-weight: 800; font-size: var(--text-xxl); line-height: 1.08; }
+.loc { font-size: var(--text-l); color: var(--muted); }
+.card { border: 3px solid var(--border); border-radius: var(--radius); padding: var(--space-5, 20px) var(--space-6); background: var(--paper); }
+h2.sec { font-family: var(--font-display); font-weight: 800; font-size: var(--text-l); }
+.steps { list-style: none; padding: 0; counter-reset: step; display: flex; flex-direction: column; gap: var(--space-3); }
+.steps li { counter-increment: step; display: flex; gap: var(--space-4); align-items: center; font-size: var(--text-l); line-height: 1.3; padding: var(--space-3); background: var(--surface); border-radius: var(--radius); }
+.steps li::before { content: counter(step); flex: 0 0 40px; height: 40px; border: 3px solid var(--border); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 800; font-size: var(--text-m); background: var(--paper); }
+.due { font-family: var(--font-utility); font-weight: 600; font-size: var(--text-m); color: var(--warn); }
+.video { border: 3px dashed var(--border); border-radius: var(--radius); padding: var(--space-4); display: flex; align-items: center; gap: var(--space-4); color: var(--accent); font-family: var(--font-utility); font-weight: 600; font-size: var(--text-l); }
+.stamp { margin: auto auto 0; align-self: center; width: 180px; height: 180px; border-radius: 50%; border: 5px solid var(--accent); color: var(--accent); background: var(--paper); font-family: var(--font-display); font-weight: 800; font-size: var(--text-xl); letter-spacing: .04em; box-shadow: inset 0 0 0 4px var(--paper), inset 0 0 0 7px var(--accent); transform: rotate(-4deg); cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="statetag"><span>State 1 - Card view</span><span>mockup, not interactive</span></div>
+<div class="frame">
+  <main class="screen">
+    <h1 class="app">Your chore</h1>
+    <p class="big">Empty the dishwasher</p>
+    <p class="loc">In the kitchen</p>
+
+    <section class="card" aria-label="Steps">
+      <h2 class="sec">What to do</h2>
+      <ol class="steps" style="margin-top: var(--space-4);">
+        <li>Open the dishwasher all the way.</li>
+        <li>Put the plates on the shelf.</li>
+        <li>Put the cups in the cupboard.</li>
+        <li>Put the forks and spoons in the drawer.</li>
+        <li>Close the dishwasher.</li>
+      </ol>
+    </section>
+
+    <svg role="img" aria-label="Steps to check off" viewBox="0 0 340 56" width="100%" height="56">
+      <g font-family="ui-rounded, system-ui, sans-serif" font-weight="800" font-size="20">
+        <circle cx="30" cy="28" r="22" fill="none" stroke="var(--border)" stroke-width="3"/><text x="30" y="35" text-anchor="middle" fill="var(--ink)">1</text>
+        <circle cx="100" cy="28" r="22" fill="none" stroke="var(--border)" stroke-width="3"/><text x="100" y="35" text-anchor="middle" fill="var(--ink)">2</text>
+        <circle cx="170" cy="28" r="22" fill="none" stroke="var(--border)" stroke-width="3"/><text x="170" y="35" text-anchor="middle" fill="var(--ink)">3</text>
+        <circle cx="240" cy="28" r="22" fill="none" stroke="var(--border)" stroke-width="3"/><text x="240" y="35" text-anchor="middle" fill="var(--ink)">4</text>
+        <circle cx="310" cy="28" r="22" fill="none" stroke="var(--border)" stroke-width="3"/><text x="310" y="35" text-anchor="middle" fill="var(--ink)">5</text>
+      </g>
+    </svg>
+
+    <a class="video" href="#">
+      <svg viewBox="0 0 24 24" width="32" height="32" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 8.5v7l6-3.5z" fill="currentColor"/></svg>
+      Watch how
+    </a>
+
+    <p class="due">Finish by Saturday</p>
+
+    <button class="stamp" type="button">Done</button>
+  </main>
+</div>
+</body>
+</html>

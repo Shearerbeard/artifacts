@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kid PWA - mockup review index</title>
+<style>
+  :root {
+    --ink: #191817; --paper: #FDFCF7; --accent: #2450C8; --muted: #6E6A63;
+    --border: #191817; --surface: #F2F1EA;
+  }
+  * { margin: 0; box-sizing: border-box; }
+  body { background: #3C3C3C; padding: 24px 12px 64px; font-family: system-ui, sans-serif; }
+  .wrap { max-width: 480px; margin: 0 auto; }
+  h1 { color: #FDFCF7; font-size: 22px; margin-bottom: 4px; }
+  .sub { color: #CFCFCF; font-size: 14px; margin-bottom: 20px; }
+  a.state { display: block; background: var(--paper); color: var(--ink); border: 3px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 12px; text-decoration: none; }
+  a.state b { display: block; font-size: 18px; margin-bottom: 2px; }
+  a.state span { color: var(--muted); font-size: 14px; }
+  .state-num { display: inline-block; background: var(--accent); color: var(--paper); font-weight: 800; border-radius: 50%; width: 26px; height: 26px; text-align: center; line-height: 26px; font-size: 14px; margin-right: 8px; }
+  .docs { margin-top: 24px; }
+  .docs a { color: #CFCFCF; font-size: 14px; display: block; margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Kid PWA mockups</h1>
+  <p class="sub">Six states for Gate U review. Tap a state; use the phone's back button to return.</p>
+
+  <a class="state" href="mockup-01-card-view.html"><b><span class="state-num">1</span>Card view</b><span>Current chore: title, where, steps, video, due date, Done stamp</span></a>
+  <a class="state" href="mockup-02-done-flow.html"><b><span class="state-num">2</span>Done flow</b><span>Bottom sheet confirming the photo requirement</span></a>
+  <a class="state" href="mockup-03-photo-upload.html"><b><span class="state-num">3</span>Photo upload</b><span>Thumbnails, remove, add more, count, Finish</span></a>
+  <a class="state" href="mockup-04-rejected.html"><b><span class="state-num">4</span>Rejected with notes</b><span>"Dad says it needs more work." plus the parent's note</span></a>
+  <a class="state" href="mockup-05-empty.html"><b><span class="state-num">5</span>Empty state</b><span>Nothing drawn yet; the Get my chore draw button</span></a>
+  <a class="state" href="mockup-06-returned.html"><b><span class="state-num">6</span>Returned / all caught up</b><span>Approved with stamp ring, then the no-chores draw result</span></a>
+
+  <div class="docs">
+    <a href="kid-pwa-mockups.md">Review notes and design decisions (markdown)</a>
+    <a href="copy-deck.md">Copy deck (all strings)</a>
+  </div>
+</div>
+</body>
+</html>

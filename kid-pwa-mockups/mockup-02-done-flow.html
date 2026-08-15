@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup 02 - Done flow</title>
+<!-- Token values generated from docs/ux/design/tokens.json (chore-chart v1); inlined so this file opens standalone. -->
+<style>
+:root {
+  --ink: #191817; --paper: #FDFCF7; --accent: #2450C8; --accent2: #2F9E5B;
+  --muted: #6E6A63; --warn: #C77F0A; --danger: #C03A2B; --border: #191817;
+  --surface: #F2F1EA; --radius: 16px;
+  --font-display: ui-rounded, 'SF Pro Rounded', 'Segoe UI Rounded', system-ui, sans-serif;
+  --font-body: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-utility: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --text-s: 14px; --text-m: 18px; --text-l: 22px; --text-xl: 28px;
+  --text-xxl: 35px; --text-xxxl: 44px;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-6: 24px; --space-8: 32px; --space-12: 48px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #F4F2EC; --paper: #17181C; --accent: #8AABFF; --accent2: #62D69A;
+    --muted: #A39E94; --warn: #E5A53D; --danger: #E4695A; --border: #F4F2EC;
+    --surface: #212329;
+  }
+}
+* { margin: 0; box-sizing: border-box; }
+body { background: #3C3C3C; padding: 24px 12px 64px; font-family: var(--font-body); }
+.statetag { max-width: 390px; margin: 0 auto 8px; color: #CFCFCF; font-family: var(--font-utility); font-weight: 600; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; display: flex; justify-content: space-between; }
+.frame { max-width: 390px; margin: 0 auto 40px; border-radius: 32px; border: 4px solid #111; background: var(--paper); color: var(--ink); overflow: hidden; box-shadow: 0 18px 50px rgba(0,0,0,.45); }
+.screen { min-height: 720px; padding: var(--space-6); display: flex; flex-direction: column; gap: var(--space-6); }
+.behind { filter: grayscale(1); opacity: .35; }
+.veil { position: absolute; inset: 0; background: rgba(0,0,0,.28); }
+.frame-wrap { position: relative; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--paper); border-top: 4px solid var(--border); border-radius: 24px 24px 0 0; padding: var(--space-8) var(--space-6) var(--space-8); display: flex; flex-direction: column; gap: var(--space-6); }
+.big { font-family: var(--font-display); font-weight: 800; font-size: var(--text-xxl); line-height: 1.08; }
+.body-text { font-size: var(--text-l); line-height: 1.35; }
+.btn { display: block; width: 100%; padding: var(--space-4); border-radius: var(--radius); border: 3px solid var(--border); font-family: var(--font-display); font-weight: 800; font-size: var(--text-l); text-align: center; cursor: pointer; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+.btn.ghost { background: transparent; color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="statetag"><span>State 2 - Done flow</span><span>mockup, not interactive</span></div>
+<div class="frame frame-wrap">
+  <main class="screen behind" aria-hidden="true">
+    <p class="big" style="font-size: var(--text-xl);">Empty the dishwasher</p>
+    <p class="body-text">The card view sits dimmed behind the sheet.</p>
+  </main>
+  <div class="veil"></div>
+  <section class="sheet" role="dialog" aria-label="Mark it done?">
+    <p class="big">Mark it done?</p>
+    <p class="body-text">Take a photo to show the work.</p>
+    <button class="btn primary" type="button">Add photos</button>
+    <button class="btn ghost" type="button">Cancel</button>
+  </section>
+</div>
+</body>
+</html>

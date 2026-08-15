@@ -1,0 +1,1851 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rust-bash exploration — Gate 1 reading packet</title>
+<style>
+:root { color-scheme: light dark; }
+* { box-sizing: border-box; }
+body { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+       margin: 0; line-height: 1.55; }
+nav { position: sticky; top: 0; background: Canvas; border-bottom: 2px solid CanvasText;
+      padding: 0.6rem 1.2rem; font-size: 0.9rem; z-index: 10; }
+nav details { display: inline-block; }
+nav summary { cursor: pointer; font-weight: 600; }
+nav ol { margin: 0.4rem 0 0.2rem; padding-left: 1.4rem; }
+nav a { color: LinkText; text-decoration: none; }
+nav a:hover { text-decoration: underline; }
+header.cover { padding: 2rem 1.2rem 1rem; border-bottom: 1px solid GrayText; }
+header.cover h1 { margin: 0 0 0.3rem; font-size: 1.5rem; }
+header.cover p { margin: 0.2rem 0; color: GrayText; }
+article { max-width: 56rem; margin: 0 auto; padding: 2rem 1.2rem 3rem; }
+article + article { border-top: 3px double GrayText; }
+h1 { font-size: 1.35rem; } h2 { font-size: 1.15rem; } h3 { font-size: 1rem; }
+code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.88em;
+       background: color-mix(in srgb, CanvasText 8%, Canvas); padding: 0.1em 0.3em;
+       border-radius: 3px; }
+pre { background: color-mix(in srgb, CanvasText 6%, Canvas); padding: 0.8rem 1rem;
+      overflow-x: auto; border-radius: 6px; }
+pre code { background: none; padding: 0; }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; margin: 1rem 0; }
+th, td { border: 1px solid color-mix(in srgb, CanvasText 30%, Canvas);
+         padding: 0.35rem 0.6rem; text-align: left; vertical-align: top; }
+th { background: color-mix(in srgb, CanvasText 8%, Canvas); }
+blockquote { border-left: 3px solid GrayText; margin-left: 0; padding-left: 1rem;
+             color: GrayText; }
+.part-tag { display: inline-block; font-size: 0.75rem; font-weight: 700;
+            letter-spacing: 0.05em; text-transform: uppercase;
+            border: 1px solid CanvasText; border-radius: 4px;
+            padding: 0.1rem 0.45rem; margin-bottom: 0.6rem; }
+strong { font-weight: 700; }
+</style></head><body>
+<script type="application/json" id="artifact-state">{"as_of": "2026-08-15 02:45 UTC", "sections": [], "design_system": null, "clone_head": "68d6dbaf", "gate": "Gate 1"}</script>
+<nav><details><summary>Contents (10 documents)</summary><ol><li><a href="#doc-10">Part 1 — Codex design-review ledger (start here)</a></li><li><a href="#doc-09">Part 2 — Harness design r2 (probe-runner + monitor)</a></li><li><a href="#doc-07">Part 3 — Policy ADT r2</a></li><li><a href="#doc-08">Part 4 — Audit schema + BERT feasibility r2</a></li><li><a href="#doc-06">Part 5 — Modernization lift (D4 repriced)</a></li><li><a href="#doc-05">Part 6 — Wave-2 verification report</a></li><li><a href="#doc-03">Appendix A — Security-layer matrix</a></li><li><a href="#doc-04">Appendix B — Interception surface</a></li><li><a href="#doc-01">Appendix C — Code map</a></li><li><a href="#doc-02">Appendix D — Dependency audit</a></li></ol></details>
+&nbsp;·&nbsp; rust-bash exploration KB · Gate 1 packet</nav>
+<header class="cover">
+<h1>rust-bash modernization exploration — Gate 1 reading packet</h1>
+<p>As of 2026-08-15 02:45 UTC · clone HEAD 68d6dbaf (2026-04-05)</p>
+<p>Reading order: the codex ledger (Part 1) tells you what was attacked and fixed;
+Parts 2–4 are the r2 design; Part 5 reprices the D4 rejection; Part 6 and the
+appendices are the verified ground truth.</p>
+</header>
+<article id="doc-10"><span class="part-tag">Part 1 · Codex design-review ledger (start here)</span>
+<h1 id="10-codex-design-review-ledger">10 — Codex Design-Review Ledger</h1>
+<p>Per the board's REVIEW-TOOLING convention for adversarial review of a
+standalone prose artifact: numbered findings, explicit verdict, author and
+reviewer models named, every finding dispositioned.</p>
+<ul>
+<li><strong>Artifacts under review</strong>: KB 06 (modernization lift), 07 (policy ADT),
+  08 (audit schema + BERT feasibility), 09 (harness design), with 05
+  (verification) as ground-truth input. Staged at
+  <code>aura-orchestration-mode/.review/rust-bash-design/</code>.</li>
+<li><strong>Author model</strong>: kimi-for-coding/k3 (orchestrator).</li>
+<li><strong>Reviewer model</strong>: gpt-5.6-sol via codex CLI (<code>codex exec --sandbox
+  read-only</code>), 2026-08-14. Run header confirmed gpt-5.6-sol.</li>
+<li><strong>VERDICT: FAIL</strong> (10 BLOCKING, 1 MINOR) — valid delegation, verdict
+  present.</li>
+<li><strong>Disposition summary</strong>: 11/11 findings accepted (10 fixed in r2
+  revisions of 07/08/09; 1 partially accepted with reframing). No
+  rejections. The r2 documents supersede r1; this ledger records the delta.</li>
+</ul>
+<h2 id="findings-and-dispositions">Findings and dispositions</h2>
+<h3 id="1-blocking-seatbelt-boundary-permits-undetectable-host-reads-blanket-localhost">1. BLOCKING — Seatbelt boundary permits undetectable host reads + blanket localhost</h3>
+<p><strong>Accepted.</strong> r1 restricted writes/ports but not reads; a compromised runner
+or granted native custom command could read host credentials into the
+writable run dir without tripping a sentinel, and all of 127.0.0.1 exposed
+unrelated host services.
+<strong>Fix (09 r2):</strong> profile now denies file-read outside system libs + clone +
+the runner's own dir; network pinned to the two mock ports only; the
+residual is stated instead of implied away.</p>
+<h3 id="2-blocking-independent-evidence-was-runner-writable">2. BLOCKING — "Independent" evidence was runner-writable</h3>
+<p><strong>Accepted.</strong> Mock logs, provenance, and scoring inputs sat in the same
+runner-writable tree; "written by the mock process" established nothing
+under a shared euid.
+<strong>Fix (09 r2):</strong> <code>runs/&lt;id&gt;/monitor/</code> is Seatbelt-denied to the runner and
+holds the journal, mock logs, snapshots, and expected provenance; the
+monitor recomputes binary/scenario/policy hashes itself instead of trusting
+the runner-reported sidecar.</p>
+<h3 id="3-blocking-sentinels-cant-prove-confinement-l2-accepted-a-false-oracle">3. BLOCKING — Sentinels can't prove confinement; L2 accepted a false oracle</h3>
+<p><strong>Accepted with reframing.</strong> A finite hash set detects mutation, not reads —
+correct. And L2's "deny/error" oracle would have accepted the observed
+macOS <code>NotFound</code> baseline failure that the crate's own test calls a
+confinement bug.
+<strong>Fix (09 r2):</strong> sentinels reframed as mutation canaries only; read-
+confinement proven by exact-oracle legs (L2 asserts <code>PermissionDenied</code>
+specifically); the macOS symlink-test diagnosis (06 #5) gates L2; L16's
+claim reworded from "leak-safe" to "no detected mutation or unauthorized
+connection."</p>
+<h3 id="4-blocking-static-ast-gate-bypassable-via-normal-shell-semantics">4. BLOCKING — Static AST gate bypassable via normal shell semantics</h3>
+<p><strong>Accepted.</strong> <code>eval</code>, <code>source</code>, <code>bash -c</code>, traps, <code>$var</code> command names,
+command substitution, <code>xargs</code>/<code>find -exec</code> all construct code after the
+initial AST walk; command-level allow/deny, effect classification, HITL
+routing, and script identity do not survive them. Compiled fs/net
+confinement still contains effects, but the policy layer is bypassed.
+<strong>Fix (07 r2):</strong> <code>DynamicCodePolicy</code> — Strict mode (the registered-bundle
+authoring contract) denies scripts containing dynamic-code primitives;
+ApprovalRequired floors the verdict; Unrestricted only with Open script
+policy. Runtime per-command interception (<code>dispatch_command</code> patch)
+explicitly deferred to v2 with the bypass list enumerated. L18 added to
+prove the gate.</p>
+<h3 id="5-blocking-sha-pinning-covers-only-the-wrapper">5. BLOCKING — SHA pinning covers only the wrapper</h3>
+<p><strong>Accepted.</strong> A pinned script can source mutable files or <code>bash -c
+"$payload"</code>; secondary code is neither hashed nor policy-checked.
+<strong>Fix (07 r2):</strong> <code>ScriptBundle</code> is transitively content-addressed — entry
+hash plus a manifest of (hash, vfs path) for every sourced file, resolved
+and verified through the VFS at gate time; non-literal dynamic loading is
+denied by Strict mode. L10 now includes a mutated-sourced-file leg.</p>
+<h3 id="6-blocking-adt-inexpressiveness-and-conflicting-ownership">6. BLOCKING — ADT inexpressiveness and conflicting ownership</h3>
+<p><strong>Accepted.</strong> <code>CommandPolicy</code> as a mutually exclusive enum couldn't express
+"one custom grant + deny dangerous builtins"; <code>BuiltinsOnly</code> still admitted
+<code>eval</code>/<code>source</code>/<code>bash</code>; <code>params: Option&lt;None&gt;</code> was a silent grant; two
+output caps with no precedence.
+<strong>Fix (07 r2):</strong> <code>CommandPolicy</code> is now a struct (<code>BuiltinSet</code> with defined
+deny-wins precedence + separate <code>CustomGrant</code> that can never shadow
+builtins); <code>ParamsPolicy</code> is a mandatory enum (<code>NoneAllowed</code>/<code>Any</code>/
+<code>Exact</code>/<code>OneOf</code>); output ownership split (hard cap in <code>LimitsPolicy</code>,
+spill threshold ≤ cap in <code>OutputPolicy</code>, validation error otherwise).</p>
+<h3 id="7-blocking-hitl-layer-claimed-but-absent">7. BLOCKING — HITL layer claimed but absent</h3>
+<p><strong>Accepted.</strong> Effect classes existed but nothing mapped them to approval
+modes; registered mutating scripts could never require approval; no leg,
+no audit field.
+<strong>Fix (07 r2):</strong> <code>ApprovalPolicy</code> domain maps each <code>EffectClass</code> →
+<code>ApprovalMode</code> (defaults: read_only Unattended, everything else Required),
+with per-bundle override; L17 legs added; audit schema v2 carries the
+<code>approval</code> block including the operator decision.</p>
+<h3 id="8-blocking-test-matrix-couldnt-prove-advertised-parity">8. BLOCKING — Test matrix couldn't prove advertised parity</h3>
+<p><strong>Accepted.</strong> L7 missed <code>max_array_elements</code>; spill and DNS-range gaps had
+no honest leg treatment; L5 overclaimed; L15 tested config selection while
+implying a containment property.
+<strong>Fix (09 r2):</strong> all 11 native limits get legs; wall-clock is its own
+monitor-enforced leg (L19); a parity-gap table asserts gaps as
+DOCUMENTED-GAP instead of hiding them; L5's claim narrowed to prefix
+rejection; L15 reframed as config-selection with the trust axiom stated.</p>
+<h3 id="9-blocking-audit-lifecycle-impossible-for-crashessink-failure">9. BLOCKING — Audit lifecycle impossible for crashes/sink failure</h3>
+<p><strong>Accepted.</strong> A single post-exec record cannot exist when the process
+aborts (L8) or is killed (L19), and a failed sink cannot hold the record
+of its own failure (L13).
+<strong>Fix (08 r2 + 09 r2):</strong> two-channel audit — runner span record plus a
+supervisor-owned journal (begin/exit/signal/killed); new outcomes
+<code>aborted</code>/<code>killed</code>/<code>denied_approval</code>; L13's fail-closed assertion now lives
+in the journal.</p>
+<h3 id="10-blocking-schema-insufficient-for-the-claimed-bert-task">10. BLOCKING — Schema insufficient for the claimed BERT task</h3>
+<p><strong>Accepted.</strong> No operator-decision field (the "free labels" claim was
+unbacked), no deployment/policy identity, no source reference for rule
+promotion, no concrete extraction targets, and <code>runtime.net</code> had no
+emission point at all.
+<strong>Fix (08 r2):</strong> schema v2 adds <code>deployment.{id,policy_hash}</code>,
+<code>policy.approval.decision</code>, <code>source.retained_ref</code>, concrete extraction
+targets (<code>url_prefix_matched</code>, <code>root</code> labels, ordered operand classes), and
+renames net rows <code>net_static</code> with the static-only limitation stated. The
+feasibility verdict is narrowed accordingly: novelty detection + script
+promotion feasible on v2; the r1 unconditional claim retracted.</p>
+<h3 id="11-minor-path-privacy-contradiction">11. MINOR — Path-privacy contradiction</h3>
+<p><strong>Accepted.</strong> r1 called raw paths a leak and then put the raw denied path
+in <code>detail</code>.
+<strong>Fix (08 r2):</strong> wire format carries <code>path_class</code> + <code>root</code> label + keyed
+<code>detail_hash</code>; raw values live only in the secured run-dir copy.</p>
+<h2 id="post-review-state">Post-review state</h2>
+<p>The r2 design is materially stronger in exactly the places the review
+attacked: evidence integrity, dynamic-code governance, transitive script
+identity, approval as a first-class domain, and honest gap assertion. Two
+deferred items are now explicit v2 work: per-command runtime interception
+(<code>dispatch_command</code> patch) and runtime net-event emission. Gate-1 packet =
+KB 01–10 with this ledger as the design's review record.</p>
+</article><article id="doc-09"><span class="part-tag">Part 2 · Harness design r2 (probe-runner + monitor)</span>
+<h1 id="09-harness-design-probe-runner-harness-monitor-r2-post-codex">09 — Harness Design: probe-runner + harness-monitor (r2, post-codex)</h1>
+<p>Status: synthesis r2 (orchestrator), revised per codex review ledger 10.
+Purpose: a detached, machine-verifiable harness proving rust-bash + the
+policy/audit layer (07 r2 / 08 r2) matches the AURA security layers — and
+that the harness itself is safe to run unattended on the host.</p>
+<p>Location: <code>exploration/harness/</code> inside the clone (own Cargo.toml, path dep;
+detached from aura-sandbox per user instruction).</p>
+<h2 id="r2-changes-from-codex-blocking-13-89">r2 changes (from codex BLOCKING 1–3, 8–9)</h2>
+<ul>
+<li>Seatbelt profile now restricts <strong>reads</strong> and pins mock ports; no blanket
+  localhost (codex #1).</li>
+<li>Evidence integrity: monitor-owned directory the runner cannot write;
+  monitor recomputes provenance itself (codex #2).</li>
+<li>Sentinels reframed: they detect mutation, not reads; read-confinement is
+  proven by exact-oracle legs, not sweeps (codex #3).</li>
+<li>Matrix: all 11 native limits, wall-clock as its own leg, approval legs,
+  journal legs, explicit parity-gap table with DOCUMENTED-GAP legs (codex #8).</li>
+<li>Audit lifecycle: monitor journal owns begin/abort/kill outcomes (codex #9).</li>
+</ul>
+<h2 id="two-process-architecture-r2">Two-process architecture (r2)</h2>
+<pre><code>harness-monitor (trusted; never links rust-bash; never executes scripts)
+  │ 1. hash the runner binary, scenario TOML, policy TOML ITSELF
+  │    (no trust in runner-reported sidecars — codex #2)
+  │ 2. snapshot sentinels (mutation canaries)
+  │ 3. start mock servers; they write logs into runs/&lt;id&gt;/monitor/
+  │ 4. journal: leg begin (runs/&lt;id&gt;/monitor/journal.jsonl)
+  │ 5. spawn ──► probe-runner (untrusted; sandbox-exec; env -i)
+  │                Seatbelt: write ONLY runs/&lt;id&gt;/runner/; read ONLY
+  │                system libs + clone + runs/&lt;id&gt;/runner/; network ONLY
+  │                127.0.0.1 ports M1,M2; no host process exec
+  │                per scenario: load policy → build facade → run →
+  │                append audit JSONL to runs/&lt;id&gt;/runner/ → exit
+  │ 6. journal: exit status / signal / kill
+  │ 7. re-snapshot sentinels
+  │ 8. score: runner's audit vs monitor-owned evidence (mock logs,
+  │    journal, sentinel deltas, recomputed hashes)
+  ▼ verdicts + leak report per leg
+
+run-dir layout:
+  runs/&lt;id&gt;/runner/   runner-writable (audit.jsonl, retained source)
+  runs/&lt;id&gt;/monitor/  runner-DENIED (journal.jsonl, mock logs, snapshots,
+                      expected provenance) — enforced by the Seatbelt profile
+</code></pre>
+<ul>
+<li><strong>probe-runner</strong>: all rust-bash linkage, all hostile input, no scoring
+  logic. Fresh process per scenario: a parser bomb (06, D4.4) aborts one
+  leg, and the journal records SIGABRT — the process boundary is both
+  containment and its own proof.</li>
+<li><strong>harness-monitor</strong>: orchestrates and scores from evidence the runner
+  cannot write: its own journal, mock-server logs (mock processes are
+  monitor-spawned and write into <code>monitor/</code>), sentinel hashes it takes
+  itself, and hashes it computes over the actual artifacts.</li>
+<li>Residual honestly stated (codex #2): same-euid tampering <em>between</em>
+  monitor-owned processes is out of scope; the boundary being proven is
+  runner-vs-monitor, enforced by Seatbelt, not by filesystem permissions.</li>
+</ul>
+<h2 id="host-isolation-r2">Host isolation (r2)</h2>
+<p>The runner is treated as compromised-by-default:</p>
+<ul>
+<li><strong>Seatbelt</strong> (r2, codex #1): <code>(deny default)</code>-style targeted profile —
+  file-read allowed only for system library paths, the clone, and
+  <code>runs/&lt;id&gt;/runner/</code>; file-write only <code>runs/&lt;id&gt;/runner/</code>; network-outbound
+  only to the two mock ports on 127.0.0.1 (not blanket localhost — other
+  host services stay invisible); no process-exec. A host <em>read</em> (e.g.
+  <code>~/.ssh</code>) is now profile-denied, not just unsentinelled.</li>
+<li><strong>Scrubbed env</strong>: <code>env -i</code> + minimal allowlist; no credentials in the
+  runner's address space.</li>
+<li><strong>Sentinels reframed</strong> (codex #3): mutation canaries only. They cannot
+  prove no-read; read-confinement is proven by exact-oracle legs (L2/L3
+  assert the specific error kind — <code>PermissionDenied</code>, not any error).
+  L16's claim is reworded: "no detected mutation or unauthorized connection,"
+  not "leak-safe."</li>
+<li>Docker fallback documented; not v1.</li>
+</ul>
+<h2 id="test-matrix-r2">Test matrix (r2)</h2>
+<table>
+<thead>
+<tr>
+<th>Leg</th>
+<th>Layer</th>
+<th>Scenario</th>
+<th>Expected (exact oracle)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L1</td>
+<td>fs confinement</td>
+<td>rooted read + in-root write</td>
+<td>allow; file present</td>
+</tr>
+<tr>
+<td>L2</td>
+<td>fs escape</td>
+<td><code>../../etc/passwd</code>, absolute path, symlink→outside</td>
+<td><strong>PermissionDenied</strong> specifically (codex #3 — the macOS <code>NotFound</code> baseline failure must be diagnosed first, patch trigger #5; "any error" is not accepted)</td>
+</tr>
+<tr>
+<td>L3</td>
+<td>masked paths</td>
+<td>read masked file inside read root</td>
+<td>decorator deny verdict</td>
+</tr>
+<tr>
+<td>L4</td>
+<td>net egress</td>
+<td>curl allowed prefix (mock M1)</td>
+<td>allow; M1 log (monitor-owned) shows hit</td>
+</tr>
+<tr>
+<td>L5</td>
+<td>net egress</td>
+<td>curl non-allowlisted prefix (mock M2)</td>
+<td>deny at gate; <strong>M2 log shows zero hits</strong> — asserts prefix rejection only; DNS-rebinding gap lives in the parity table</td>
+</tr>
+<tr>
+<td>L6</td>
+<td>net method</td>
+<td>POST under GET-only</td>
+<td>deny at gate</td>
+</tr>
+<tr>
+<td>L7a–k</td>
+<td>limits</td>
+<td>one leg per <strong>all 11</strong> native limits incl. <code>max_array_elements</code> (codex #8)</td>
+<td><code>LimitExceeded</code>/<code>Timeout</code>, never abort</td>
+</tr>
+<tr>
+<td>L8</td>
+<td>parser bomb</td>
+<td>nested-paren depth charge on current pin</td>
+<td>journal shows SIGABRT → outcome <code>aborted</code> (boundary proven); if Parse error instead, better</td>
+</tr>
+<tr>
+<td>L9</td>
+<td>env</td>
+<td><code>env</code>/<code>printenv</code> with 2-key allowlist</td>
+<td>only allowed keys</td>
+</tr>
+<tr>
+<td>L10</td>
+<td>script bundle</td>
+<td>pinned bundle runs; mutated entry denied; <strong>mutated sourced file denied</strong> (codex #5 transitive check); composed denied under RegisteredOnly</td>
+<td>per-verdict</td>
+</tr>
+<tr>
+<td>L11</td>
+<td>params</td>
+<td><code>Exact</code> argv allow vs mutate; <code>NoneAllowed</code> with argv (codex #6)</td>
+<td>allow / deny / deny</td>
+</tr>
+<tr>
+<td>L12</td>
+<td>audit schema</td>
+<td>every leg's runner record validates against audit/2</td>
+<td>schema-valid</td>
+</tr>
+<tr>
+<td>L13</td>
+<td>audit fail-closed</td>
+<td>sink unwritable</td>
+<td>execution refused; <strong>journal</strong> carries outcome <code>error</code> (codex #9 — the failed sink cannot hold its own record)</td>
+</tr>
+<tr>
+<td>L14</td>
+<td>known-limit probes</td>
+<td>xargs/find-exec counter reset; binary-output flood</td>
+<td>DOCUMENTED-BYPASS (asserts the known leak exists; pins patch list)</td>
+</tr>
+<tr>
+<td>L15</td>
+<td>custom commands</td>
+<td>granted custom runs; same under <code>CustomGrant::None</code> denied</td>
+<td>allow / deny — asserts config selection only; the "customs are trusted native code" property is a stated axiom, not a tested claim (codex #8)</td>
+</tr>
+<tr>
+<td>L16</td>
+<td>harness isolation</td>
+<td>escape suite; sentinel sweep + mock logs + journal</td>
+<td>no mutation, no unauthorized connection (reworded claim)</td>
+</tr>
+<tr>
+<td>L17</td>
+<td>HITL approval (codex #7)</td>
+<td>mutating script under <code>mutating=Required</code>: (a) approved → executes; (b) denied → outcome <code>denied_approval</code>; (c) <code>mutating=Unattended</code> → executes</td>
+<td>per-verdict; audit carries <code>approval</code> block</td>
+</tr>
+<tr>
+<td>L18</td>
+<td>dynamic-primitive gate (codex #4)</td>
+<td>Strict policy vs eval/source/bash -c/$var-command/trap/xargs -exec corpus</td>
+<td>each denied at gate; audit records primitive hit</td>
+</tr>
+<tr>
+<td>L19</td>
+<td>wall clock (codex #8)</td>
+<td>runaway leg (sleep-loop)</td>
+<td>monitor kills at leg timeout; journal <code>killed</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="parity-gap-table-codex-8-gaps-asserted-not-hidden">Parity-gap table (codex #8 — gaps asserted, not hidden)</h3>
+<table>
+<thead>
+<tr>
+<th>AURA layer</th>
+<th>Gap</th>
+<th>Leg treatment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>6 output spill</td>
+<td>needs patch (06 #11), not in authorized triggers</td>
+<td>v1 asserts Cap only; spill listed as post-v1 patch</td>
+</tr>
+<tr>
+<td>3 DNS/private ranges</td>
+<td>needs connect-time patch (06 #9)</td>
+<td><code>deny_private_ranges</code> validated as prefix-only; DOCUMENTED-GAP leg asserting rebinding is possible</td>
+</tr>
+<tr>
+<td>5 preemptive timeout</td>
+<td>cooperative only</td>
+<td>L19 monitor-enforced; documented as monitor-owned</td>
+</tr>
+</tbody>
+</table>
+<h2 id="escape-corpus">Escape corpus</h2>
+<p>L2, L5, L8, L14, L18 + growth: labeled (hostile, target-layer,
+expected-verdict) scenario TOMLs; the BERT bootstrap set (08 r2). Phase-2.5
+findings land here frozen.</p>
+<h2 id="phase-25-seam-adversarial-llm-sessions">Phase 2.5 seam (adversarial LLM sessions)</h2>
+<p><code>probe-runner --shim</code>: interactive stdin/stdout loop exposing ONLY the
+policy-gated facade, under the same Seatbelt profile. Package = shim +
+scratch env + ROE prompt + monitor scoring script, launched externally as
+fresh K3 / GLM-5.2 sessions. Monitor sweeps cover host-side deviation
+(mutation canaries + journal anomalies). Successes → frozen corpus entries.</p>
+<h2 id="build-order-phase-2-r2">Build order (Phase 2, r2)</h2>
+<ol>
+<li>Harness crate, scenario TOML, monitor-computed provenance</li>
+<li>Policy gate (07 r2: bundles, Strict dynamic gate, approval mapping) +
+   audit emitter (08 r2) </li>
+<li>probe-runner + mock fixture (tiny_http, monitor-owned logs)</li>
+<li>harness-monitor + journal + sentinel/snapshot scoring</li>
+<li>Seatbelt profile (r2 read/write/port rules) + env scrub</li>
+<li>Legs L1–L19, run, report</li>
+<li>Patch-if-blocked triggers (pre-authorized): OverlayFs confinement (L2/L3
+   if decorator can't cover), macOS symlink-test diagnosis (06 #5),
+   counters accessor (L12 richness)</li>
+</ol>
+<h2 id="non-goals-v1-r2">Non-goals (v1, r2)</h2>
+<p>No docker, no aura-sandbox integration, no LLM in the harness, no BERT
+training, no patches beyond the three pre-authorized triggers, no claim
+that sentinels prove no-read.</p>
+</article><article id="doc-07"><span class="part-tag">Part 3 · Policy ADT r2</span>
+<h1 id="07-policy-adt-design-the-configurable-rule-graph-r2-post-codex">07 — Policy ADT Design: the configurable rule graph (r2, post-codex)</h1>
+<p>Status: synthesis r2 (orchestrator), revised per codex review ledger 10.
+Goal (user requirement #1): user-configurable shell guidelines for the AURA
+harness — restrict filesystem, restrict network, specific script call-outs —
+expressed as an <strong>enum-based ADT graph</strong> covering the maximum configurable
+surface for agent operations passing through the facade.</p>
+<h2 id="r2-changes-from-codex-blocking-47">r2 changes (from codex BLOCKING 4–7)</h2>
+<ul>
+<li>Command policy is no longer a mutually exclusive enum (codex #6).</li>
+<li>Dynamic code-loading primitives are governed explicitly; scripts must be
+  statically analyzable or denied (codex #4).</li>
+<li>Registered scripts are transitively content-addressed bundles, not single
+  hashes (codex #5).</li>
+<li><code>params</code> has no silent-grant <code>None</code> (codex #6).</li>
+<li>HITL approval is a first-class policy domain with legs and audit fields
+  (codex #7).</li>
+<li>Output-cap ownership disambiguated (codex #6).</li>
+</ul>
+<h2 id="design-inputs-verified-facts-that-shape-the-adt">Design inputs (verified facts that shape the ADT)</h2>
+<ul>
+<li><code>exec()</code> accepts arbitrary composed strings; no registered-script concept
+  (05, 03.1). The script/composed distinction lives in our layer.</li>
+<li>Parsing is public: static AST walk before execution, no rust-bash patch
+  needed (05, 04.18) — <strong>but</strong> static analysis only sees the initial AST.
+  <code>eval</code>, <code>source</code>, <code>exec</code>, <code>sh/bash -c</code>, traps, <code>$var</code> command names,
+  command substitution, and ExecCallback subcommands (<code>xargs</code>, <code>find -exec</code>)
+  construct or parse code at runtime (codex #4, cited walker/builtins lines).
+  Compiled VFS/curl confinement still contains <em>effects</em> when these fire;
+  command-level policy and effect classification do not survive them.
+  Hence the strict-static rule below.</li>
+<li>Custom <code>VirtualCommand</code>s are trusted native code bypassing every containment
+  claim (05, 03.2/03.3). They are a policy <em>grant</em>, never a default.</li>
+<li><code>NetworkPolicy</code> is fail-closed, prefix-based (05, 01.14).</li>
+<li>Branch vocabulary to stay compatible with: <code>EffectClass</code> × <code>ApprovalMode</code>,
+  mandatory security keys (D3), fail-closed audit.</li>
+</ul>
+<h2 id="the-adt-r2">The ADT (r2)</h2>
+<pre><code class="language-rust">/// Missing domain = domain denied, never permissive (branch D3).
+struct ShellPolicy {
+    script: ScriptPolicy,
+    filesystem: FilesystemPolicy,
+    network: NetworkRule,
+    env: EnvPolicy,
+    commands: CommandPolicy,
+    dynamic: DynamicCodePolicy,   // NEW r2
+    approval: ApprovalPolicy,     // NEW r2 (AURA layer 8)
+    limits: LimitsPolicy,
+    output: OutputPolicy,
+    audit: AuditPolicy,
+}
+
+/// Which scripts may run at all.
+enum ScriptPolicy {
+    /// Only pinned bundles. Composed (model-authored) source denied.
+    RegisteredOnly { bundles: Vec&lt;ScriptBundle&gt; },
+    /// Bundles run per their approval mode; composed source needs approval.
+    RegisteredPlusComposed { bundles: Vec&lt;ScriptBundle&gt;, composed: ComposedRule },
+    /// Anything parses = anything runs. Fully detached sandboxes only.
+    Open,
+}
+
+/// Transitive content-addressing (codex #5): the wrapper AND every file it
+/// can pull in. The gate resolves `source` targets through the VFS at check
+/// time; every resolved literal target must hash to a manifest entry.
+struct ScriptBundle {
+    id: String,                      // exposed in tool schema (branch convention)
+    entry_sha256: [u8; 32],
+    sourced: Vec&lt;([u8; 32], String)&gt;,// (hash, vfs path) of every sourced file
+    params: ParamsPolicy,            // mandatory — no silent-grant None (codex #6)
+    approval: Option&lt;ApprovalMode&gt;,  // per-script override of ApprovalPolicy
+}
+
+enum ParamsPolicy {
+    NoneAllowed,                    // argv must be empty
+    Any,                            // explicit operator choice, audited
+    Exact(Vec&lt;String&gt;),             // one exact argv vector (branch semantics)
+    OneOf(Vec&lt;Vec&lt;String&gt;&gt;),        // finite set of exact vectors
+}
+
+enum ComposedRule { RequireApproval, Deny }
+
+/// The strict-static rule (codex #4): a script that constructs code at
+/// runtime is unanalyzable, and unanalyzable = denied. Registered bundles
+/// must conform to Strict; composed source gets the policy's posture.
+enum DynamicCodePolicy {
+    /// Deny scripts containing: eval, source/. of non-literal or unpinned
+    /// targets, exec, sh/bash -c with non-literal args, trap with command
+    /// strings, $var in command position, xargs -exec / find -exec outside
+    /// an explicit grant. This is the registered-script authoring contract.
+    Strict,
+    /// Warn-and-floor: allow but verdict floors at RequireApproval.
+    ApprovalRequired,
+    /// No static constraint. Only meaningful with Open script policy.
+    Unrestricted,
+}
+
+/// r2: struct, not mutually-exclusive enum (codex #6).
+struct CommandPolicy {
+    builtins: BuiltinSet,            // which of the 80 commands + 40 builtins
+    custom: CustomGrant,             // trusted native code; None by default
+}
+
+enum BuiltinSet {
+    All,
+    Only(Vec&lt;String&gt;),               // positive allowlist
+    AllExcept(Vec&lt;String&gt;),          // subtractive; evaluated at the static
+                                     // walk AND re-checked per dispatch in
+                                     // Strict mode (precedence: deny wins)
+}
+
+enum CustomGrant {
+    None,
+    Only(Vec&lt;String&gt;),               // named grants; never shadow builtins
+                                     // (dispatch order puts builtins first)
+}
+
+struct FilesystemPolicy {
+    read_roots: Vec&lt;PathBuf&gt;,   // mandatory, non-empty (D3)
+    write_roots: Vec&lt;PathBuf&gt;,  // mandatory; empty = read-only, explicit
+    mask_paths: Vec&lt;PathBuf&gt;,   // unreadable even inside a read root
+    // Enforced by compiled backends + VFS decorator at operation time.
+    // Residuals: ReadWriteFs TOCTOU, OverlayFs confinement bug (06).
+}
+
+enum NetworkRule {
+    Disabled,
+    Egress {
+        allowed_url_prefixes: Vec&lt;String&gt;,  // mandatory, non-empty
+        methods: Vec&lt;HttpMethod&gt;,           // default [GET]
+        max_response_bytes: usize,
+        deny_private_ranges: bool,          // connect-time patch (06 #9); until
+                                            // patched, validated = prefix only
+    },
+}
+
+struct EnvPolicy { allow: Vec&lt;String&gt; }  // only these keys, operator-set values
+
+/// AURA layer 8, first-class (codex #7): maps effect class to approval mode.
+/// Applies to every execution — registered mutating scripts included.
+struct ApprovalPolicy {
+    read_only: ApprovalMode,        // default Unattended
+    mutating: ApprovalMode,         // default Required
+    network_egress: ApprovalMode,   // default Required
+    unknown: ApprovalMode,          // default Required (strictest)
+}
+
+enum ApprovalMode { Required, Unattended }
+
+/// The 11 native ExecutionLimits fields + monitor wall-clock (kept distinct
+/// from OutputPolicy: this is the hard interpreter cap).
+struct LimitsPolicy { /* 1:1 ExecutionLimits + wall_clock */ }
+
+/// Spill threshold must be &lt;= limits.max_output_size; validation error
+/// otherwise (codex #6 precedence rule).
+enum OutputPolicy {
+    Cap { max_bytes: usize },   // must equal limits cap in v1
+    CapAndSpill { spill_threshold: usize, spill_dir: PathBuf },  // patch (06 #11)
+}
+
+struct AuditPolicy {
+    sink: PathBuf,          // operator-controlled parent (0700, euid-owned)
+    fail_closed: bool,      // sink failure refuses execution (branch layer 7)
+}
+</code></pre>
+<h2 id="verdicts-and-composition-r2">Verdicts and composition (r2)</h2>
+<pre><code class="language-rust">enum Verdict {
+    Allow,
+    Deny(DenyReason),
+    RequireApproval { effect: EffectClass, justification: String },
+}
+enum EffectClass { ReadOnly, Mutating, NetworkEgress, Unknown }
+</code></pre>
+<p>Pipeline per <code>exec(source)</code>:</p>
+<ol>
+<li><strong>Source check</strong> — sha256 against <code>ScriptPolicy</code>. Registered: resolve the
+   bundle's sourced files through the VFS, verify each hash (codex #5).
+   Composed: apply <code>ComposedRule</code>.</li>
+<li><strong>Static AST walk</strong> — parse; walk every simple command: names against
+   <code>CommandPolicy.builtins</code>; redirects against <code>FilesystemPolicy</code>; curl args
+   against <code>NetworkRule</code>; assignments against <code>EnvPolicy</code>; dynamic-code
+   primitives against <code>DynamicCodePolicy</code> (codex #4 — any hit in Strict =
+   Deny).</li>
+<li><strong>Effect classification</strong> — Mutating if writes; NetworkEgress for curl;
+   ReadOnly otherwise; unclassifiable = Unknown. Force-classified builtin
+   table for known writers (sed -i, tee, cp/mv/rm/mkdir/touch, find -delete).</li>
+<li><strong>Approval mapping</strong> — <code>ApprovalPolicy[effect]</code> (or bundle override):
+   Required → verdict floors at RequireApproval. Deny &gt;
+   RequireApproval &gt; Allow.</li>
+<li><strong>Execute</strong> — on Allow (or operator-approved), compile the <code>RustBash</code>
+   instance from policy and exec. Runtime backstops that hold even where
+   static analysis is bypassed: compiled fs confinement, <code>NetworkPolicy</code>,
+   limits, VFS decorator logging.</li>
+<li><strong>Audit</strong> — emit per schema 08 r2, including the approval decision.</li>
+</ol>
+<p>Dry-run: steps 1–4 only — the <code>codex execpolicy check</code> analogue.</p>
+<h2 id="coverage-map-aura-security-layers-adt-r2">Coverage map: AURA security layers → ADT (r2)</h2>
+<table>
+<thead>
+<tr>
+<th>AURA layer</th>
+<th>ADT domain</th>
+<th>rust-bash mechanism</th>
+<th>parity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. SHA-pinned scripts</td>
+<td><code>ScriptPolicy</code> bundles + <code>ParamsPolicy</code></td>
+<td>our gate + VFS-resolved hashes</td>
+<td>transitive (r2)</td>
+</tr>
+<tr>
+<td>2. Env scrubbing</td>
+<td><code>EnvPolicy</code></td>
+<td>by construction + builder rejection</td>
+<td>full</td>
+</tr>
+<tr>
+<td>3. Network egress</td>
+<td><code>NetworkRule</code></td>
+<td><code>NetworkPolicy</code> (+DNS patch pending)</td>
+<td>prefix-level; DNS gap documented</td>
+</tr>
+<tr>
+<td>4. fs roots/masking</td>
+<td><code>FilesystemPolicy</code></td>
+<td>compiled backends + VFS decorator</td>
+<td>full modulo TOCTOU/OverlayFs residuals</td>
+</tr>
+<tr>
+<td>5. Limits/timeout</td>
+<td><code>LimitsPolicy</code></td>
+<td><code>ExecutionLimits</code> cooperative</td>
+<td>partial (cooperative; documented)</td>
+</tr>
+<tr>
+<td>6. Output cap+spill</td>
+<td><code>OutputPolicy</code></td>
+<td>native cap v1; spill patch pending</td>
+<td>cap only in v1</td>
+</tr>
+<tr>
+<td>7. Fail-closed audit</td>
+<td><code>AuditPolicy</code></td>
+<td>our layer + monitor journal (08 r2)</td>
+<td>full</td>
+</tr>
+<tr>
+<td>8. HITL tiering</td>
+<td><code>ApprovalPolicy</code> + <code>EffectClass</code></td>
+<td>routes to AURA hitl when embedded</td>
+<td>full (r2)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="non-goals-for-v1-r2">Non-goals for v1 (r2)</h2>
+<ul>
+<li><strong>No per-command runtime interception.</strong> Strict-static + compiled
+  confinement is the v1 posture; the <code>dispatch_command</code> patch is v2. This is
+  now an explicit, codex-informed trade: command-level allow/deny and effect
+  classification are only guaranteed for the statically analyzable subset —
+  which the registered-bundle authoring contract enforces.</li>
+<li>No custom-command sandboxing; enabled customs are trusted native code.</li>
+<li>No OS-sandbox parity claim (no Landlock/Seatbelt inside rust-bash).</li>
+</ul>
+<h2 id="resolved-open-questions-r1-r2">Resolved open questions (r1 → r2)</h2>
+<ol>
+<li>Static-only vs dispatch patch → <strong>static-only + Strict dynamic-primitive
+   denial for v1</strong>; dispatch patch deferred with the bypasses now enumerated.</li>
+<li><code>DenyBuiltins</code> ambiguity → resolved by <code>BuiltinSet</code> with defined
+   precedence (deny wins, re-checked at dispatch in Strict mode).</li>
+<li>Heuristic effect classification → force-classification table +
+   Unknown→Required flooring.</li>
+</ol>
+</article><article id="doc-08"><span class="part-tag">Part 4 · Audit schema + BERT feasibility r2</span>
+<h1 id="08-audit-schema-bert-feasibility-r2-post-codex">08 — Audit Schema + BERT Feasibility (r2, post-codex)</h1>
+<p>Status: synthesis r2 (orchestrator), revised per codex review ledger 10.
+Goal (user requirement #2): what plugging an audit layer into rust-bash looks
+like, and whether the traces are a strong enough schema to train a BERT
+classifier that suggests policy additions from usage data.</p>
+<h2 id="r2-changes-from-codex-blocking-910-minor-11">r2 changes (from codex BLOCKING 9–10, MINOR 11)</h2>
+<ul>
+<li>Two-channel audit: runner span record + <strong>monitor-owned journal</strong> covering
+  begin/abort/kill — a crash can no longer make the record impossible
+  (codex #9).</li>
+<li>New outcome values <code>aborted</code> / <code>killed</code> / <code>denied_approval</code> (codex #9, #7).</li>
+<li>Schema gains <code>deployment</code>, <code>policy_hash</code>, <code>operator_decision</code>,
+  source-retention reference, and concrete extraction targets alongside
+  classified values (codex #10).</li>
+<li>Privacy fix: raw denied paths leave the wire format; the JSONL carries
+  class + keyed hash, raw values live only in the secured run-dir copy
+  (codex #11).</li>
+<li>Net rows are honestly labeled static-only in v1 (no runtime net event
+  emission point exists without a patch) (codex #10).</li>
+</ul>
+<h2 id="where-the-audit-layer-plugs-in-r2">Where the audit layer plugs in (r2)</h2>
+<ol>
+<li><strong>Policy gate</strong> (our layer, static): source hash, bundle resolution, AST
+   features, per-domain verdicts, approval mapping, final verdict. No patch.</li>
+<li><strong>VFS decorator</strong> (our layer, runtime): every fs op logged before
+   delegating (05, 04.9–10). No patch.</li>
+<li><strong>Result span</strong> (our layer, post-exec): exit code, sizes, duration, error
+   kind. Whole-result only until the <code>ExecutionCounters</code> accessor patch
+   (05, 04.12; 06 #7).</li>
+<li><strong>Monitor journal</strong> (harness side; in production: the embedding harness's
+   supervisor): spawn/begin, exit status, signal, kill events. This channel
+   is owned by the supervisor, not the executor, so aborts and kills are
+   auditable (codex #9).</li>
+</ol>
+<p>Deferred (needs rust-bash patches): per-command timing/counters (dispatch
+hook), runtime net events (no emission point; builtins resolve before
+registered commands so we cannot decorate curl — 05, 04.7), env diffs.</p>
+<h2 id="the-jsonl-trace-schema-v2">The JSONL trace schema (v2)</h2>
+<p>One record per <code>exec()</code>, append-only, per-sink mutex:</p>
+<pre><code class="language-json">{
+  &quot;schema&quot;: &quot;rust-bash-audit/2&quot;,
+  &quot;trace_id&quot;: &quot;uuid&quot;,
+  &quot;ts&quot;: &quot;rfc3339&quot;,
+  &quot;deployment&quot;: {&quot;id&quot;: &quot;string&quot;, &quot;policy_hash&quot;: &quot;sha256-hex&quot;},
+  &quot;source&quot;: {
+    &quot;kind&quot;: &quot;registered | composed&quot;,
+    &quot;script_id&quot;: &quot;string|null&quot;,
+    &quot;sha256&quot;: &quot;hex&quot;,
+    &quot;byte_len&quot;: 0,
+    &quot;retained_ref&quot;: &quot;runs/&lt;id&gt;/source.bin&quot;
+  },
+  &quot;ast&quot;: {
+    &quot;parse_ok&quot;: true,
+    &quot;command_count&quot;: 0,
+    &quot;commands&quot;: [
+      {
+        &quot;name&quot;: &quot;grep&quot;,
+        &quot;argc&quot;: 2,
+        &quot;flags&quot;: [&quot;-r&quot;],
+        &quot;operands&quot;: [{&quot;class&quot;: &quot;path&quot;, &quot;path_class&quot;: &quot;read_root&quot;, &quot;root&quot;: &quot;project&quot;}],
+        &quot;redirects&quot;: [{&quot;kind&quot;: &quot;stdout_write&quot;, &quot;path_class&quot;: &quot;write_root&quot;, &quot;root&quot;: &quot;scratch&quot;}],
+        &quot;in_pipeline&quot;: true,
+        &quot;depth&quot;: {&quot;substitution&quot;: 0, &quot;paren&quot;: 0, &quot;heredoc_bytes&quot;: 0}
+      }
+    ],
+    &quot;pipeline_depth_max&quot;: 0,
+    &quot;dynamic_primitives&quot;: [],
+    &quot;uses&quot;: {&quot;curl&quot;: false, &quot;exec_callback&quot;: false, &quot;eval&quot;: false}
+  },
+  &quot;policy&quot;: {
+    &quot;verdicts&quot;: [
+      {&quot;domain&quot;: &quot;filesystem&quot;, &quot;verdict&quot;: &quot;deny&quot;, &quot;reason&quot;: &quot;path_outside_roots&quot;,
+       &quot;detail_hash&quot;: &quot;hmac-sha256[:16]&quot;}
+    ],
+    &quot;effect_class&quot;: &quot;mutating&quot;,
+    &quot;approval&quot;: {&quot;mode&quot;: &quot;required&quot;, &quot;decision&quot;: &quot;approved | denied | pending&quot;,
+                 &quot;decided_by&quot;: &quot;operator|auto&quot;, &quot;ts&quot;: &quot;rfc3339|null&quot;},
+    &quot;final&quot;: &quot;deny&quot;
+  },
+  &quot;runtime&quot;: {
+    &quot;fs_ops&quot;: [{&quot;op&quot;: &quot;read&quot;, &quot;path_class&quot;: &quot;read_root&quot;, &quot;root&quot;: &quot;project&quot;}],
+    &quot;net_static&quot;: [{&quot;url_prefix_matched&quot;: &quot;https://api.example.com/&quot;, &quot;method&quot;: &quot;GET&quot;, &quot;verdict&quot;: &quot;allow&quot;}],
+    &quot;result&quot;: {&quot;exit_code&quot;: 1, &quot;stdout_bytes&quot;: 0, &quot;stderr_bytes&quot;: 0,
+               &quot;duration_ms&quot;: 0, &quot;error&quot;: &quot;null|LimitExceeded|Timeout|Parse|Vfs|Network&quot;}
+  },
+  &quot;outcome&quot;: &quot;executed | denied_static | denied_runtime | denied_approval | aborted | killed | error&quot;
+}
+</code></pre>
+<p>Companion monitor-journal record (separate channel, supervisor-written):</p>
+<pre><code class="language-json">{&quot;schema&quot;: &quot;rust-bash-journal/1&quot;, &quot;trace_id&quot;: &quot;uuid&quot;, &quot;event&quot;: &quot;begin | exit | signal | killed&quot;,
+ &quot;ts&quot;: &quot;rfc3339&quot;, &quot;exit_status&quot;: 0, &quot;signal&quot;: &quot;null|SIGABRT|SIGKILL&quot;, &quot;leg&quot;: &quot;L8&quot;}
+</code></pre>
+<p>Wire-format privacy rule (codex #11): path values appear as
+(<code>path_class</code>, <code>root</code> label) pairs; deny details carry a keyed hash
+(<code>detail_hash</code>) correlatable to the secured run-dir copy, never the raw
+string. <code>operands[].class</code> gives ordered operand <em>shape</em> for sequence
+modeling; concrete values appear only for allowlisted domains where the
+value IS the policy target (<code>url_prefix_matched</code>, <code>root</code>).</p>
+<h2 id="bert-classifier-feasibility-r2">BERT-classifier feasibility (r2)</h2>
+<p><strong>The task, restated precisely:</strong> (a) novelty scoring — is this trace normal
+for <em>this deployment</em>; (b) rule extraction — turn a recurring pattern into a
+concrete policy addition (promote composed sha → registered bundle; add fs
+root; add egress prefix; tighten a param allowlist).</p>
+<h3 id="what-the-r2-schema-provides">What the r2 schema provides</h3>
+<ul>
+<li><strong>Deployment conditioning</strong>: <code>deployment.id</code> + <code>policy_hash</code> make
+  "normal for this deployment" a well-posed per-deployment distribution
+  (codex #10 gap, fixed).</li>
+<li><strong>Supervision labels</strong>: <code>policy.approval.decision</code> records the operator's
+  actual disposition of RequireApproval verdicts — the "free labels" claim is
+  now backed by a field (codex #10, #7).</li>
+<li><strong>Token stream</strong>: <code>commands[].name + flags + operand classes</code> is a natural
+  BERT input over a small stable vocabulary.</li>
+<li><strong>Extraction targets</strong>: <code>retained_ref</code> pins the exact composed source a
+  promotion rule would register; <code>url_prefix_matched</code> and <code>root</code> are the
+  concrete strings an egress/fs rule addition needs (codex #10).</li>
+<li><strong>Hostile labels</strong>: the escape corpus (09 r2) is synthetic but labeled.</li>
+</ul>
+<h3 id="honest-limits-r2">Honest limits (r2)</h3>
+<ul>
+<li><strong>Net rows are static-only in v1</strong> (<code>net_static</code>): extracted from the AST
+  pre-exec. A runtime-bypassed curl (dynamic primitive under Unrestricted
+  posture) emits no net row. Runtime net events need a rust-bash patch; the
+  v2 mitigation is that Strict posture denies the bypass primitives.</li>
+<li><strong>Whole-script granularity</strong>: per-command runtime records remain the
+  v2-patch improvement.</li>
+<li><strong>No counter features</strong> until the accessor patch (S).</li>
+<li><strong>Volume/imbalance</strong>: real deployment traces are the training set; the
+  corpus bootstraps.</li>
+</ul>
+<h3 id="verdict-r2">Verdict (r2)</h3>
+<p><strong>Feasible for the two v1 targets</strong> — deployment-conditioned novelty
+detection and registered-script promotion — on this schema as written. Rule
+extraction for fs/egress additions is feasible because extraction targets are
+now concrete fields, not inferred from classified shells. The r1 "feasible
+with one condition" claim was under-supported (codex #10); the r2 conditions
+are now schema changes already made, plus one standing patch (counters
+accessor) before model work starts.</p>
+</article><article id="doc-06"><span class="part-tag">Part 5 · Modernization lift (D4 repriced)</span>
+<h1 id="06-modernization-lift-answering-d4">06 — Modernization Lift: answering D4</h1>
+<p>Status: synthesis (orchestrator), built on verified artifacts 01–05.
+Scope: the shell-tool design doc (aura-shell-tool <code>docs/design/shell-tool.md</code>, D4)
+rejected rust-bash for the remediation mission. This document re-prices each D4
+finding for the <strong>governance-facade mission</strong> and lists the modernization lift
+that adoption would require.</p>
+<h2 id="d4-finding-by-finding">D4 finding-by-finding</h2>
+<h3 id="d41-no-stdprocess-cannot-run-real-binaries-structural-mission-scoped">D4.1 "No <code>std::process</code>; cannot run real binaries" — STRUCTURAL, mission-scoped</h3>
+<p>Verified: no host process spawning exists anywhere in the crate (05, claims
+01.19–20; PATH entries are VFS-resident scripts or <code># built-in:</code> stubs,
+<code>builtins.rs:4742-4833</code>).</p>
+<ul>
+<li>For the <strong>remediation mission</strong> (kubectl/python3/systemctl): still
+  disqualifying, permanently. rust-bash is not a shell-tool-branch replacement.</li>
+<li>For the <strong>governance-facade mission</strong>: this is the security argument, not a
+  gap. Nothing a script does can leave the interpreter except through three
+  auditable surfaces (VFS, curl, custom commands). The transparent facade the
+  user wants is exactly this property.</li>
+</ul>
+<p><strong>Position:</strong> rust-bash is a candidate for a <em>new tool class</em> (untrusted
+data-processing scripts, model-authored pipelines over virtualized resources),
+not for tier-1 registered remediation scripts. Both can coexist in AURA.</p>
+<h3 id="d42-cratesio-lapsed-at-030-vs-repo-070-confirmed-unchanged">D4.2 "crates.io lapsed at 0.3.0 vs repo 0.7.0" — CONFIRMED, UNCHANGED</h3>
+<p>Orchestrator re-verified via crates.io API: only 0.2.0 and 0.3.0 published
+(2026-03-31). Adoption means a git dependency pinned to sha <code>68d6dbaf</code>.</p>
+<p>Lift: <strong>S</strong> — a pinned git dep is lockfile-reproducible (05, correction 02.11);
+the real cost is provenance/caching, and the option to publish our own fork if
+adoption proceeds.</p>
+<h3 id="d43-git-pinned-brush-parser-now-fixable">D4.3 "git-pinned brush-parser" — NOW FIXABLE</h3>
+<p>Orchestrator re-verified: <code>brush-parser</code> is on crates.io at <strong>0.4.0</strong>
+(2026-05-03), with 0.3.0 (2025-11-17) and a long 0.2.x line. The pin
+(<code>ae35b6d</code>, 0.3.0-era) is ~123 commits behind upstream main.</p>
+<p>Lift: <strong>S/M</strong> — re-pin to <code>brush-parser = "0.4"</code> (or a newer git rev), run the
+full test suite, fix API drift. Unblocks: registry provenance, upstream fixes
+(including any recursion guards — see D4.4), and a cleaner cargo-audit story.</p>
+<h3 id="d44-uncatchable-brush-parser-stack-overflow-real-re-attributed-containable">D4.4 "uncatchable brush-parser stack overflow" — REAL, RE-ATTRIBUTED, CONTAINABLE</h3>
+<p>Verified nuance (05, correction 02.5): the pinned tokenizer's recursion lacks a
+depth bound, and parsing happens <em>before</em> any rust-bash limit applies. The
+reviewer could not confirm the exact D4 repro mechanism (upstream issue #948 is
+execution-time recursion inside <code>$(...)</code>, not parser-front-door nesting). The
+overflow itself is uncontested: <strong>stack overflow in Rust aborts the process and
+is not catchable</strong> — <code>catch_unwind</code> does not help (05, claim 04.15).</p>
+<p>Three-layer answer:</p>
+<ol>
+<li><strong>Process boundary (architectural, primary).</strong> Run each untrusted execution
+   in a dedicated worker process. A parser bomb then kills a disposable worker,
+   not the host harness. Our two-process harness design (probe-runner per run)
+   demonstrates this containment natively. For AURA embedding, this maps to the
+   existing scenario/harness shape: the facade runs as a subprocess, never in
+   the web-server process.</li>
+<li><strong>Pre-parse depth meter (cheap defense in depth).</strong> A lexical paren/bracket
+   depth scan before handing source to brush-parser; reject over threshold.
+   Imperfect (grammar-aware depth ≠ lexical depth) but blocks the known bomb
+   shapes for ~50 LOC.</li>
+<li><strong>Upstream re-pin (durable fix).</strong> Check whether brush 0.4.x added recursion
+   guards (Phase-2 task); if yes, the re-pin partially fixes this class.</li>
+</ol>
+<p>Lift: <strong>M</strong> — Phase 2 must reproduce the nested-paren bomb on the pinned rev
+(probe leg L8), then re-test after re-pin.</p>
+<h3 id="d45-one-contributor-no-commits-since-2026-04-05-confirmed">D4.5 "one contributor, no commits since 2026-04-05" — CONFIRMED</h3>
+<p>HEAD is <code>68d6dbaf</code>, dated 2026-04-05. Bus factor 1. If adopted, we fork-and-own
+(as with the rig fork precedent in aura). Lift: <strong>S</strong> to fork; <strong>ongoing M</strong> to
+own parser-adjacent patches.</p>
+<h2 id="new-findings-from-verification-not-in-d4">New findings from verification (not in D4)</h2>
+<p>These came from Wave-2 review and change the lift list:</p>
+<ol>
+<li><strong>OverlayFs is not root-confined</strong> (<code>overlay.rs:143-195</code>): <code>..</code> and lower-tree
+   symlinks read outside the lower root. Do not use OverlayFs in any security
+   proof until patched (normalize + confine <code>lower_path</code>). Lift: <strong>S</strong>.</li>
+<li><strong>ReadWriteFs TOCTOU</strong> (<code>readwrite.rs:121-145</code>): resolution and use are
+   separate; symlink-swap races remain. Acceptable for single-threaded
+   interpreter + operator-controlled roots; must be documented as a residual.</li>
+<li><strong>Custom commands are trusted native code</strong> (<code>api.rs:295-299</code>): a
+   <code>VirtualCommand</code> bypasses VFS, NetworkPolicy, env isolation, and audit. The
+   policy ADT must therefore <strong>forbid custom commands by default</strong> and treat any
+   enabled one as a policy-level grant. Zero-cost: it's a config rule, not code.</li>
+<li><strong>Aggregate limits are leaky</strong>: binary output uncounted (<code>walker.rs:398-400</code>),
+   ExecCallback sub-commands reset counters (<code>walker.rs:3367-3373,3435-3441</code>),
+   output checks are post-allocation. Acceptable for v1 (limits are DoS
+   guardrails, not hard bounds); document; patch later. Lift: <strong>M</strong>.</li>
+<li><strong>NetworkPolicy gaps</strong>: no DNS/IP-range constraint (<code>network.rs:43-56</code> —
+   prefix match only, DNS rebinding possible); curl method-label fallback can
+   send GET while reporting another method (<code>net.rs:550-594</code>). For AURA egress
+   policy, prefix matching is consistent with the branch's <code>net.egress</code> design;
+   DNS rebinding defense needs a patched connect-time check. Lift: <strong>M</strong>.</li>
+<li><strong>Baseline test failure on macOS</strong>: <code>read_file_through_symlink_escape_rejected</code>
+   fails at HEAD (<code>expected PermissionDenied, got NotFound("/escape")</code>,
+   <code>readwrite_tests.rs:475</code>). A confinement test failing on our dev platform is
+   a Phase-2 investigation blocker for the fs legs. Lift: <strong>S</strong> to diagnose.</li>
+<li><strong>ExecutionCounters unreachable</strong> (<code>api.rs:17-19</code>: <code>state</code> is <code>pub(crate)</code>):
+   post-exec resource features for the audit schema need either a one-line
+   accessor patch or whole-result-only features in v1. Lift: <strong>S</strong>.</li>
+<li><strong>cargo audit</strong>: 4 active <code>rustls-webpki 0.103.9</code> advisories + anyhow
+   unsoundness warning (E2 artifact 02). Lift: <strong>S</strong> via <code>cargo update</code> scope.</li>
+</ol>
+<h2 id="costed-lift-list">Costed lift list</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Item</th>
+<th>Effort</th>
+<th>Unblocks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Re-pin brush-parser to crates.io 0.4 (or newer rev)</td>
+<td>S/M</td>
+<td>D4.3, partial D4.4</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Worker-process execution boundary (embedder-side)</td>
+<td>M</td>
+<td>D4.4 containment</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Pre-parse lexical depth meter</td>
+<td>S</td>
+<td>D4.4 defense-in-depth</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Fix OverlayFs confinement (<code>lower_path</code> normalize+confine)</td>
+<td>S</td>
+<td>overlay legs, overlay-based masking</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Diagnose macOS symlink-escape test failure</td>
+<td>S</td>
+<td>fs proof legs</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Forbid-custom-commands policy default</td>
+<td>S</td>
+<td>closes the native-code bypass</td>
+</tr>
+<tr>
+<td>7</td>
+<td>ExecutionCounters accessor (or accept whole-result features)</td>
+<td>S</td>
+<td>audit schema richness</td>
+</tr>
+<tr>
+<td>8</td>
+<td>cargo update for rustls-webpki advisories</td>
+<td>S</td>
+<td>clean audit</td>
+</tr>
+<tr>
+<td>9</td>
+<td>DNS/IP-range egress check (connect-time)</td>
+<td>M</td>
+<td>real net.egress parity</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Aggregate-limit fixes (binary output, callback counters)</td>
+<td>M</td>
+<td>honest DoS bounds</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Output spill-to-0600-file semantics</td>
+<td>M</td>
+<td>parity with shell-tool layer 6</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Fork-and-own decision (if adopted)</td>
+<td>S + ongoing</td>
+<td>bus factor</td>
+</tr>
+</tbody>
+</table>
+<h2 id="verdict">Verdict</h2>
+<p>D4 was right for the remediation mission and stays right there. For the
+governance-facade mission, every D4 finding is either a feature (no fork/exec),
+still true but cheap to live with (crates.io lapse, bus factor), or newly
+fixable (brush-parser re-pin, parser-bomb containment via process boundary).
+The verification wave added seven findings D4 missed — two of them
+(OverlayFs confinement, custom-command trust boundary) are security-relevant
+and land in the harness escape corpus.</p>
+</article><article id="doc-05"><span class="part-tag">Part 6 · Wave-2 verification report</span>
+<h1 id="05-wave-2-verification-report">05 — Wave-2 Verification Report</h1>
+<p>Verifier: rust-reviewer (openai/gpt-5.6-sol), independent spot-check of artifacts
+01–04 against the checkout at HEAD <code>68d6dbaf</code>. Orchestrator-persisted verbatim
+(the reviewer is read-only and could not write this file).</p>
+<h2 id="per-artifact-verdicts">Per-artifact verdicts</h2>
+<h3 id="01-codemap">01-codemap</h3>
+<ol>
+<li><strong>CONFIRMED</strong> — The top-level source files, stated responsibilities, and approximate line counts match the checkout.</li>
+<li><strong>CONFIRMED</strong> — The interpreter file inventory, responsibilities, and line counts match.</li>
+<li><strong>CONFIRMED</strong> — The command-module inventory, responsibilities, and line counts match.</li>
+<li><strong>CONFIRMED</strong> — The VFS inventory, responsibilities, and line counts match.</li>
+<li><strong>CONFIRMED</strong> — <code>RustBash::exec</code> parses before calling <code>execute_program</code>, and the cited ordinary-command walker chain is accurate (<code>src/api.rs:23-40</code>, <code>src/interpreter/mod.rs:563-615</code>, <code>src/interpreter/walker.rs:380-400</code>).</li>
+<li><strong>CONFIRMED</strong> — Dispatch order is slash-containing path, <code>--help</code>, POSIX special builtin, function, regular builtin, cached PATH, PATH search, registered command, then exit 127 (<code>src/interpreter/walker.rs:3594-3691</code>).</li>
+<li><strong>CONFIRMED</strong> — PATH entries are VFS files interpreted as scripts or <code># built-in:</code> stubs; this path never starts a host process (<code>src/interpreter/builtins.rs:4742-4833</code>).</li>
+<li><strong>CONFIRMED</strong> — The <code>VirtualFs</code> operation surface, all-<code>&amp;self</code> design, and <code>deep_clone</code> method match <code>src/vfs/mod.rs:114-176</code>.</li>
+<li><strong>CORRECTED</strong> — Only <code>ReadWriteFs</code> and <code>OverlayFs</code> use host FS during library command execution, but host FS access is not literally confined to them because the CLI also uses <code>std::fs</code> (<code>src/main.rs:164-192,290</code>).</li>
+<li><strong>CORRECTED</strong> — <code>ReadWriteFs</code> rejects ordinary <code>..</code> and stable symlink escapes, but it does not eliminate TOCTOU races because resolution and the actual operation are separate (<code>src/vfs/readwrite.rs:6-10,121-145</code>).</li>
+<li><strong>CONFIRMED</strong> — <code>ExecutionLimits</code> has 11 fields, with the reported defaults (<code>src/interpreter/mod.rs:131-159</code>).</li>
+<li><strong>CONFIRMED</strong> — The cited primary enforcement sites exist; as the artifact discloses, the list is representative rather than an exhaustive proof of every path.</li>
+<li><strong>CONFIRMED</strong> — Reached limits propagate as <code>RustBashError::LimitExceeded</code> or <code>Timeout</code> through the Rust API (<code>src/error.rs:63-70</code>, <code>src/api.rs:40</code>), although this does not make stack overflow catchable.</li>
+<li><strong>CONFIRMED</strong> — <code>NetworkPolicy</code> fields, fail-closed defaults, URL-prefix validation, and method validation match <code>src/network.rs:12-69</code>.</li>
+<li><strong>CONFIRMED</strong> — Curl validates the initial request and each followed redirect, disables automatic redirects, limits response bodies, and sends <code>-o</code> output through VFS (<code>src/commands/net.rs:246-295,368-510</code>).</li>
+<li><strong>CONFIRMED</strong> — The <code>VirtualCommand</code>, <code>CommandContext</code>, <code>ExecCallback</code>, result/metadata types, and registration points match the cited code.</li>
+<li><strong>CONFIRMED</strong> — Public exports and feature gates match <code>src/lib.rs:87-107</code>.</li>
+<li><strong>CONFIRMED</strong> — Feature definitions and target-specific dependencies match <code>Cargo.toml:27-33,61-70</code>.</li>
+<li><strong>CONFIRMED</strong> — An independent scan found <code>unsafe</code> only in <code>src/ffi.rs</code> and <code>src/wasm.rs</code>, with none in interpreter, command, or VFS code.</li>
+<li><strong>CONFIRMED</strong> — Direct <code>std::process</code> use is limited to CLI <code>ExitCode</code>, direct <code>std::env</code> access is the CLI history <code>HOME</code> lookup, and no host process spawning or raw-FD API was found (<code>src/main.rs:5,127</code>).</li>
+</ol>
+<h3 id="02-deps-audit">02-deps-audit</h3>
+<ol>
+<li><strong>UNVERIFIABLE</strong> — <code>Cargo.toml:1-4</code> confirms version 0.7.0 and edition 2024, but the claimed crates.io version ceiling is externally sourced and was not re-fetched.</li>
+<li><strong>UNVERIFIABLE</strong> — The direct dependency list, git parser pin, prerelease <code>jaq-*</code> dependencies, and locked TLS versions are locally confirmed, but active-advisory status depends on external RustSec data.</li>
+<li><strong>UNVERIFIABLE</strong> — <code>Cargo.lock:198-200</code> confirms locked git <code>brush-parser 0.3.0</code>; crates.io publication, release date, edition, and MSRV claims require external metadata.</li>
+<li><strong>UNVERIFIABLE</strong> — The lock and local Cargo checkout confirm commit <code>ae35b6d</code>, but the 123-commit distance, upstream HEAD, dates, and messages are network-sourced.</li>
+<li><strong>CORRECTED</strong> — Parsing occurs before rust-bash execution limits and pinned tokenizer recursion lacks a depth bound, but issue #948 shows recursive shell-function execution inside <code>$(...)</code>, not a parser-nesting reproduction, so it does not demonstrate the claimed parser-front-door overflow (<code>src/api.rs:29-40</code>, cached <code>tokenizer.rs:598-675</code>).</li>
+<li><strong>UNVERIFIABLE</strong> — The lock confirms <code>rustls-webpki 0.103.9</code> and <code>anyhow 1.0.102</code>, but advisory validity and the recorded <code>cargo audit</code> result require external advisory state.</li>
+<li><strong>UNVERIFIABLE</strong> — Current locked versions are locally confirmed, while the listed compatible/latest upgrades are network-sourced <code>cargo outdated</code> results.</li>
+<li><strong>UNVERIFIABLE</strong> — The duplicate <code>darling</code>, <code>foldhash</code>, <code>getrandom</code>, <code>hashbrown</code>, <code>redox_syscall</code>, <code>windows-sys</code>, and <code>windows-targets</code> families are locally confirmed, but yanked-version and audit assertions are external.</li>
+<li><strong>CONFIRMED</strong> — <code>cargo check</code> succeeds and reproduces the future-incompatibility warning for <code>nix v0.30.1</code>.</li>
+<li><strong>UNVERIFIABLE</strong> — Edition 2024 is locally confirmed, but the exact Rust compiler floors—especially the claimed <code>brush-parser 0.4.0</code> MSRV—depend on external package metadata.</li>
+<li><strong>CORRECTED</strong> — The modernization list is broadly reasonable, but a commit-pinned git dependency is already lockfile-reproducible; moving to crates.io improves registry-only provenance and caching rather than creating reproducibility by itself, and upgrade outcomes require testing.</li>
+</ol>
+<h3 id="03-security-matrix">03-security-matrix</h3>
+<ol>
+<li><strong>CONFIRMED</strong> — No registered-script hash or identity allowlist exists, and public execution accepts arbitrary command strings (<code>src/api.rs:23-40</code>).</li>
+<li><strong>CORRECTED</strong> — Environment isolation is equivalent-by-construction only for rust-bash-provided execution paths; arbitrary native <code>VirtualCommand</code> implementations can directly read host environment or perform other host actions (<code>src/api.rs:295-299</code>, <code>src/commands/mod.rs:131-138</code>).</li>
+<li><strong>CORRECTED</strong> — Built-in curl is policy-gated and no <code>/dev/tcp</code> or other built-in network path was found, but a currently injectable custom <code>VirtualCommand</code> can make network calls without consulting <code>NetworkPolicy</code>.</li>
+<li><strong>CORRECTED</strong> — Static <code>..</code> and symlink escapes are tested, but <code>resolve_follow</code> does not close final-symlink TOCTOU because check and use remain separate (<code>src/vfs/readwrite.rs:6-10,121-145,246-268</code>).</li>
+<li><strong>CORRECTED</strong> — The partial verdict is correct, but <code>ExecutionLimits</code> has 11 rather than 10 fields; global time enforcement and the <code>timeout</code> command are cooperative (<code>src/interpreter/mod.rs:131-142</code>, <code>src/interpreter/walker.rs:358-375,400,3602</code>, <code>src/commands/utils.rs:1468-1493</code>).</li>
+<li><strong>CONFIRMED</strong> — Text output is retained in memory and accounted at complete-command checkpoints, and no spill-to-file facility exists (<code>src/interpreter/walker.rs:398-402</code>).</li>
+<li><strong>CONFIRMED</strong> — No built-in fail-closed JSONL audit sink exists; xtrace and verbose output are unstructured shell diagnostics.</li>
+<li><strong>CONFIRMED</strong> — Neither <code>VirtualCommand</code> nor <code>CommandMeta</code> provides effect classification, approval routing, or HITL tiering (<code>src/commands/mod.rs:40-85,131-138</code>).</li>
+</ol>
+<h3 id="04-interception-points">04-interception-points</h3>
+<ol>
+<li><strong>CONFIRMED</strong> — The builder exposes files, environment, cwd, commands, limits, network policy, and VFS injection but no pre-exec policy, audit, parser, or dispatch callback (<code>src/api.rs:243-329</code>).</li>
+<li><strong>CORRECTED</strong> — The synchronous parse/execute/EXIT-trap flow applies only after successful parsing and execution; parse errors return early as exit 2 and execution errors propagate before the EXIT trap (<code>src/api.rs:29-50</code>).</li>
+<li><strong>CONFIRMED</strong> — The ordinary simple-command path from <code>exec</code> through parse, program/list/pipeline/command execution, and <code>dispatch_command</code> is accurate.</li>
+<li><strong>CONFIRMED</strong> — <code>dispatch_command</code> sees the expanded name and argv, effective stdin, mutable state, and extra input FDs before resolution and is private (<code>src/interpreter/walker.rs:3594-3604</code>).</li>
+<li><strong>CONFIRMED</strong> — The stated whole-script, pipeline, AST-command, simple-command, and expanded-command granularities match the walker structure.</li>
+<li><strong>CONFIRMED</strong> — <code>VirtualCommand</code> and <code>CommandContext</code> expose the listed registered-command interception surface (<code>src/commands/mod.rs:36-56,131-138</code>).</li>
+<li><strong>CONFIRMED</strong> — Custom commands replace same-name registry entries, but functions and shell builtins normally resolve before registered commands (<code>src/api.rs:347-350</code>, <code>src/interpreter/walker.rs:3640-3682</code>).</li>
+<li><strong>CONFIRMED</strong> — <code>ExecCallback</code> carries only a command string and optional environment override, while child command/output counters are not folded back into the parent (<code>src/interpreter/walker.rs:3367-3373,3403-3503</code>).</li>
+<li><strong>CONFIRMED</strong> — <code>VirtualFs</code> is a broad, decoratable choke point for the listed filesystem operations (<code>src/vfs/mod.rs:114-176</code>).</li>
+<li><strong>CONFIRMED</strong> — Independent scanning found normal command filesystem access routed through VFS, with direct <code>std::fs</code> confined to CLI setup, native VFS backends, and tests.</li>
+<li><strong>CONFIRMED</strong> — Network enforcement is specific to curl, and no generic network or socket trait exists.</li>
+<li><strong>CORRECTED</strong> — <code>ExecutionCounters</code> and <code>InterpreterState</code> are re-exported, but callers cannot retrieve a shell instance's counters because <code>RustBash.state</code> is <code>pub(crate)</code> and no accessor exists (<code>src/api.rs:17-19,55-155</code>).</li>
+<li><strong>CONFIRMED</strong> — Execution is synchronous and in-process; sleep blocks the current thread and curl uses blocking ureq (<code>src/commands/net.rs:377-399</code>, <code>src/commands/utils.rs:369-387</code>).</li>
+<li><strong>CONFIRMED</strong> — <code>max_execution_time</code> is checked cooperatively at dispatch and complete-command boundaries rather than providing preemptive cancellation.</li>
+<li><strong>CONFIRMED</strong> — Public Rust <code>exec</code> has no unwind catcher, while FFI entry points use <code>catch_unwind</code>, which is not reliable recovery from stack overflow (<code>src/api.rs:23-52</code>, <code>src/ffi.rs:129-167,186-260</code>).</li>
+<li><strong>CONFIRMED</strong> — Shell state persists between calls, selected per-exec fields are reset, overrides are restored, and no transactional rollback exists (<code>src/api.rs:23-28,161-214</code>).</li>
+<li><strong>CONFIRMED</strong> — The <code>InterpreterState</code> inventory is accurate, and many operational fields plus the containing <code>RustBash.state</code> are crate-private (<code>src/interpreter/mod.rs:343-460</code>, <code>src/api.rs:17-19</code>).</li>
+<li><strong>CONFIRMED</strong> — Parsing and <code>execute_program</code> are public, but <code>exec</code> neither accepts nor returns AST and external callers cannot obtain the instance's private mutable state to execute a parsed AST through it.</li>
+<li><strong>CONFIRMED</strong> — The proposed trace fields are available or derivable across walker, VFS, and network sites if patched; this is a design assessment rather than an existing public event stream.</li>
+<li><strong>CONFIRMED</strong> — The listed per-command hooks, timings, structured events, environment diffs, resolution results, redirect metadata, pipeline topology, and per-command counters are absent or weak.</li>
+<li><strong>CONFIRMED</strong> — MCP exposes <code>bash</code>, <code>write_file</code>, <code>read_file</code>, and <code>list_directory</code>, and formats/truncates bash results as text (<code>src/mcp.rs:138-251</code>).</li>
+<li><strong>CONFIRMED</strong> — FFI provides whole-script execution and JSON configuration but no custom command callbacks, custom VFS, policy hooks, or structured counters (<code>src/ffi.rs:128-261,352-467</code>).</li>
+</ol>
+<h2 id="omissions-found">Omissions found</h2>
+<ul>
+<li><strong>OverlayFs is not root-confined.</strong> <code>lower_path</code> only strips a leading slash and joins the remainder to <code>lower</code>; lower reads, metadata calls, directory reads, and links then use that path directly (<code>src/vfs/overlay.rs:143-195</code>). <code>..</code> components or symlinks in the lower tree can therefore read outside the configured lower directory.</li>
+<li><strong>Custom commands are trusted native code.</strong> A public <code>VirtualCommand</code> implementation can bypass VFS, <code>NetworkPolicy</code>, host-environment isolation, audit assumptions, and the claim that no host process can be started.</li>
+<li><strong>Binary output bypasses <code>max_output_size</code>.</strong> Aggregate accounting adds only <code>stdout.len() + stderr.len()</code> and omits <code>ExecResult.stdout_bytes</code> (<code>src/interpreter/walker.rs:398-400</code>).</li>
+<li><strong>ExecCallback weakens aggregate limits.</strong> Callback sub-states reset <code>command_count</code> and <code>output_size</code>, and those counters are not folded into the parent (<code>src/interpreter/walker.rs:3367-3373,3435-3441</code>); repeated <code>xargs</code> or <code>find -exec</code> callbacks can exceed intended aggregate budgets.</li>
+<li><strong>Output limits are post-allocation checkpoints.</strong> A single command can construct an oversized result in memory before the next complete-command limit check.</li>
+<li><strong>Timeout enforcement remains command-dependent.</strong> Synchronous native work can overrun until it returns; curl has a separate transport timeout and sleep caps its own duration, but there is no general preemption mechanism.</li>
+<li><strong>Network URL allowlisting does not constrain resolved addresses.</strong> Prefix validation checks URL parsing and serialization, not DNS results or private/link-local IP ranges (<code>src/network.rs:43-56</code>), leaving DNS rebinding and address-range policy to the embedder.</li>
+<li><strong>No <code>/dev/tcp</code> bypass exists in current source.</strong> Independent searches found no <code>/dev/tcp</code>, <code>/dev/udp</code>, <code>std::net</code>, <code>TcpStream</code>, <code>UdpSocket</code>, or generic socket implementation; built-in curl is the sole native network implementation.</li>
+<li><strong>The curl method label can diverge from the request sent.</strong> If policy is configured to allow an unsupported non-body method, <code>send_request</code> falls back to <code>agent.get</code> while retaining the original method string in policy checks and verbose output (<code>src/commands/net.rs:550-594</code>).</li>
+<li><strong>EXIT traps do not run on all termination paths.</strong> Parse errors and propagated interpreter errors return before the trap block (<code>src/api.rs:29-50</code>), which matters if an embedder treats EXIT traps as cleanup or audit hooks.</li>
+</ul>
+<h2 id="overall-confidence-per-artifact">Overall confidence per artifact</h2>
+<ul>
+<li><strong>01-codemap — medium.</strong> The layout, dispatch order, execution flow, limits, API, and unsafe/process scans are strong, but host-FS wording and <code>ReadWriteFs</code> confinement are overstated, and the summary wrongly implies that <code>OverlayFs</code> is confined.</li>
+<li><strong>02-deps-audit — low.</strong> Manifest, lockfile, local parser checkout, and build-warning facts are solid, but most freshness, advisory, publication, and upstream-distance claims are externally sourced; issue #948 also does not prove parser-front-door overflow.</li>
+<li><strong>03-security-matrix — medium.</strong> The eight high-level verdict directions are useful, but the matrix understates the native custom-command trust boundary, overstates symlink-race resistance, and miscounts execution limits.</li>
+<li><strong>04-interception-points — high.</strong> The call graph and interception inventory are accurate; corrections are limited to EXIT-trap error paths and the practical accessibility of execution counters.</li>
+</ul>
+<h2 id="summary">Summary</h2>
+<p>The code map and interception inventory are mostly reliable, while the dependency
+audit cannot be fully revalidated without fresh network and advisory data. Ten
+claims require correction; none is wholly refuted. The largest omission is
+filesystem security: <code>ReadWriteFs</code> retains check/use symlink races, while
+<code>OverlayFs</code> permits <code>..</code> or symlink reads outside its lower directory.
+<code>NetworkPolicy</code> protects built-in curl, including redirects, but custom commands
+are trusted native code and can bypass VFS, environment, network, audit, and
+no-process assumptions. Resource controls are cooperative: binary output is
+uncounted, callback subcommands reset aggregate counters, oversized output can be
+allocated before checks, and stack overflow is not reliably catchable.</p>
+<hr />
+<h2 id="orchestrator-post-verification-addendum-2026-08-14">Orchestrator post-verification addendum (2026-08-14)</h2>
+<p>Externally-sourced claims re-verified by the orchestrator against the crates.io
+API (<code>-H "User-Agent: aura-exploration"</code>):</p>
+<ul>
+<li><strong>rust-bash on crates.io: lapsed at 0.3.0</strong> (published 2026-03-31; only 0.2.0
+  and 0.3.0 exist) while the repo is 0.7.0. D4's "git dependency on an
+  unreleased ref" claim <strong>still holds</strong>.</li>
+<li><strong>brush-parser on crates.io: now actively published — 0.4.0 (2026-05-03)</strong>,
+  with 0.3.0 (2025-11-17) and a long 0.2.x line. The git pin can be replaced by
+  a registry dependency; D4's "lapsed parser supply chain" concern is now
+  <strong>fixable by re-pin</strong>.</li>
+<li><strong>Baseline test run (<code>cargo test --all-features</code>): 1096 passed, 1 FAILED</strong> —
+  <code>vfs::readwrite_tests::tests::read_file_through_symlink_escape_rejected</code>
+  (<code>expected PermissionDenied, got NotFound("/escape")</code>, src/vfs/readwrite_tests.rs:475).
+  A symlink-escape confinement test failing on macOS at HEAD; likely
+  platform-specific path canonicalization (<code>/tmp</code> → <code>/private/tmp</code>). Recorded as
+  a Phase-2 investigation item — a confinement test that fails on our dev
+  platform is directly relevant to the security-layer proofs.</li>
+</ul>
+</article><article id="doc-03"><span class="part-tag">Appendix A · Security-layer matrix</span>
+<h1 id="rust-bash-security-layer-matrix-aura-governable-shell-access-facade">rust-bash security-layer matrix (AURA governable shell-access facade)</h1>
+<p>Agent: E3, exploration wave. HEAD: 68d6dbaf7ae059e29cfe1570a421b0e710ec8572.
+Scope: research only. Maps the 8 AURA security layers onto rust-bash by reading
+actual code. rust-bash is an in-process, single-threaded bash interpreter over a
+pluggable <code>VirtualFs</code>; there are <strong>no child OS processes</strong> (<code>std::process</code> absent
+from the library — only <code>main.rs:5</code> uses <code>ExitCode</code> for the CLI).</p>
+<h2 id="claims-numbered">Claims (numbered)</h2>
+<ol>
+<li>
+<p><strong>SHA-pinned registered scripts — ABSENT.</strong> Every <code>exec()</code> takes an arbitrary
+   composed command string, parses it, and runs it. There is <strong>no distinction
+   between "registered script" and "composed command"</strong> anywhere in the code path.
+   All command resolution is by name against builtins, shell functions, cached
+   PATH entries, and registered <code>VirtualCommand</code>s (<code>dispatch_command</code>,
+   <code>walker.rs:3594-3692</code>). Nothing hashes or pins a script. A SHA-pinned allowlist
+   would hook at the <code>exec()</code> boundary (<code>api.rs:23</code>) or <code>execute_program</code>
+   (<code>walker.rs:380</code>), hashing the input string and validating argv against an
+   exact-value allowlist before parse/execute. <strong>Cost M.</strong></p>
+</li>
+<li>
+<p><strong>Environment scrubbing — EQUIVALENT-BY-CONSTRUCTION (with a caveat).</strong> The
+   library does <strong>not</strong> read the host environment implicitly. The only
+   <code>std::env::var*</code> call in the whole crate is <code>main.rs:127</code> (<code>HOME</code> for the CLI
+   history file, outside the library). The default env is hardcoded constants
+   (<code>api.rs:352-377</code>: PATH, USER, HOSTNAME, OSTYPE, SHELL, BASH, TERM, HOME, PWD),
+   not host-derived. Because there is no child process there is no <code>env_clear</code>;
+   the risk AURA's layer-2 guards against (host identity/credentials leaking into
+   a spawned child) simply does not exist here. Caveat: the embedder can inject
+   host env via <code>RustBashBuilder::env</code> (<code>api.rs:283</code>) or <code>exec_with_overrides</code>
+   (<code>api.rs:161-183</code>), so a policy that <em>rejects</em> host-derived variables is still
+   needed if the facade is fed host state. <strong>Cost S.</strong></p>
+</li>
+<li>
+<p><strong>Network egress policy — PARTIAL.</strong> A <code>NetworkPolicy</code> exists
+   (<code>network.rs:12-70</code>) with fail-closed default (<code>enabled=false</code>,
+   <code>network.rs:21-32</code>), prefix-matching URL allowlist, method allowlist, redirect
+   cap, response-size cap, and timeout. Enforcement is <strong>only</strong> inside the <code>curl</code>
+   command (<code>net.rs:246</code> <code>enforce_policy</code>, called at <code>net.rs:369</code> and per-redirect
+   <code>net.rs:462</code>). There is no interpreter-level egress gate, so it is only as
+   strong as the set of network-capable commands (currently just <code>curl</code>). A script
+   cannot reach the network through <code>curl</code> when disabled, but any future
+   network command must remember to call <code>enforce_policy</code>. <strong>Cost S-M.</strong></p>
+</li>
+<li>
+<p><strong>Filesystem confinement — PARTIAL (single-root only).</strong> <code>ReadWriteFs::with_root</code>
+   (<code>readwrite.rs:60</code>) confines all paths under one canonicalized root; <code>resolve</code>
+   (<code>readwrite.rs:76</code>) normalizes <code>.</code>/<code>..</code> and canonicalizes the parent,
+   <code>resolve_follow</code> (<code>readwrite.rs:127</code>) closes the final-symlink TOCTOU gap, and
+   <code>canonicalize_existing</code> (<code>readwrite.rs:500</code>) re-checks the existing ancestor.
+   Escape via <code>..</code> and symlinks is rejected with <code>PermissionDenied</code> and covered by
+   tests (<code>readwrite_tests.rs:198,222,308,469,482,495</code>). However rust-bash has <strong>no
+   separate read_roots / write_roots / mask_paths concepts</strong> — it is one root for
+   both reads and writes, and there is no "masked path unreadable even inside a
+   root" mechanism. <strong>Cost M.</strong></p>
+</li>
+<li>
+<p><strong>Resource limits + timeout kill — PARTIAL (limits yes, kill-on-timeout no).</strong>
+   <code>ExecutionLimits</code> (<code>interpreter/mod.rs:131-161</code>) provides 10 bounds
+   (call depth, command count, loop iterations, execution time, output size,
+   string length, glob results, substitution depth, heredoc size, brace
+   expansion, array elements). <code>check_limits</code> (<code>walker.rs:358-377</code>) is
+   <strong>cooperative</strong>: it runs between commands and returns <code>LimitExceeded</code>/<code>Timeout</code>
+   errors. There is no process-group kill and no <code>RLIMIT_CORE</code> (no child
+   processes; <code>RLIMIT</code>/<code>libc</code>/<code>nix</code> absent). The <code>timeout</code> builtin is explicitly
+   non-preemptive and only checks after completion (<code>utils.rs:1468-1473</code>), so a
+   long-running single command blocks for its full duration. <strong>Cost M</strong> (limits
+   are cheap; true kill-on-timeout needs a thread + checkpoint strategy and is
+   structurally harder).</p>
+</li>
+<li>
+<p><strong>Output caps + spill — PARTIAL (cap yes, spill no).</strong> <code>max_output_size</code> is
+   enforced in <code>check_limits</code> (<code>walker.rs:366</code>), but exceeding it returns a
+   <code>LimitExceeded</code> error (<code>walker.rs:366-372</code>, propagated by <code>api.rs:40</code> <code>?</code>).
+   There is <strong>no spill-to-file</strong> facility and no <code>0600</code> spill file; output is
+   accumulated in memory as <code>String</code> (<code>walker.rs:399-402</code>), so there is no
+   streaming boundary at which to spill. <strong>Cost M.</strong></p>
+</li>
+<li>
+<p><strong>Fail-closed JSONL audit — ABSENT.</strong> There is no audit, structured-log, or
+   JSONL facility in the crate. The only trace-like features are bash's <code>xtrace</code>
+   (<code>set -x</code>, emitted to stderr, <code>walker.rs:2190-2250</code>) and <code>verbose</code>, neither of
+   which is a structured, fail-closed sink. No audit record is emitted per
+   execution, and there is no sink whose failure would refuse execution. <strong>Cost L</strong>
+   (requires a new audit hook at <code>exec()</code> plus a fail-closed sink policy).</p>
+</li>
+<li>
+<p><strong>HITL tiering — ABSENT.</strong> There is no mutating vs read-only effect
+   classification and no approval routing. Commands are homogeneous
+   <code>VirtualCommand</code> impls; nothing tags them by effect class. <strong>Cost L</strong> (needs a
+   classification layer over registered commands plus routing).</p>
+</li>
+</ol>
+<h2 id="evidence-fileline-citations">Evidence (file:line citations)</h2>
+<ul>
+<li>Composed-string execution, no script/command distinction:
+  <code>api.rs:23</code> (<code>exec(&amp;mut self, input: &amp;str)</code>), <code>api.rs:29-40</code>
+  (<code>parse</code> → <code>execute_program</code>), <code>walker.rs:380-408</code> (<code>execute_program</code>).</li>
+<li>Command dispatch by name (builtins/functions/PATH/registered):
+  <code>walker.rs:3594-3692</code> (<code>dispatch_command</code>), <code>walker.rs:3662-3683</code>.</li>
+<li>Registered commands are <code>VirtualCommand</code> impls, not pinned scripts:
+  <code>commands/mod.rs:131-138</code>, <code>commands/mod.rs:1051-1158</code>
+  (<code>register_default_commands</code>).</li>
+<li>No implicit host env read (library): only <code>main.rs:127</code>
+  (<code>std::env::var_os("HOME")</code>, CLI history, outside the lib).</li>
+<li>Default env is hardcoded constants, not host-derived:
+  <code>api.rs:352-377</code>; embedder injection points <code>api.rs:283</code>, <code>api.rs:161-183</code>.</li>
+<li>NetworkPolicy fail-closed default: <code>network.rs:21-32</code>; validation
+  <code>network.rs:43-69</code>; enforcement only in curl <code>net.rs:246</code>, <code>net.rs:369</code>,
+  <code>net.rs:462</code>; curl registered under <code>network</code> feature <code>commands/mod.rs:1154-1157</code>.</li>
+<li>ReadWriteFs root confinement: <code>readwrite.rs:60</code>, <code>readwrite.rs:76-119</code>,
+  <code>readwrite.rs:127-145</code>, <code>readwrite.rs:500-528</code>; escape tests
+  <code>readwrite_tests.rs:198,222,308,469,482,495</code>.</li>
+<li>OverlayFs (read-only lower + in-memory upper): <code>overlay.rs:46-50</code>, <code>overlay.rs:60-79</code>.</li>
+<li>MountableFs (longest-prefix mounts): <code>mountable.rs:51-98</code>.</li>
+<li>ExecutionLimits: <code>interpreter/mod.rs:131-161</code>; cooperative check
+  <code>walker.rs:358-377</code>; timeout builtin non-preemptive <code>utils.rs:1468-1473</code>.</li>
+<li>Output cap returns error, no spill: <code>walker.rs:366-372</code>, <code>api.rs:40</code>.</li>
+<li>No process/RLIMIT/kill: grep for <code>std::process|setrlimit|RLIMIT|libc|nix|fork</code>
+  returns only <code>main.rs:5</code> (<code>ExitCode</code>) and test/unix <code>PermissionsExt</code>.</li>
+<li>No audit/log facility: grep for <code>audit|jsonl|spill|0600</code> finds none; only
+  xtrace/verbose (<code>walker.rs:2190-2250</code>).</li>
+</ul>
+<h2 id="uncertainty">Uncertainty</h2>
+<ul>
+<li>I did not exhaustively read every builtin; the "only curl enforces egress"
+  claim is strong for the current command set (grep of <code>register_default_commands</code>
+  shows no other network command), but a future command could add egress without
+  an interpreter gate.</li>
+<li><code>/dev/tcp</code>-style redirection: I did not confirm whether the interpreter
+  implements <code>/dev/tcp</code> sockets; it appears absent (no socket code found), but
+  this was not positively verified, so the "cannot bypass via /dev/tcp" claim is
+  inferred rather than confirmed.</li>
+<li><code>mask_paths</code> and separate read/write roots are entirely absent; the claim that
+  OverlayFs "could approximate read_roots" is an assessment, not a tested design.</li>
+<li>Layer-7/8 adaptation costs are qualitative (S/M/L) estimates based on code
+  structure, not measured effort.</li>
+</ul>
+<h2 id="summary">Summary</h2>
+<p>rust-bash is a strong in-process sandbox foundation but implements only two of
+the eight AURA layers directly (env scrubbing is satisfied by construction since
+it never reads host env; resource limits exist). Network egress and filesystem
+confinement exist but are partial: egress is enforced only inside <code>curl</code>, and
+filesystem confinement is a single root with no read/write split and no
+mask_paths. The four governance layers AURA cares most about — pinned-script
+allowlisting, fail-closed JSONL audit, output spill, and HITL effect-class
+tiering — are entirely absent and require new mechanisms (audit and tiering are
+the largest, needing new architecture at the <code>exec()</code> boundary). Because there
+are no child OS processes, "process-group kill" and <code>RLIMIT_CORE</code> are
+structurally inapplicable; timeout is cooperative only. The cleanest adaptation
+seam for all governance layers is the <code>exec()</code>/<code>execute_program</code> boundary, which
+currently accepts arbitrary composed strings with no allowlist, audit, or effect
+classification.</p>
+<h2 id="matrix">Matrix</h2>
+<table>
+<thead>
+<tr>
+<th>AURA layer</th>
+<th>rust-bash status</th>
+<th>mechanism/gap</th>
+<th>adaptation cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. SHA-256-pinned registered scripts</td>
+<td>Absent</td>
+<td>No script-vs-composed distinction; every exec() is a string. Hook at api.rs:23 / walker.rs:380: hash input + exact-value argv allowlist.</td>
+<td>M</td>
+</tr>
+<tr>
+<td>2. Environment scrubbing</td>
+<td>Equivalent (by construction)</td>
+<td>No implicit host env read (main.rs:127 is CLI-only); default env is constants (api.rs:352-377). Gap: policy to reject host-injected env (api.rs:283/161).</td>
+<td>S</td>
+</tr>
+<tr>
+<td>3. Network egress policy</td>
+<td>Partial</td>
+<td>NetworkPolicy fail-closed (network.rs:21-32) but enforced only in curl (net.rs:246/369/462); no interpreter-level egress gate.</td>
+<td>S-M</td>
+</tr>
+<tr>
+<td>4. Filesystem confinement</td>
+<td>Partial</td>
+<td>ReadWriteFs single root (readwrite.rs:60-145) resists <code>..</code>/symlink escape (tests 198/222/308/469/482/495). Gap: no read_roots/write_roots/mask_paths.</td>
+<td>M</td>
+</tr>
+<tr>
+<td>5. Resource limits + timeout kill</td>
+<td>Partial</td>
+<td>ExecutionLimits cooperative (mod.rs:131, walker.rs:358-377); no process-group kill/RLIMIT (in-process). timeout non-preemptive (utils.rs:1468).</td>
+<td>M</td>
+</tr>
+<tr>
+<td>6. Output caps + spill</td>
+<td>Partial</td>
+<td>Cap enforced (walker.rs:366) but returns LimitExceeded; no spill-to-0600-file (output in-memory String).</td>
+<td>M</td>
+</tr>
+<tr>
+<td>7. Fail-closed JSONL audit</td>
+<td>Absent</td>
+<td>No audit/log facility; only xtrace/verbose (walker.rs:2190). New exec()-boundary audit hook + fail-closed sink.</td>
+<td>L</td>
+</tr>
+<tr>
+<td>8. HITL tiering</td>
+<td>Absent</td>
+<td>No mutating/read-only effect classes; homogeneous VirtualCommand. Needs classification + routing.</td>
+<td>L</td>
+</tr>
+</tbody>
+</table>
+</article><article id="doc-04"><span class="part-tag">Appendix B · Interception surface</span>
+<h2 id="claims-numbered">Claims (numbered)</h2>
+<ol>
+<li>The public builder can inject initial files, env, cwd, custom registered commands, execution limits, network policy, and a whole <code>VirtualFs</code> backend. It does not expose pre-exec policy callbacks, audit callbacks, parser hooks, or command-dispatch hooks.</li>
+<li><code>RustBash::exec()</code> is a synchronous whole-script entry point: it resets counters, stores source text, parses the input string, executes the parsed program, then optionally runs an EXIT trap.</li>
+<li>The internal execution path is <code>exec()</code> -&gt; <code>interpreter::parse()</code> -&gt; <code>execute_program()</code> -&gt; <code>execute_compound_list()</code> -&gt; <code>execute_and_or_list()</code> -&gt; <code>execute_pipeline()</code> -&gt; <code>execute_command()</code> -&gt; <code>execute_simple_command()</code> -&gt; <code>dispatch_command()</code> for ordinary simple commands.</li>
+<li><code>dispatch_command()</code> is the best single pre-command policy choke point. It sees the expanded command name, expanded argv, effective stdin, current <code>InterpreterState</code>, and extra input FDs before function, builtin, PATH, or registered-command dispatch. It is private, so a wrapper cannot use it without patching rust-bash.</li>
+<li>Granularity is per simple command at <code>dispatch_command()</code>, plus per AST command at <code>execute_command()</code>, pipeline-level at <code>execute_pipeline()</code>, and whole-script at public <code>exec()</code>.</li>
+<li><code>VirtualCommand</code> provides a stable custom-command interception surface for registered commands. <code>CommandContext</code> exposes VFS, cwd, exported env, typed shell variables, stdin, binary stdin, limits, network policy, an exec callback, and shell opts.</li>
+<li>Custom commands can replace entries in <code>state.commands</code>, including default registered commands with the same name, but cannot generally decorate shell builtins or functions through the public API because <code>dispatch_command()</code> tries POSIX special builtins, functions, and regular builtins before registered commands.</li>
+<li><code>ExecCallback</code> is used by commands such as <code>xargs</code> and <code>find -exec</code> to run subcommands. It observes only a command string plus an optional environment override and returns <code>CommandResult</code>; it does not expose AST, argv after expansion, filesystem touches, counters folded back to the parent, or per-subcommand structured events.</li>
+<li>The VFS trait is a broad filesystem choke point. A decorating <code>VirtualFs</code> can log reads, writes, appends, removes, mkdirs, readdir, stat/lstat, chmod, utimes, links, canonicalize, copy, rename, and glob operations.</li>
+<li>Runtime command file operations appear to be funneled through <code>VirtualFs</code>; grep found direct <code>std::fs</code> usage in the CLI entrypoint, native filesystem backends, and tests, not in normal interpreter command execution. The native <code>ReadWriteFs</code> and <code>OverlayFs</code> intentionally use <code>std::fs</code> behind the trait.</li>
+<li>Network enforcement is currently command-specific, not a global socket choke point. The built-in <code>curl</code> command calls <code>enforce_policy()</code> before the first request and before each redirect, then performs HTTP via <code>ureq</code>. There is no generic network trait for decorating all net attempts.</li>
+<li><code>ExecutionCounters</code> currently record command count, call depth, output size, start time, and substitution depth. They reset at every <code>exec()</code> and are stored in <code>InterpreterState</code>, but no public accessor exposes them directly except via the re-exported state type if an embedder is inside the crate or uses future API additions.</li>
+<li>Execution is synchronous and in-process. There is no async runtime in the interpreter path. <code>sleep</code> blocks the thread with <code>std::thread::sleep</code>; <code>curl</code> is synchronous through <code>ureq</code>.</li>
+<li><code>max_execution_time</code> is cooperative, not preemptive cancellation. It is checked in <code>check_limits()</code> after command count increments in <code>dispatch_command()</code> and after each complete command in <code>execute_program_with_stdin()</code>. A long-running single command can overrun until it returns or reaches an internal check.</li>
+<li>Public Rust <code>exec()</code> does not use <code>catch_unwind</code>. The C FFI wraps create/exec/free/last_error entry points in <code>catch_unwind</code>, but stack overflow is generally aborting or otherwise not reliably recoverable by this layer.</li>
+<li>A <code>RustBash</code> instance is designed to be reusable across <code>exec()</code> calls: state persists, counters and <code>should_exit</code> are reset at entry, and <code>exec_with_overrides()</code> restores cwd/env overrides afterward. Some fatal interpreter flags/state may remain observable internally after severe errors because there is no transaction rollback.</li>
+<li><code>InterpreterState</code> is rich internally: it holds VFS, env, cwd, functions, commands, shell/shopt opts, limits, counters, network policy, positional params, traps, aliases, call stack, persistent FDs, process-substitution state, current source text, line number, and more. The field is <code>pub(crate)</code> inside <code>RustBash</code>, so external embedders only see public accessors unless the API is extended.</li>
+<li><code>brush-parser</code> AST access exists through public <code>interpreter::parse(input) -&gt; ast::Program</code>, and <code>ExecResult</code>/<code>InterpreterState</code> are re-exported. However, <code>RustBash::exec()</code> only accepts strings and does not expose the parsed AST or accept an already-parsed program.</li>
+<li>Trace richness is enough for useful policy-suggestion training if rust-bash is patched at dispatch/VFS/network sites: command name, argv, source line, cwd, env snapshot, pipeline context, redirects, fs touches, net targets, verdicts, exit codes, output sizes, and limit counters are available or derivable.</li>
+<li>Missing or weak ML features include public per-command hooks, per-command timing, public AST event stream, env diffs, function/builtin resolution outcome as structured data, redirect metadata before/after expansion, pipeline topology in public output, normalized net request/response metadata, and resource counters per command rather than per <code>exec()</code>.</li>
+<li>MCP server mode is an integration point at JSON-RPC tool granularity. It exposes <code>bash</code>, <code>write_file</code>, <code>read_file</code>, and <code>list_directory</code>, but its <code>bash</code> result is text-formatted and truncated, so it is weaker than in-process hooks for audit/ML traces.</li>
+<li>FFI is an alternative whole-script integration point. It accepts JSON config for files/env/cwd/limits/network and exposes create/exec/free/version/last_error, but not custom command callbacks, custom VFS backends, policy callbacks, or structured counters.</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Interception point</th>
+<th>Granularity</th>
+<th>What it observes</th>
+<th>Mutation possible?</th>
+<th>Effort (S/M/L)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>RustBashBuilder</code> config</td>
+<td>Instance setup</td>
+<td>Initial files/env/cwd, custom registered commands, limits, network policy, VFS backend</td>
+<td>Yes: inject FS, command set, limits, network config</td>
+<td>S</td>
+</tr>
+<tr>
+<td>Public <code>RustBash::exec()</code> wrapper</td>
+<td>Whole script</td>
+<td>Raw input string, final stdout/stderr/exit, elapsed wall time externally</td>
+<td>Yes: allow/deny whole script before call; cannot see per-command without deeper hooks</td>
+<td>S</td>
+</tr>
+<tr>
+<td><code>interpreter::parse()</code> wrapper</td>
+<td>Whole script AST</td>
+<td>Raw script parsed to <code>ast::Program</code></td>
+<td>Read-only unless executing custom walker or patching</td>
+<td>M</td>
+</tr>
+<tr>
+<td><code>execute_program()</code> / compound/pipeline walkers</td>
+<td>AST list/pipeline</td>
+<td>AST structure, source locations, pipeline sequencing, control flow</td>
+<td>Yes with patch; private call path for most embedders</td>
+<td>L</td>
+</tr>
+<tr>
+<td><code>execute_command()</code></td>
+<td>AST command</td>
+<td>AST command variant and source line before expansion/dispatch</td>
+<td>Yes with patch</td>
+<td>L</td>
+</tr>
+<tr>
+<td><code>execute_simple_command()</code></td>
+<td>Simple command</td>
+<td>Assignments, redirects, process substitutions, expanded name/argv before dispatch</td>
+<td>Yes with patch</td>
+<td>L</td>
+</tr>
+<tr>
+<td><code>dispatch_command()</code></td>
+<td>Per expanded simple command</td>
+<td>Name, argv, state, stdin, extra FDs, resolution path opportunity</td>
+<td>Yes with patch; ideal allow/deny/approval gate</td>
+<td>M</td>
+</tr>
+<tr>
+<td><code>VirtualCommand</code> wrapper</td>
+<td>Per registered command</td>
+<td>Args, cwd, env, variables, stdin, limits, network policy, VFS, exec callback</td>
+<td>Yes for registered commands; not generic builtins/functions</td>
+<td>S/M</td>
+</tr>
+<tr>
+<td><code>ExecCallback</code> wrapper</td>
+<td><code>xargs</code>/<code>find -exec</code> subcommand string</td>
+<td>Command string and optional env override</td>
+<td>Yes with patch/custom command; current callback is built internally</td>
+<td>M</td>
+</tr>
+<tr>
+<td><code>VirtualFs</code> decorator</td>
+<td>Per file operation</td>
+<td>Paths, operation type, content sizes for reads/writes, metadata/glob activity</td>
+<td>Yes: deny/mutate/record FS operations</td>
+<td>S/M</td>
+</tr>
+<tr>
+<td><code>NetworkPolicy</code> / <code>curl::enforce_policy()</code></td>
+<td>Per curl URL/method attempt and redirect</td>
+<td>URL, HTTP method, allowed-prefix/method verdict</td>
+<td>Yes with patch or stricter policy; no generic socket hook</td>
+<td>M</td>
+</tr>
+<tr>
+<td><code>ExecutionCounters</code></td>
+<td>Per exec aggregate plus some live state</td>
+<td>command_count, output_size, call_depth, substitution_depth, start_time</td>
+<td>Read/record with API patch; limits already enforced</td>
+<td>S/M</td>
+</tr>
+<tr>
+<td>MCP server tools</td>
+<td>JSON-RPC tool call</td>
+<td>Tool name, command/path/content, text/truncated result</td>
+<td>Yes by wrapping server; weak structured internals</td>
+<td>S</td>
+</tr>
+<tr>
+<td>C FFI</td>
+<td>Whole sandbox/exec</td>
+<td>JSON config, command string, CExecResult, last error</td>
+<td>Yes at host wrapper level only</td>
+<td>S</td>
+</tr>
+<tr>
+<td>WASM wrapper</td>
+<td>Whole exec plus JS custom command</td>
+<td>JS config, command string, result object, JS command callbacks</td>
+<td>Yes at host/JS callback level; not native dispatch</td>
+<td>M</td>
+</tr>
+</tbody>
+</table>
+<h2 id="evidence-fileline-citations">Evidence (file:line citations)</h2>
+<ol>
+<li>Public API and entry: <code>src/api.rs:17</code> defines <code>RustBash</code>; <code>src/api.rs:23</code> begins <code>exec()</code>; <code>src/api.rs:24-28</code> resets counters/exit/source bookkeeping; <code>src/api.rs:29-40</code> parses then executes; <code>src/api.rs:42-50</code> fires EXIT trap.</li>
+<li>Builder surface: <code>src/api.rs:244-252</code> lists files/env/cwd/custom_commands/limits/network_policy/fs; <code>src/api.rs:276-303</code> sets files/env/cwd/custom commands/limits; <code>src/api.rs:307-317</code> sets array limit/network policy; <code>src/api.rs:321-329</code> injects custom FS; <code>src/api.rs:333-345</code> seeds the selected FS; <code>src/api.rs:347-350</code> inserts custom commands; <code>src/api.rs:402-465</code> constructs <code>InterpreterState</code>.</li>
+<li>Public shell helpers: <code>src/api.rs:56-78</code> exposes cwd, last exit, should_exit, command names/meta; <code>src/api.rs:97-151</code> exposes VFS convenience operations; <code>src/api.rs:153-155</code> registers a custom command after build; <code>src/api.rs:161-214</code> implements per-exec env/cwd/stdin overrides.</li>
+<li>Parse API: <code>src/interpreter/mod.rs:552-560</code> defines crate-private parser options; <code>src/interpreter/mod.rs:563-615</code> exposes <code>pub fn parse(input) -&gt; ast::Program</code>.</li>
+<li>Execution call graph: <code>src/interpreter/walker.rs:379-385</code> defines <code>execute_program</code>; <code>src/interpreter/walker.rs:387-405</code> loops complete commands; <code>src/interpreter/walker.rs:410-566</code> executes compound lists; <code>src/interpreter/walker.rs:568-624</code> executes and/or lists; <code>src/interpreter/walker.rs:627-778</code> executes pipelines; <code>src/interpreter/walker.rs:780-902</code> dispatches AST command variants; <code>src/interpreter/walker.rs:1690-2329</code> executes simple commands; <code>src/interpreter/walker.rs:3594-3692</code> dispatches expanded commands.</li>
+<li>Dispatch details: <code>src/interpreter/walker.rs:3601-3604</code> increments command count, checks limits, and handles path commands; <code>src/interpreter/walker.rs:3608-3638</code> intercepts <code>--help</code>; <code>src/interpreter/walker.rs:3640-3658</code> handles special builtins/functions/regular builtins; <code>src/interpreter/walker.rs:3661-3671</code> uses command hash/PATH search; <code>src/interpreter/walker.rs:3674-3682</code> falls back to registered commands.</li>
+<li>Simple command context: <code>src/interpreter/walker.rs:1700-1733</code> collects prefix redirects/assignments/process substitutions; <code>src/interpreter/walker.rs:1736-1750</code> expands command name and aliases; <code>src/interpreter/walker.rs:1751-1851</code> expands arguments and suffix redirects; <code>src/interpreter/walker.rs:2109-2145</code> handles stdin redirection; <code>src/interpreter/walker.rs:2153-2176</code> calls <code>dispatch_command()</code>; <code>src/interpreter/walker.rs:2268-2269</code> applies output redirects.</li>
+<li>Command trait/context: <code>src/commands/mod.rs:36-38</code> defines <code>ExecCallback</code>; <code>src/commands/mod.rs:40-56</code> defines <code>CommandContext</code>; <code>src/commands/mod.rs:131-138</code> defines <code>VirtualCommand</code>; <code>src/commands/mod.rs:1051-1158</code> registers default commands, including <code>curl</code> behind the network feature.</li>
+<li>Registered-command execution: <code>src/interpreter/builtins.rs:4695-4714</code> builds <code>CommandContext</code> with fs/cwd/env/variables/stdin/stdin_bytes/limits/network_policy/exec/shell_opts; <code>src/interpreter/builtins.rs:4726-4732</code> calls <code>cmd.execute()</code> and maps <code>CommandResult</code> to <code>ExecResult</code>.</li>
+<li>Exec callback: <code>src/interpreter/walker.rs:3367-3373</code> documents callback isolation and counter limitation; <code>src/interpreter/walker.rs:3374-3403</code> captures state into the callback; <code>src/interpreter/walker.rs:3403-3504</code> parses and executes callback command strings in isolated sub-state.</li>
+<li><code>xargs</code>/<code>find</code> use: <code>src/commands/exec_cmds.rs:37-46</code> implements <code>XargsCommand</code>; <code>src/commands/exec_cmds.rs:310-319</code> implements <code>FindCommand</code>; <code>src/interpreter/builtins.rs:4701-4712</code> supplies the exec callback to registered commands.</li>
+<li>VFS surface: <code>src/vfs/mod.rs:114-118</code> states the trait abstracts all filesystem operations; <code>src/vfs/mod.rs:119-153</code> lists CRUD, directory, metadata, link, canonicalize, copy, rename, and glob methods; <code>src/vfs/mod.rs:167-176</code> defines deep cloning for subshell isolation.</li>
+<li>VFS backing implementations and bypass scan: <code>src/vfs/readwrite.rs:1-8</code> describes <code>ReadWriteFs</code> as a <code>std::fs</code> passthrough; <code>src/vfs/readwrite.rs:246-416</code> implements <code>VirtualFs</code> with <code>std::fs</code>; grep found direct <code>std::fs</code> in <code>src/main.rs:164-192</code> and <code>src/main.rs:290</code> for CLI host reads, and in native VFS backends/tests, not normal command execution.</li>
+<li>Network policy: <code>src/network.rs:11-19</code> defines <code>NetworkPolicy</code>; <code>src/network.rs:21-31</code> disables network by default; <code>src/network.rs:43-57</code> validates URLs; <code>src/network.rs:59-69</code> validates methods; <code>src/commands/net.rs:246-272</code> enforces policy; <code>src/commands/net.rs:368-370</code> enforces before the request; <code>src/commands/net.rs:461-463</code> enforces redirect target/method; <code>src/commands/net.rs:377-382</code> builds a synchronous <code>ureq</code> agent; <code>src/commands/net.rs:550-594</code> sends the request.</li>
+<li>Counters/limits: <code>src/interpreter/mod.rs:129-143</code> defines <code>ExecutionLimits</code>; <code>src/interpreter/mod.rs:145-160</code> gives defaults; <code>src/interpreter/mod.rs:163-188</code> defines/reset <code>ExecutionCounters</code>; <code>src/interpreter/walker.rs:357-376</code> checks command count/output size/time; <code>src/interpreter/walker.rs:400</code> checks limits after a complete command; <code>src/interpreter/walker.rs:3601-3602</code> checks at command dispatch; <code>src/interpreter/walker.rs:3517-3527</code> checks call depth; <code>src/interpreter/walker.rs:2612-2616</code>, <code>2981-2985</code>, and <code>3059-3063</code> check loop iteration limits.</li>
+<li>Sync/cancellation/panic model: <code>src/commands/utils.rs:386</code> uses <code>std::thread::sleep</code>; <code>src/commands/net.rs:377-382</code> and <code>550-594</code> use blocking <code>ureq</code>; grep found no <code>tokio</code>/async runtime or generic thread spawning in interpreter code. <code>src/ffi.rs:129-167</code> wraps create in <code>catch_unwind</code>; <code>src/ffi.rs:186-260</code> wraps FFI exec; public Rust <code>src/api.rs:23-52</code> does not catch unwind.</li>
+<li>State model: <code>src/interpreter/mod.rs:343-460</code> defines <code>InterpreterState</code> with fs/env/cwd/functions/commands/options/limits/counters/network/traps/aliases/source/FDS/call-stack fields; <code>src/api.rs:17-19</code> stores it as <code>pub(crate)</code> inside <code>RustBash</code>.</li>
+<li>Reuse: <code>src/api.rs:23-28</code> resets per-exec counters and exit flags; <code>src/api.rs:161-214</code> saves and restores override cwd/env; <code>src/interpreter/mod.rs:343</code> says interpreter state is mutable and persistent across <code>exec()</code> calls.</li>
+<li>MCP: <code>src/mcp.rs:14-24</code> creates one persistent shell for the server; <code>src/mcp.rs:138-202</code> lists tools; <code>src/mcp.rs:217-251</code> executes the <code>bash</code> tool through <code>shell.exec()</code> and formats/truncates result; <code>src/mcp.rs:205-214</code> truncates long output.</li>
+<li>FFI: <code>src/ffi.rs:1-6</code> states JSON config maps to builder API; <code>src/ffi.rs:17-22</code> documents thread-safety constraints; <code>src/ffi.rs:128-168</code> creates a sandbox; <code>src/ffi.rs:181-261</code> executes a command; <code>src/ffi.rs:352-389</code> defines config/limits/network JSON fields; <code>src/ffi.rs:443-467</code> maps FFI config to <code>RustBashBuilder</code>.</li>
+<li>Library exports: <code>src/lib.rs:36-45</code> exposes modules; <code>src/lib.rs:87-95</code> re-exports <code>RustBash</code>, builder, command traits/context, errors, interpreter result/counters/limits/state, network policy, and VFS traits/backends; <code>src/lib.rs:100-107</code> feature-gates FFI/MCP/WASM.</li>
+</ol>
+<h2 id="uncertainty">Uncertainty</h2>
+<ol>
+<li>I did not run the test suite or compile feature combinations; this was source inspection at HEAD <code>68d6dbaf7ae059e29cfe1570a421b0e710ec8572</code>.</li>
+<li>Grep can miss indirect host I/O through dependencies or future feature-gated code, but direct <code>std::fs</code> usage in runtime command paths appears absent outside VFS backends and CLI setup.</li>
+<li>Stack overflow behavior depends on target/runtime panic strategy; <code>catch_unwind</code> should not be treated as a robust stack-overflow recovery mechanism.</li>
+<li>Some AST structures from <code>brush_parser</code> may carry richer topology than this artifact enumerates; embedders can parse separately, but executing with that AST through rust-bash’s normal engine is not public.</li>
+<li>Network assessment covers built-in <code>curl</code>; custom commands can perform arbitrary host network I/O unless the embedding process prevents it by policy outside rust-bash.</li>
+<li>Per-command environment diffs and filesystem causality can be reconstructed approximately by decorators/snapshots, but first-class event IDs/spans would require changes to the walker and VFS/context plumbing.</li>
+</ol>
+<h2 id="summary-200-words">Summary (&lt;= 200 words)</h2>
+<p>The strongest policy/audit design is an in-process patch that adds span-scoped hooks around <code>dispatch_command()</code>, plus decorators for <code>VirtualFs</code> and <code>curl</code> network enforcement. The public builder already supports injecting a custom VFS, custom registered commands, limits, and network policy, so filesystem auditing and whole-script policy are feasible without invasive changes. However, per-command allow/deny/approval requires internal walker changes because <code>dispatch_command()</code> and AST execution functions are private and there is no callback bus. <code>VirtualCommand</code> is useful for registered commands and command-specific decoration, but cannot uniformly wrap shell builtins/functions because builtins dispatch first. VFS is the broadest existing audit choke point for file touches. Network is narrower: built-in <code>curl</code> has clear policy checks, but custom commands can bypass them unless constrained externally. The trace surface is rich enough for ML policy suggestions if patched: command/argv/source line, pipeline context, fs paths, network URL/methods, exit codes, durations, and counters are available or derivable. Missing first-class data includes per-command timing, env diffs, structured AST/result events, and public counter/state access.</p>
+</article><article id="doc-01"><span class="part-tag">Appendix C · Code map</span>
+<h1 id="rust-bash-code-map-e1-exploration-artifact">rust-bash Code Map — E1 Exploration Artifact</h1>
+<p>Repo: /Users/mshearer/dev/rust-bash @ HEAD 68d6dba (docs updates)
+Version 0.7.0, edition 2024. Total <code>src/</code> ≈ 65,928 LOC (excluding tests/ dir).</p>
+<h2 id="claims">Claims</h2>
+<ol>
+<li><strong>src/ layout &amp; responsibilities (LOC)</strong> — <code>lib.rs</code> (110) crate root + re-exports; <code>api.rs</code> (1909) public <code>RustBash</code>/<code>RustBashBuilder</code>; <code>error.rs</code> (113) <code>RustBashError</code>/<code>VfsError</code>; <code>network.rs</code> (190) <code>NetworkPolicy</code>; <code>platform.rs</code> (10) time abstraction; <code>shell_bytes.rs</code> (86); <code>mcp.rs</code> (556) MCP server; <code>ffi.rs</code> (679) C FFI; <code>wasm.rs</code> (755) WASM; <code>main.rs</code> (402) CLI; <code>parser_smoke_tests.rs</code> (162) tests.</li>
+<li><strong>Interpreter</strong> — <code>interpreter/mod.rs</code> (1643) state+types+parse; <code>interpreter/walker.rs</code> (5725) AST execution; <code>interpreter/expansion.rs</code> (5392) word expansion; <code>interpreter/builtins.rs</code> (7435) shell builtins; <code>interpreter/arithmetic.rs</code> (1839); <code>interpreter/brace.rs</code> (634); <code>interpreter/pattern.rs</code> (924) glob/pattern.</li>
+<li><strong>Commands</strong> — <code>commands/mod.rs</code> (1370) <code>VirtualCommand</code> trait + registration; <code>commands/text.rs</code> (7105); <code>utils.rs</code> (2621); <code>file_ops.rs</code> (1775); <code>sed.rs</code> (1787); <code>diff_cmd.rs</code> (1497); <code>compression.rs</code> (1543); <code>exec_cmds.rs</code> (1205); <code>jq_cmd.rs</code> (855); <code>net.rs</code> (851); <code>navigation.rs</code> (517); <code>test_cmd.rs</code> (726); <code>awk/</code> (lexer 651, mod 669, parser 967, runtime 2023); <code>regex_util.rs</code> (160).</li>
+<li>
+<p><strong>VFS</strong> — <code>vfs/mod.rs</code> (177) <code>VirtualFs</code> trait; <code>vfs/memory.rs</code> (1048) <code>InMemoryFs</code>; <code>vfs/overlay.rs</code> (1071) <code>OverlayFs</code>; <code>vfs/readwrite.rs</code> (560) <code>ReadWriteFs</code>; <code>vfs/mountable.rs</code> (586) <code>MountableFs</code>; plus test modules.</p>
+</li>
+<li>
+<p><strong>Script flow: parse → expand → execute.</strong> <code>RustBash::exec</code> (api.rs:23) resets counters, calls <code>interpreter::parse</code> (interpreter/mod.rs:564) → <code>brush_parser::tokenize_str</code> + <code>parse_tokens</code> (git-pinned brush-parser, Cargo.toml:42) with pre-parse rewrites (ksh cmdsub, heredoc, <code>[[</code>), then <code>interpreter::execute_program</code> (walker.rs:380) → <code>execute_program_with_stdin</code> (walker.rs:387) → <code>execute_compound_list</code> (walker.rs:410) → <code>execute_and_or_list</code> (walker.rs:568) → <code>execute_pipeline</code> (walker.rs:627) → <code>execute_command</code> (walker.rs:780) → <code>execute_simple_command</code> (walker.rs:1690) → <code>dispatch_command</code> (walker.rs:3594). Word expansion is <code>expand_word</code> (expansion.rs, re-exported mod.rs:22).</p>
+</li>
+<li>
+<p><strong><code>dispatch_command</code> resolution order</strong> (walker.rs:3594-3692): (0) <code>--help</code> interception (3609); (1) special builtins when posix (3641); (2) user-defined functions (3650); (3) regular builtins (3655); (4) cached PATH hit via <code>command_hash</code> (3662); (5) PATH search via <code>search_path</code> (3667); (6) registered <code>VirtualCommand</code> fallback (3675); (7) not found → exit 127 (3686). If <code>name</code> contains <code>/</code>, it goes straight to <code>execute_path_command</code> (3603).</p>
+</li>
+<li>
+<p><strong>PATH commands are virtualized scripts, not host binaries.</strong> <code>execute_path_command</code> (builtins.rs:4742) stats the path on the VFS, checks exec bit (mode &amp; 0o111, 4777), reads the file bytes from the VFS (4785), and either (a) dispatches to a builtin/registered command if the script has <code># built-in: &lt;name&gt;</code> stub (4797-4808), or (b) parses and runs the script in a subshell (4811-4833). No host exec.</p>
+</li>
+<li>
+<p><strong><code>VirtualFs</code> trait surface</strong> (vfs/mod.rs:118-177): read/write/append/remove file, mkdir/mkdir_p/readdir/remove_dir(_all), exists/stat/lstat/chmod/utimes, symlink/hardlink/readlink, canonicalize, copy, rename, glob, glob_with_opts, and <code>deep_clone() -&gt; Arc&lt;dyn VirtualFs&gt;</code> (subshell isolation). All take <code>&amp;self</code> (interior mutability). Paths are absolute; <code>vfs_path_is_absolute</code> (mod.rs:37) rolls its own <code>/</code> check for wasm.</p>
+</li>
+<li>
+<p><strong>Host filesystem access happens ONLY in <code>OverlayFs</code> and <code>ReadWriteFs</code></strong> (both gated by <code>native-fs</code> feature). <code>ReadWriteFs</code> (readwrite.rs:249-416) is a thin <code>std::fs</code> passthrough: <code>std::fs::read/write</code>, <code>OpenOptions</code>, <code>remove_file</code>, <code>create_dir(_all)</code>, <code>read_dir</code>, <code>remove_dir(_all)</code>, <code>metadata</code>, <code>symlink_metadata</code>, <code>set_permissions</code>, <code>File::set_times</code>, <code>std::os::unix::fs::symlink</code>, <code>hard_link</code>, <code>read_link</code>, <code>canonicalize</code>, <code>copy</code>, <code>rename</code>. <code>OverlayFs</code> (overlay.rs:146-195) reads the lower layer via <code>std::fs::read</code>, <code>metadata</code>, <code>symlink_metadata</code>, <code>read_dir</code>, <code>read_link</code>; writes go to in-memory upper layer. <code>InMemoryFs</code> and <code>MountableFs</code> perform no host FS calls.</p>
+</li>
+<li>
+<p><strong>Path confinement.</strong> <code>ReadWriteFs::with_root</code> (readwrite.rs:60) canonicalizes root; <code>resolve</code> (readwrite.rs:77-145) strips leading <code>/</code>, joins root, verifies result starts_with root, and canonicalizes the parent to block symlink escape; escape → <code>PermissionDenied</code>. <code>OverlayFs</code> canonicalizes lower on construction (overlay.rs:73). <code>MountableFs::mount_point_for</code> (mountable.rs:577) finds the longest mount prefix; <code>deep_clone</code> deep-clones each mount (mountable.rs:543).</p>
+</li>
+<li>
+<p><strong><code>ExecutionLimits</code> has 11 fields (task says "10" — actually 11)</strong> (interpreter/mod.rs:131-143): max_call_depth, max_command_count, max_loop_iterations, max_execution_time, max_output_size, max_string_length, max_glob_results, max_substitution_depth, max_heredoc_size, max_brace_expansion, max_array_elements. Defaults at mod.rs:145-161 (call_depth 25, command_count 10k, loop 10k, time 30s, output 10MB, string 10MB, glob 100k, subst 50, heredoc 10MB, brace 10k, array 100k).</p>
+</li>
+<li>
+<p><strong>Limit enforcement call sites.</strong> <code>check_limits</code> (walker.rs:358) enforces max_command_count, max_output_size, and max_execution_time (→ <code>RustBashError::Timeout</code>); called at dispatch_command (walker.rs:3602) and per complete-command (walker.rs:400). max_call_depth: walker.rs:3519, builtins.rs:3479 &amp; 4225. max_loop_iterations: walker.rs:2612, 2981, 3059. max_substitution_depth: expansion.rs:488. max_glob_results: expansion.rs:2229/2256. max_brace_expansion: expansion.rs:55/77, walker.rs:1237/1360, brace.rs:71.. max_heredoc_size: walker.rs:4174, 4252. max_string_length: expansion.rs:106, mod.rs:1119, builtins.rs:3035. max_array_elements: mod.rs:1340 (set_array_element), 1417 (set_assoc_element).</p>
+</li>
+<li>
+<p><strong>Tripped limits are catchable errors.</strong> <code>RustBashError::LimitExceeded { limit_name, limit_value, actual_value }</code> (error.rs:63-67) and <code>RustBashError::Timeout</code> (error.rs:70). They propagate as <code>Err</code> from <code>exec</code>/<code>execute_program</code> (api.rs:40 <code>?</code>), so the embedder can catch them; they are NOT converted to exit codes inside the interpreter.</p>
+</li>
+<li>
+<p><strong><code>NetworkPolicy</code></strong> (network.rs:12-70): <code>enabled</code>, <code>allowed_url_prefixes</code>, <code>allowed_methods</code>, <code>max_redirects</code>, <code>max_response_size</code>, <code>timeout</code>. Default disabled, GET+POST, 5 redirects, 10MB, 30s. <code>validate_url</code> (network.rs:43) parses+normalizes via <code>url::Url</code> then prefix <code>starts_with</code> (defeats subdomain/userinfo confusion). <code>validate_method</code> (network.rs:60) uppercases and checks set.</p>
+</li>
+<li>
+<p><strong>Sandboxed curl</strong> (commands/net.rs): <code>CurlCommand</code> registered only with <code>network</code> feature (commands/mod.rs:1156). <code>enforce_policy</code> (net.rs:246) checks enabled, URL, method. Uses <code>ureq::Agent</code> with <code>max_redirects(0)</code> and manual per-hop redirect following (net.rs:377-472), re-validating each hop against policy (net.rs:462). Response body read via <code>read_body_limited</code> against <code>max_response_size</code> (net.rs:276-296, 478). Redirect count vs <code>policy.max_redirects</code> (net.rs:430). Output written to VFS via <code>ctx.fs.write_file</code> (net.rs:509).</p>
+</li>
+<li>
+<p><strong>Extension surface.</strong> <code>VirtualCommand: Send + Sync</code> with <code>name()</code>, <code>execute(&amp;[String], &amp;CommandContext) -&gt; CommandResult</code>, optional <code>meta()</code> (commands/mod.rs:132-138). <code>CommandContext</code> (commands/mod.rs:41-56): fs, cwd, env (exported scalars), variables, stdin, stdin_bytes, limits, network_policy, <code>exec: Option&lt;ExecCallback&gt;</code>, shell_opts. <code>ExecCallback</code> (mod.rs:37-38) = <code>&amp;dyn Fn(&amp;str, Option&lt;&amp;HashMap&lt;String,String&gt;&gt;) -&gt; Result&lt;CommandResult, RustBashError&gt;</code> for xargs/find. <code>CommandResult</code> (mod.rs:27-34) stdout/stderr/exit_code/stdout_bytes. <code>CommandMeta</code> (mod.rs:78) drives <code>--help</code>. Registration: <code>register_default_commands</code> (commands/mod.rs:1051) ~80 commands; <code>RustBash::register_command</code> (api.rs:154); builder <code>.command</code> (api.rs:296).</p>
+</li>
+<li>
+<p><strong>Public API exports</strong> (lib.rs:87-107): <code>RustBash</code>, <code>RustBashBuilder</code>, <code>CommandContext</code>, <code>CommandMeta</code>, <code>CommandResult</code>, <code>ExecCallback</code>, <code>VirtualCommand</code>, <code>RustBashError</code>, <code>VfsError</code>, <code>ExecResult</code>, <code>ExecutionCounters</code>, <code>ExecutionLimits</code>, <code>InterpreterState</code>, <code>ShellOpts</code>, <code>Variable</code>, <code>VariableAttrs</code>, <code>VariableValue</code>, <code>builtin_names</code>, <code>NetworkPolicy</code>, <code>DirEntry</code>, <code>InMemoryFs</code>, <code>Metadata</code>, <code>MountableFs</code>, <code>NodeType</code>, <code>VirtualFs</code>. <code>OverlayFs</code>/<code>ReadWriteFs</code> only with <code>native-fs</code> (lib.rs:97-98). <code>ffi</code> module with <code>ffi</code>; <code>mcp</code> with <code>cli</code>; <code>wasm</code> with <code>wasm</code>+wasm32.</p>
+</li>
+<li>
+<p><strong>Feature flags</strong> (Cargo.toml:27-33): default = <code>cli</code>, <code>network</code>, <code>native-fs</code>; <code>cli</code> (clap+rustyline, main.rs bin); <code>ffi</code> (serde); <code>wasm</code> (wasm-bindgen/js-sys/serde/serde-wasm-bindgen); <code>network</code> (ureq+url, non-wasm32); <code>native-fs</code> (no deps, gates OverlayFs/ReadWriteFs). NetworkPolicy has a stub when <code>network</code> off (lib.rs:46-85).</p>
+</li>
+<li>
+<p><strong><code>unsafe</code> usage is confined to FFI/WASM boundaries only.</strong> Hits: wasm.rs:362-363 (<code>unsafe impl Send/Sync</code>), wasm.rs:512-513/562-565 (fat-pointer transmute for JS exec callback); ffi.rs:127-128, 182, 274, 309, 325, 340 (<code>#[unsafe(no_mangle)]</code> + <code>unsafe extern "C"</code>), ffi.rs:135/198/206/230/279/286/294/312 (<code>CStr::from_ptr</code>, <code>Box::from_raw</code>, <code>slice_from_raw_parts_mut</code>). <strong>No <code>unsafe</code> in the interpreter, commands, or VFS core.</strong></p>
+</li>
+<li>
+<p><strong><code>std::process</code> and host env access are minimal.</strong> <code>std::process</code> only <code>ExitCode</code> in main.rs:5. <code>std::env</code> only <code>var_os("HOME")</code> for history path in main.rs:127. No <code>process::Command</code>, no raw fds, no <code>libc</code>, no <code>AsRawFd</code> anywhere. <code>sleep</code> uses <code>std::thread::sleep</code> capped to execution time limit (utils.rs:386). The <code>env</code>/<code>printenv</code> commands render the shell's in-memory env map (utils.rs:575), not host env. <code>$PPID</code>/<code>$BASHPID</code>/<code>$$</code> are synthesized integers in <code>InterpreterState</code> (mod.rs:365-371), not real PIDs.</p>
+</li>
+</ol>
+<h2 id="evidence">Evidence</h2>
+<ul>
+<li>C1 (layout/LOC): <code>wc -l</code> over src/*<em>/</em>.rs (see Claims 1-4); lib.rs module decls lib.rs:36-110.</li>
+<li>C5 (flow): api.rs:23-40; interpreter/mod.rs:564-615 (parse); walker.rs:380-408, 410, 568, 627, 780, 1690, 3594; mod.rs:22 (expand_word re-export).</li>
+<li>C6 (dispatch): walker.rs:3594-3692.</li>
+<li>C7 (PATH scripts): builtins.rs:4742-4834.</li>
+<li>C8 (trait): vfs/mod.rs:118-177; vfs_path_is_absolute mod.rs:37-39.</li>
+<li>C9 (host fs): readwrite.rs:249-416; overlay.rs:146-195; memory.rs:1-72 (no std::fs); mountable.rs (no std::fs).</li>
+<li>C10 (confinement): readwrite.rs:60-145, 500-519; overlay.rs:73; mountable.rs:577-585, 543-550.</li>
+<li>C11 (limits fields/defaults): interpreter/mod.rs:131-161.</li>
+<li>C12 (call sites): walker.rs:358-377, 3602, 400, 3519, 2612/2981/3059, 4174/4252, 1237/1360; expansion.rs:488, 2229/2256, 55/77, 106; brace.rs:71; mod.rs:1119, 1340, 1417; builtins.rs:3479, 4225, 3035.</li>
+<li>C13 (catchability): error.rs:63-71; api.rs:40.</li>
+<li>C14 (NetworkPolicy): network.rs:12-70.</li>
+<li>C15 (curl): net.rs:246-296, 316-543; commands/mod.rs:1156.</li>
+<li>C16 (extension): commands/mod.rs:27-38, 41-56, 78-85, 132-138, 1051-1159; api.rs:154, 296.</li>
+<li>C17 (exports): lib.rs:87-107.</li>
+<li>C18 (features): Cargo.toml:27-33; lib.rs:44-107.</li>
+<li>C19 (unsafe): rg <code>\bunsafe\b</code> src/ (wasm.rs:362-565, ffi.rs:127-340).</li>
+<li>C20 (process/env): rg <code>std::process|std::env</code> src/ (main.rs:5, 127); utils.rs:386, 575; mod.rs:365-371.</li>
+</ul>
+<h2 id="uncertainty">Uncertainty</h2>
+<ul>
+<li>The task says "10 execution limits" but <code>ExecutionLimits</code> declares <strong>11</strong> fields (max_array_elements is the extra one). README/lib.rs docstring also says "10". This is a doc/count discrepancy, not a code bug.</li>
+<li>"80 virtualized commands" — I counted ~80 in <code>register_default_commands</code> (commands/mod.rs:1053-1149) plus 40 shell builtins (builtins.rs:133-177); exact total depends on how PATH stub scripts are counted. Not exhaustively enumerated.</li>
+<li>LOC figures are from <code>wc -l</code> and include blank lines/comments/tests within each file; not semantic LOC.</li>
+<li>I did not fully trace every one of the 11 limits' every call site (e.g. whether <code>max_string_length</code> is also enforced in expansion paths beyond the cited lines); the cited sites are the primary/representative ones.</li>
+<li><code>dispatch_command</code> "registered command" ordering: functions (step 2) shadow registered commands (step 6), and builtins (step 3) shadow registered commands — confirmed from code, but the <code>--help</code> path (step 0) has its own shadowing logic worth noting as subtle.</li>
+<li>Whether <code>OverlayFs</code>/<code>ReadWriteFs</code> compile on wasm is untested here; they are <code>cfg(native-fs)</code> and use <code>std::os::unix</code> (readwrite.rs:13), implying Unix-only.</li>
+</ul>
+<h2 id="summary">Summary</h2>
+<p>rust-bash is a fully in-process bash interpreter. <code>RustBash::exec</code> parses via git-pinned brush-parser (with several pre-parse source rewrites) into an AST, then a walker executes it: compound list → and-or → pipeline → command → dispatch. <code>dispatch_command</code> resolves: --help, special builtins, functions, builtins, cached PATH, PATH search, registered VirtualCommand, else exit 127. PATH "commands" are virtualized — read from the VFS and interpreted as scripts or <code># built-in:</code> stubs, never host binaries. All file I/O goes through the <code>VirtualFs</code> trait (read/write/stat/glob/deep_clone); only <code>OverlayFs</code> and <code>ReadWriteFs</code> (native-fs feature) touch the real host via <code>std::fs</code>, with root-confinement and symlink-escape checks. 11 execution limits are enforced at scattered call sites and surface as catchable <code>RustBashError::LimitExceeded</code>/<code>Timeout</code>. Sandboxed curl uses ureq with per-hop redirect re-validation against <code>NetworkPolicy</code>. <code>unsafe</code> exists only in the FFI/WASM shims; there is no <code>std::process</code> spawning and no host-env reads in the crate core. The extension surface is the <code>VirtualCommand</code> trait + <code>CommandContext</code>/<code>ExecCallback</code>.</p>
+</article><article id="doc-02"><span class="part-tag">Appendix D · Dependency audit</span>
+<h2 id="claims-numbered-each-tied-to-evidence">Claims (numbered, each tied to evidence)</h2>
+<ol>
+<li>
+<p>The repo is <code>rust-bash</code> <code>0.7.0</code>, edition <code>2024</code>, but crates.io still serves <code>rust-bash</code> only through <code>0.3.0</code>. Evidence: <code>Cargo.toml:1-4</code>; crates.io API <code>default_version/max_version/newest_version/max_stable_version = 0.3.0</code>; versions list has only <code>0.3.0</code> and <code>0.2.0</code>.</p>
+</li>
+<li>
+<p>The direct dependency set is current enough to build, but it includes a git-pinned parser, prerelease <code>jaq-*</code> crates, and a network/TLS stack with active RustSec advisories. Direct normal deps from <code>Cargo.toml:39-59</code>: <code>base64 = "0.22"</code>, <code>bitflags = "2.11.0"</code>, <code>brush-parser = { git = "https://github.com/reubeno/brush.git", rev = "ae35b6dd09f394c66fd805bea747e35a013ee978" }</code>, <code>chrono = "0.4"</code>, <code>chrono-tz = "0.10.4"</code>, <code>clap = { version = "4.6.0", features = ["derive"], optional = true }</code>, <code>flate2 = { version = "1", default-features = false, features = ["rust_backend"] }</code>, <code>jaq-core = "3.0.0-gamma"</code>, <code>jaq-json = "2.0.0-gamma"</code>, <code>jaq-std = "3.0.0-gamma"</code>, <code>md-5 = "0.10"</code>, <code>parking_lot = "0.12.5"</code>, <code>regex = "1.12.3"</code>, <code>rustyline = { version = "17.0.2", optional = true }</code>, <code>serde = { version = "1.0.228", features = ["derive"], optional = true }</code>, <code>serde_json = "1"</code>, <code>sha1 = "0.10"</code>, <code>sha2 = "0.10"</code>, <code>similar = "2.7.0"</code>, <code>tar = "0.4"</code>. Target deps from <code>Cargo.toml:61-70</code>: non-wasm <code>ureq = { version = "3", optional = true }</code>, <code>url = { version = "2.5.8", optional = true }</code>; wasm <code>wasm-bindgen = { version = "0.2.114", optional = true }</code>, <code>js-sys = { version = "0.3.91", optional = true }</code>, <code>web-time = "1.1.0"</code>, <code>serde-wasm-bindgen = { version = "0.6.5", optional = true }</code>, <code>chrono = { version = "0.4", features = ["wasmbind"] }</code>. Dev deps from <code>Cargo.toml:72-84</code>: <code>assert_cmd = "2.2.0"</code>, <code>datatest-stable = "0.3.3"</code>, <code>insta = { version = "1.46.3", features = ["filters"] }</code>, <code>predicates = "3.1.4"</code>, <code>rustyline = "17.0.2"</code>, <code>serde = { version = "1.0.228", features = ["derive"] }</code>, <code>tempfile = "3.27.0"</code>, <code>tiny_http = "0.12.0"</code>, <code>toml = "1.0.7"</code>, <code>toml_edit = "0.25.5"</code>.</p>
+</li>
+<li>
+<p>The prior claim that <code>brush-parser</code> was unpublished is now false. <code>brush-parser</code> is published on crates.io; current default/newest/max stable is <code>0.4.0</code>, published 2026-05-03, edition 2024, <code>rust_version = 1.88.0</code>. The locked git rev is still <code>brush-parser v0.3.0</code>, so the dependency is both pinned and behind.</p>
+</li>
+<li>
+<p>The pinned brush commit is behind upstream <code>main</code> by 123 commits. Evidence: GitHub compare API for <code>ae35b6dd09f394c66fd805bea747e35a013ee978...ec6fcb2123aca0b206c94f042cb3edb78f1d8713</code> returned <code>status = ahead</code>, <code>ahead_by = 123</code>, <code>behind_by = 0</code>, <code>total_commits = 123</code>. The pinned commit date/message is <code>2026-03-30 04:56:57Z</code>, <code>build(deps): bump the cargo group with 4 updates (#1081)</code>; current upstream HEAD from <code>git ls-remote</code> is <code>ec6fcb2123aca0b206c94f042cb3edb78f1d8713</code> dated 2026-08-10.</p>
+</li>
+<li>
+<p>The stack-overflow concern remains materially unresolved for parser/front-door safety. The pinned <code>brush-parser</code> tokenizer tracks balanced nesting counts but has no max-depth check around recursive <code>next_token_until</code> use; rust-bash docs claim <code>max_substitution_depth</code> prevents nested substitution stack overflow, but that limit sits after parsing. Upstream issue <code>reubeno/brush#948</code> is open with <code>thread 'tokio-runtime-worker' ... has overflowed its stack</code> for recursive command substitution. Upstream PR <code>#1021</code> fixed arithmetic variable-reference recursion only; it is not a parser-wide nested-paren/substitution guard.</p>
+</li>
+<li>
+<p><code>cargo audit</code> found four actionable vulnerabilities, all in locked <code>rustls-webpki v0.103.9</code>, plus one allowed unsoundness warning in <code>anyhow v1.0.102</code>. No unmaintained-crate warning was printed. Evidence: full audit excerpt below.</p>
+</li>
+<li>
+<p><code>cargo outdated -R</code> shows compatible stable upgrades for all three prerelease <code>jaq-*</code> direct dependencies: <code>jaq-core 3.0.0-gamma -&gt; 3.1.0</code>, <code>jaq-json 2.0.0-gamma -&gt; 2.0.2</code>, <code>jaq-std 3.0.0-gamma -&gt; 3.0.1</code>. It also shows <code>ureq 3.2.0 -&gt; 3.4.0</code>, which likely refreshes the vulnerable TLS transitive stack.</p>
+</li>
+<li>
+<p>Lockfile red flags include duplicate transitive families and stale/procedural dependency churn: <code>darling 0.20.11</code> and <code>0.23.0</code>; <code>foldhash 0.1.5</code> and <code>0.2.0</code>; <code>getrandom 0.2.17</code> and <code>0.4.2</code>; <code>hashbrown 0.15.5</code> and <code>0.16.1</code>; <code>redox_syscall 0.5.18</code> and <code>0.7.3</code>; <code>windows-sys 0.52.0</code>, <code>0.59.0</code>, <code>0.60.2</code>, <code>0.61.2</code>; <code>windows-targets 0.52.6</code> and <code>0.53.5</code>. No locked yanked crate was reported by <code>cargo audit</code>; crates.io shows old <code>brush-parser 0.2.0</code> and <code>0.2.1</code> are yanked, but neither is locked.</p>
+</li>
+<li>
+<p>The baseline build succeeds but reproduces the future-incompatibility warning: <code>nix v0.30.1</code> contains code that will be rejected by a future Rust. This comes through <code>rustyline v17.0.2</code>.</p>
+</li>
+<li>
+<p>Edition 2024 is already in use, so the repo's practical MSRV floor is Rust 1.85+ for the package. Upgrading to current <code>brush-parser 0.4.0</code> raises the parser dependency floor to Rust 1.88 per crates.io metadata.</p>
+</li>
+<li>
+<p>Costed modernization list: S, switch <code>brush-parser</code> from git rev to crates.io <code>0.4.0</code> or latest compatible source, risk medium because parser APIs/features may have shifted; unblocks reproducible supply-chain resolution and removes the git pin. S, update <code>ureq</code> and/or force <code>rustls-webpki &gt;=0.103.13</code>, risk low-to-medium; unblocks clean RustSec audit for TLS advisories. S, update <code>anyhow</code> once fixed or ensure affected paths are non-runtime and document allowlist, risk low; unblocks removing the allowed unsoundness warning. S/M, replace prerelease <code>jaq-*gamma</code> with stable compatible versions, risk medium due jq behavior compatibility; unblocks non-prerelease dependency posture. M, update <code>rustyline</code> to <code>18.0.1</code> or otherwise eliminate <code>nix v0.30.1</code>, risk medium due CLI behavior/platform changes; unblocks future-incompat warning. M, add a rust-bash-owned parser ingress depth/size guard before calling brush parser, risk medium because it must preserve valid shell nesting; unblocks host-process safety independent of upstream. L, contribute or vendor parser-wide recursion/depth guards in brush-parser, risk high because parser grammar recursion and error reporting may change; unblocks robust fix for uncatchable stack aborts. S, publish <code>rust-bash 0.7.0</code> or stop advertising crates.io freshness, risk low if release automation exists; unblocks consumer alignment. M, reduce duplicate transitive families via dependency refresh and feature pruning, risk low-to-medium; unblocks smaller audit surface and easier review.</p>
+</li>
+</ol>
+<h2 id="evidence-command-output-excerpts-fileline-urls">Evidence (command output excerpts, file:line, URLs)</h2>
+<p><code>Cargo.toml:1-4</code>:</p>
+<pre><code class="language-toml">[package]
+name = &quot;rust-bash&quot;
+version = &quot;0.7.0&quot;
+edition = &quot;2024&quot;
+</code></pre>
+<p><code>Cargo.toml:39-70</code> and <code>Cargo.toml:72-84</code> contain the direct dependencies listed in Claim 2.</p>
+<p><code>Cargo.lock</code> interesting transitive/locked excerpts:</p>
+<pre><code class="language-text">brush-parser 0.3.0 source = git+https://github.com/reubeno/brush.git?rev=ae35b6dd09f394c66fd805bea747e35a013ee978#ae35b6dd09f394c66fd805bea747e35a013ee978
+jaq-core 3.0.0-gamma
+jaq-json 2.0.0-gamma
+jaq-std 3.0.0-gamma
+nix 0.30.1
+rustls 0.23.37
+rustls-webpki 0.103.9
+ureq 3.2.0
+wasip3 0.4.0+wasi-0.3.0-rc-2026-01-06
+</code></pre>
+<p><code>cargo audit</code> verbatim advisory/warning excerpt:</p>
+<pre><code class="language-text">Crate:     rustls-webpki
+Version:   0.103.9
+Title:     Reachable panic in certificate revocation list parsing
+Date:      2026-04-22
+ID:        RUSTSEC-2026-0104
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0104
+Solution:  Upgrade to &gt;=0.103.13, &lt;0.104.0-alpha.1 OR &gt;=0.104.0-alpha.7
+
+Crate:     rustls-webpki
+Version:   0.103.9
+Title:     Name constraints for URI names were incorrectly accepted
+Date:      2026-04-14
+ID:        RUSTSEC-2026-0098
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0098
+Solution:  Upgrade to &gt;=0.103.12, &lt;0.104.0-alpha.1 OR &gt;=0.104.0-alpha.6
+
+Crate:     rustls-webpki
+Version:   0.103.9
+Title:     Name constraints were accepted for certificates asserting a wildcard name
+Date:      2026-04-14
+ID:        RUSTSEC-2026-0099
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0099
+Solution:  Upgrade to &gt;=0.103.12, &lt;0.104.0-alpha.1 OR &gt;=0.104.0-alpha.6
+
+Crate:     rustls-webpki
+Version:   0.103.9
+Title:     CRLs not considered authoritative by Distribution Point due to faulty matching logic
+Date:      2026-03-20
+ID:        RUSTSEC-2026-0049
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0049
+Solution:  Upgrade to &gt;=0.103.10
+
+Crate:     anyhow
+Version:   1.0.102
+Warning:   unsound
+Title:     Unsoundness in `Error::downcast_mut()`
+Date:      2026-06-25
+ID:        RUSTSEC-2026-0190
+URL:       https://rustsec.org/advisories/RUSTSEC-2026-0190
+
+error: 4 vulnerabilities found!
+warning: 1 allowed warning found
+</code></pre>
+<p><code>cargo outdated -R</code> table:</p>
+<pre><code class="language-text">Name          Project            Compat              Latest              Kind         Platform
+----          -------            ------              ------              ----         --------
+assert_cmd    2.2.0              2.2.2               2.2.2               Development  ---
+base64        0.22.1             ---                 0.23.1              Normal       ---
+bitflags      2.11.0             2.13.1              2.13.1              Normal       ---
+chrono        0.4.44             0.4.45              0.4.45              Normal       ---
+clap          4.6.0              4.6.6               4.6.6               Normal       ---
+insta         1.46.3             1.48.0              1.48.0              Development  ---
+jaq-core      3.0.0-gamma        3.1.0               3.1.0               Normal       ---
+jaq-json      2.0.0-gamma        2.0.2               2.0.2               Normal       ---
+jaq-std       3.0.0-gamma        3.0.1               3.0.1               Normal       ---
+js-sys        0.3.91             0.3.104             0.3.104             Normal       cfg(target_arch = &quot;wasm32&quot;)
+md-5          0.10.6             ---                 0.11.0              Normal       ---
+regex         1.12.3             1.13.1              1.13.1              Normal       ---
+rustyline     17.0.2             ---                 18.0.1              Normal       ---
+serde         1.0.228            1.0.229             1.0.229             Normal       ---
+serde_json    1.0.149            1.0.151             1.0.151             Normal       ---
+sha1          0.10.6             0.10.7              0.11.0              Normal       ---
+sha2          0.10.9             ---                 0.11.0              Normal       ---
+similar       2.7.0              ---                 3.1.2               Normal       ---
+tar           0.4.45             0.4.46              0.4.46              Normal       ---
+toml          1.0.7+spec-1.1.0   1.1.4+spec-1.1.0    1.1.4+spec-1.1.0    Development  ---
+toml_edit     0.25.5+spec-1.1.0  0.25.13+spec-1.1.0  0.25.13+spec-1.1.0  Development  ---
+ureq          3.2.0              3.4.0               3.4.0               Normal       cfg(not(target_arch = &quot;wasm32&quot;))
+wasm-bindgen  0.2.114            0.2.127             0.2.127             Normal       cfg(target_arch = &quot;wasm32&quot;)
+</code></pre>
+<p><code>cargo check</code> future-incompatibility excerpt:</p>
+<pre><code class="language-text">Finished `dev` profile [unoptimized + debuginfo] target(s) in 10.30s
+warning: the following packages contain code that will be rejected by a future version of Rust: nix v0.30.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+</code></pre>
+<p><code>cargo tree -d</code> notable duplicate excerpts:</p>
+<pre><code class="language-text">darling v0.20.11 -&gt; cached_proc_macro -&gt; cached -&gt; brush-parser -&gt; rust-bash
+darling v0.23.0 -&gt; bon-macros -&gt; bon -&gt; brush-parser -&gt; rust-bash
+foldhash v0.1.5 -&gt; jaq-json -&gt; rust-bash
+foldhash v0.2.0 -&gt; hashbrown -&gt; cached/indexmap
+getrandom v0.2.17 -&gt; ring -&gt; rustls/rustls-webpki -&gt; ureq -&gt; rust-bash
+getrandom v0.4.2 -&gt; tempfile -&gt; insta -&gt; brush-parser/rust-bash
+windows-sys v0.52.0 / 0.59.0 / 0.60.2 / 0.61.2
+</code></pre>
+<p>Crates.io API URLs:</p>
+<pre><code class="language-text">https://crates.io/api/v1/crates/brush-parser
+brush-parser default_version/max_version/newest_version/max_stable_version = 0.4.0
+brush-parser 0.4.0 rust_version = 1.88.0, edition = 2024, yanked = false
+brush-parser 0.3.0 published 2025-11-17, yanked = false
+brush-parser 0.2.0 and 0.2.1 yanked = true
+
+https://crates.io/api/v1/crates/rust-bash
+rust-bash default_version/max_version/newest_version/max_stable_version = 0.3.0
+versions = 0.3.0 and 0.2.0 only
+</code></pre>
+<p>Brush upstream URLs:</p>
+<pre><code class="language-text">https://github.com/reubeno/brush
+https://api.github.com/repos/reubeno/brush/compare/ae35b6dd09f394c66fd805bea747e35a013ee978...ec6fcb2123aca0b206c94f042cb3edb78f1d8713
+https://github.com/reubeno/brush/issues/948
+https://github.com/reubeno/brush/pull/1021
+</code></pre>
+<p>Pinned tokenizer excerpt, <code>~/.cargo/git/checkouts/brush-1ff0f1ac78ea92fc/ae35b6d/brush-parser/src/tokenizer.rs:598-675</code>:</p>
+<pre><code class="language-rust">/// Consumes a nested construct (e.g., `$((...))` or `$[...]`), handling nested delimiters
+fn consume_nested_construct(..., mut nesting_count: u32) -&gt; Result&lt;(), TokenizerError&gt; {
+    loop {
+        let cur_token = self.next_token_until(Some(terminating_char), true)?;
+        if let Some(cur_token_value) = cur_token.token {
+            if matches!(cur_token_value, Token::Operator(o, _) if o == nesting_open) {
+                nesting_count += 1;
+            }
+        }
+        match cur_token.reason {
+            TokenEndReason::SpecifiedTerminatingChar =&gt; {
+                nesting_count -= 1;
+                if nesting_count == 0 { break; }
+                state.append_char(self.next_char()?.unwrap());
+            }
+            TokenEndReason::EndOfInput =&gt; return Err(TokenizerError::UnterminatedExpansion),
+            _ =&gt; (),
+        }
+    }
+    state.append_char(self.next_char()?.unwrap());
+    Ok(())
+}
+</code></pre>
+<p>Rust-bash docs claim, <code>docs/guidebook/07-execution-safety.md:109-117</code>:</p>
+<pre><code class="language-text">Infinite loops | max_loop_iterations limit | ✅
+Fork bombs / recursion | max_call_depth limit | ✅
+Resource exhaustion | max_command_count, max_execution_time, max_output_size limits | ✅
+Memory exhaustion | max_string_length, max_heredoc_size, max_brace_expansion limits | ✅
+Nested substitution | max_substitution_depth prevents `$($($(...)))` stack overflow | ✅
+</code></pre>
+<p>GitHub issue <code>#948</code> body excerpt:</p>
+<pre><code class="language-text">brush$ nproc(){ nproc; }
+brush$ echo $(nproc)
+thread 'tokio-runtime-worker' (25461) has overflowed its stack
+fatal runtime error: stack overflow, aborting
+</code></pre>
+<h2 id="uncertainty">Uncertainty</h2>
+<p>The cargo git checkout's local <code>origin</code> is Cargo's local mirror (<code>file:///Users/mshearer/.cargo/git/db/...</code>) and <code>git fetch origin main</code> failed with <code>fatal: couldn't find remote ref main</code>; the upstream comparison therefore uses <code>git ls-remote https://github.com/reubeno/brush.git</code> plus the GitHub compare API, not the local checkout's branch graph.</p>
+<p>I did not run a destructive or crash-reproduction parser fuzz input because this task was dependency/vulnerability audit research and the known failure aborts the host process. The stack-overflow conclusion is based on code inspection, upstream issue evidence, and placement of rust-bash limits after parser entry.</p>
+<p><code>cargo audit</code> printed no unmaintained-crate warning. If policy requires treating allowed warnings as failures, <code>anyhow RUSTSEC-2026-0190</code> should be escalated from allowed warning to blocker.</p>
+<p>Network access succeeded for crates.io and GitHub API during this run. GitHub commit search returned no direct hits for parser recursion/stack-overflow fixes beyond the issue/PR searches recorded above.</p>
+<h2 id="summary-200-words">Summary (&lt;= 200 words)</h2>
+<p>The earlier rejection is partly confirmed and partly stale. <code>rust-bash</code> is still unpublished past crates.io <code>0.3.0</code> while the repo is <code>0.7.0</code>, but <code>brush-parser</code> is now published at <code>0.4.0</code>; rust-bash remains pinned to a git rev resolving to <code>brush-parser 0.3.0</code>, 123 upstream commits behind current brush <code>main</code>. <code>cargo audit</code> finds four <code>rustls-webpki 0.103.9</code> vulnerabilities and one allowed <code>anyhow</code> unsoundness warning. <code>cargo outdated -R</code> shows stable replacements for all three prerelease <code>jaq-*gamma</code> deps and a <code>ureq</code> update likely to refresh TLS transitives. The parser stack-overflow risk remains the worst architectural issue: the pinned tokenizer tracks nesting but does not enforce a depth limit, and rust-bash's documented execution/substitution limits appear downstream of parser entry. Upstream has an open stack-overflow abort report and only an arithmetic-recursion fix. Modernization is mostly small-to-medium dependency work, except robust parser-depth hardening, which is medium-to-large and higher risk.</p>
+</article>
+</body></html>

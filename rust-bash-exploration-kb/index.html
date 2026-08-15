@@ -38,17 +38,194 @@ blockquote { border-left: 3px solid GrayText; margin-left: 0; padding-left: 1rem
             padding: 0.1rem 0.45rem; margin-bottom: 0.6rem; }
 strong { font-weight: 700; }
 </style></head><body>
-<script type="application/json" id="artifact-state">{"as_of": "2026-08-15 02:45 UTC", "sections": [], "design_system": null, "clone_head": "68d6dbaf", "gate": "Gate 1"}</script>
-<nav><details><summary>Contents (10 documents)</summary><ol><li><a href="#doc-10">Part 1 — Codex design-review ledger (start here)</a></li><li><a href="#doc-09">Part 2 — Harness design r2 (probe-runner + monitor)</a></li><li><a href="#doc-07">Part 3 — Policy ADT r2</a></li><li><a href="#doc-08">Part 4 — Audit schema + BERT feasibility r2</a></li><li><a href="#doc-06">Part 5 — Modernization lift (D4 repriced)</a></li><li><a href="#doc-05">Part 6 — Wave-2 verification report</a></li><li><a href="#doc-03">Appendix A — Security-layer matrix</a></li><li><a href="#doc-04">Appendix B — Interception surface</a></li><li><a href="#doc-01">Appendix C — Code map</a></li><li><a href="#doc-02">Appendix D — Dependency audit</a></li></ol></details>
+<script type="application/json" id="artifact-state">{"as_of": "2026-08-15 14:49 UTC", "sections": [], "design_system": null, "clone_head": "68d6dbaf", "gate": "Gate 2"}</script>
+<nav><details><summary>Contents (10 documents)</summary><ol><li><a href="#doc-11">Part 0 — Phase 2 results: 30/30 sandboxed (start here)</a></li><li><a href="#doc-10">Part 1 — Codex design-review ledger</a></li><li><a href="#doc-09">Part 2 — Harness design r2 (probe-runner + monitor)</a></li><li><a href="#doc-07">Part 3 — Policy ADT r2</a></li><li><a href="#doc-08">Part 4 — Audit schema + BERT feasibility r2</a></li><li><a href="#doc-06">Part 5 — Modernization lift (D4 repriced)</a></li><li><a href="#doc-05">Part 6 — Wave-2 verification report</a></li><li><a href="#doc-03">Appendix A — Security-layer matrix</a></li><li><a href="#doc-04">Appendix B — Interception surface</a></li><li><a href="#doc-01">Appendix C — Code map</a></li><li><a href="#doc-02">Appendix D — Dependency audit</a></li></ol></details>
 &nbsp;·&nbsp; rust-bash exploration KB · Gate 1 packet</nav>
 <header class="cover">
-<h1>rust-bash modernization exploration — Gate 1 reading packet</h1>
-<p>As of 2026-08-15 02:45 UTC · clone HEAD 68d6dbaf (2026-04-05)</p>
-<p>Reading order: the codex ledger (Part 1) tells you what was attacked and fixed;
-Parts 2–4 are the r2 design; Part 5 reprices the D4 rejection; Part 6 and the
-appendices are the verified ground truth.</p>
+<h1>rust-bash modernization exploration — Gate 2 reading packet</h1>
+<p>As of 2026-08-15 14:49 UTC · clone HEAD 68d6dbaf (2026-04-05) · harness 30/30 legs PASS (sandboxed)</p>
+<p>Reading order: Part 0 is the Phase-2 result and review ledger; the codex
+ledger (Part 1) tells you what was attacked and fixed in the design; Parts 2–4
+are the r2 design; Part 5 reprices the D4 rejection; Part 6 and the appendices
+are the verified ground truth.</p>
 </header>
-<article id="doc-10"><span class="part-tag">Part 1 · Codex design-review ledger (start here)</span>
+<article id="doc-11"><span class="part-tag">Part 0 · Phase 2 results: 30/30 sandboxed (start here)</span>
+<h1 id="11-phase-2-results-harness-built-3030-legs-pass-sandboxed">11 — Phase 2 Results: harness built, 30/30 legs PASS (sandboxed)</h1>
+<p>Date: 2026-08-15. Harness: <code>exploration/harness/</code> (crate <code>rb-harness</code>, two
+binaries + Seatbelt profile + 30-leg scenario corpus). rust-bash under test:
+clone HEAD <code>68d6dbaf</code>, unmodified (no patches were needed to reach green).</p>
+<h2 id="headline">Headline</h2>
+<ul>
+<li><strong>30/30 legs PASS under Seatbelt</strong> (<code>runs-sandboxed/report.json</code>);
+  29/30 unsandboxed (L16 documents the delta by design).</li>
+<li>30 unit tests PASS; <code>cargo fmt --check</code> clean.</li>
+<li>The harness proves the policy/audit layer (07 r2 / 08 r2) matches the AURA
+  security layers in interpreter terms, with the parity gaps explicitly
+  pinned rather than hidden.</li>
+</ul>
+<h2 id="what-each-proven-layer-looks-like-now">What each proven layer looks like now</h2>
+<table>
+<thead>
+<tr>
+<th>AURA layer</th>
+<th>Legs</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. SHA-pinned scripts</td>
+<td>l10 family (pinned runs / mutated entry / composed denied / transitive sourced-file verify + mutation)</td>
+<td>proven, incl. codex-#5 transitive hashing</td>
+</tr>
+<tr>
+<td>1b. params allowlist</td>
+<td>l11/l11b (exact argv, NoneAllowed)</td>
+<td>proven</td>
+</tr>
+<tr>
+<td>2. env scrubbing</td>
+<td>l9 (allowlist; smuggled key absent)</td>
+<td>proven</td>
+</tr>
+<tr>
+<td>3. network egress</td>
+<td>l4 (allow + mock hit), l5 (deny, canary mock ZERO hits), l6 (method deny)</td>
+<td>proven at prefix level; DNS-rebinding gap documented (06 #9)</td>
+</tr>
+<tr>
+<td>4. fs roots/masking</td>
+<td>l1 (happy), l2/l2b (escape → denied_runtime, exact <code>Permission denied</code> oracle), l2c (symlink-to-outside denied at creation), l3 (masked)</td>
+<td>proven; see notes below</td>
+</tr>
+<tr>
+<td>5. limits/timeout</td>
+<td>l7a/l7b/l7c (LimitExceeded/Timeout), l19 (monitor SIGKILL wall clock)</td>
+<td>proven as cooperative + monitor-enforced; documented</td>
+</tr>
+<tr>
+<td>6. output cap</td>
+<td>l7b</td>
+<td>cap proven; spill is a documented post-v1 patch (06 #11)</td>
+</tr>
+<tr>
+<td>7. fail-closed audit</td>
+<td>l13 (unwritable sink → refusal, exit 4, journal carries it) + pre-exec sink preflight</td>
+<td>proven</td>
+</tr>
+<tr>
+<td>8. HITL tiering</td>
+<td>l17a (grant→executed), l17b (deny→denied_approval, nothing written)</td>
+<td>proven (post-codex ApprovalPolicy domain)</td>
+</tr>
+<tr>
+<td>— parser bomb (D4.4)</td>
+<td>l8: 5000-deep <code>$()</code> → runner SIGABRT, monitor journal records it, suite continues</td>
+<td><strong>process-boundary containment proven</strong></td>
+</tr>
+<tr>
+<td>— harness isolation</td>
+<td>l16: granted "compromised" native command with the real home path → <code>ssh:BLOCKED hosts:OK homewrite:BLOCKED</code> under Seatbelt</td>
+<td>sandbox boundary proven</td>
+</tr>
+<tr>
+<td>— documented bypass</td>
+<td>l14: ExecCallback counter-reset leak asserted to exist</td>
+<td>pins upstream patch (05 omission)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="harness-findings-about-rust-bash-itself-new-this-phase">Harness findings about rust-bash itself (new this phase)</h2>
+<ol>
+<li><strong>L8 confirms D4.4's shape on the current pin</strong>: deep nesting kills the
+   process; the two-process design contains it. This is now a demonstrated
+   mitigation, not a hypothesis.</li>
+<li><strong>The interpreter self-seeds <code>/bin</code> stubs and <code>/dev</code> sinks at startup</strong> —
+   the facade composite (in-memory root + ReadWriteFs mounts per policy root)
+   keeps that plumbing in memory. The <code>Infrastructure</code> path class is now
+   distinct from policy roots in the audit schema.</li>
+<li><strong>The macOS symlink-escape unit-test failure (06 #5) is moot at the facade
+   layer</strong>: AuditedFs denies symlink creation to outside-root targets at
+   creation time, before ReadWriteFs's resolver is involved. The upstream
+   error-kind bug remains worth fixing upstream but no longer gates the fs
+   proofs.</li>
+<li><strong><code>ReadWriteFs</code> creates no parent dirs on write</strong> — the runner pre-creates
+   declared roots; noted for future embedders.</li>
+</ol>
+<h2 id="rust-reviewer-gpt-56-sol-implementation-review-ledger">rust-reviewer (gpt-5.6-sol) implementation review — ledger</h2>
+<p>Reviewer: openai/gpt-5.6-sol, 2026-08-15, VERDICT: FAIL (12 BLOCKING, 1
+MINOR). All fixed and re-verified by the 30/30 run:</p>
+<ol>
+<li><strong>Unnormalized path classification</strong> (<code>../</code> laundering) → lexical
+   normalization before classification; regression test
+   <code>traversal_laundering_denied</code>. FIXED.</li>
+<li><strong>Infra prefixes outranked policy roots</strong> → policy classification now
+   wins; infra applies only to otherwise-unclassified paths. FIXED.</li>
+<li><strong>glob delegated before authorizing</strong> → cwd authorized first, results
+   filtered; residual (walk beneath an authorized cwd) documented. FIXED.</li>
+<li><strong>AST omissions</strong> (process substitution discarded, arithmetic-for bodies
+   skipped) → process substitution is flagged under the dynamic policy and
+   its body walked; arithmetic-for bodies walked; command substitution in any
+   word flagged. FIXED.</li>
+<li><strong>Raw-text command names</strong> (<code>'eval'</code>, <code>e""val</code> evasion) → quote-stripped
+   comparison for all command checks. FIXED.</li>
+<li><strong>Fail-closed only post-exec</strong> → pre-exec sink preflight; mid-exec
+   failure residual documented. FIXED.</li>
+<li><strong>Runtime denials mislabeled <code>executed</code></strong> → decorator logs denials;
+   outcome becomes <code>denied_runtime</code> when any fired; scenarios updated. FIXED.</li>
+<li><strong>Deny-by-default inverted for omitted domains</strong> → <code>[commands]</code> is now a
+   mandatory policy section; empty env allow-list means no keys. FIXED.</li>
+<li><strong>Provenance computed but never scored</strong> → monitor recomputes the policy
+   hash and requires it in the record; schema tag validated. FIXED.</li>
+<li><strong>Any-signal abort acceptance</strong> → exact SIGABRT match required; other
+    signals are crashes, not containment. FIXED.</li>
+<li><strong>Pipe-drain deadlock via forked descendant</strong> → bounded channel drain;
+    <code>process-fork</code> removed from the profile. FIXED.</li>
+<li><strong>Seatbelt read breadth + unrestricted mach-lookup</strong> → mach-lookup
+    dropped (bisected unnecessary), deny list extended (shell histories,
+    .cargo, .npm, keychains). Residual honestly stated in the profile header:
+    broad reads remain because macOS 26 aborts startup under an enumerated
+    read allowlist; the facade is the primary fs control. PARTIALLY FIXED /
+    DOCUMENTED.</li>
+<li>MINOR fmt → <code>cargo fmt</code> run, clean. FIXED.</li>
+</ol>
+<h2 id="where-this-leaves-the-two-user-goals">Where this leaves the two user goals</h2>
+<ol>
+<li><strong>Configurable shell guidelines (ADT)</strong>: implemented and proven — the
+   TOML→ADT→compiled-facade pipeline works, including transitive script
+   bundles, strict dynamic-code gating, and HITL verdict flooring. The enum
+   graph covers the AURA layers with documented parity gaps (spill, DNS
+   ranges, preemptive timeout).</li>
+<li><strong>Audit layer for a BERT policy-suggestion classifier</strong>: the audit/2
+   schema is emitted by every leg (see <code>runs-sandboxed/*/runner/audit.jsonl</code>
+   for 30 real records, including deny-shaped rows). Feasibility verdict from
+   08 r2 stands: novelty detection + script promotion are well-posed on this
+   schema; the counters-accessor patch remains the one pre-model-work item.</li>
+</ol>
+<h2 id="relationship-to-the-shell-tool-branch-for-the-gate-2-decision">Relationship to the shell-tool branch (for the Gate-2 decision)</h2>
+<p>rust-bash is validated as a <strong>facade for a different tool class</strong> than the
+branch's tier-1 remediation scripts: governed, model-facing script execution
+over virtualized resources, with policy and audit semantics AURA already
+speaks. D4's remediation-mission rejection is untouched and correct. The
+facade path answers the branch's composed-command tier (currently
+<code>NotImplemented</code>) with a fundamentally different containment story: nothing
+to sandbox at the OS level because nothing leaves the interpreter.</p>
+<h2 id="known-residuals-all-documented-in-line">Known residuals (all documented in-line)</h2>
+<ul>
+<li>Seatbelt broad-read residual (profile header).</li>
+<li>Mid-exec audit-sink failure window (post-exec emit failure still flags).</li>
+<li>Cooperative limits + ExecCallback counter leak (l14 pins it).</li>
+<li>DNS-rebinding egress gap (06 #9); output spill (06 #11); counters accessor
+  (06 #7) — the three-item pre-production patch list.</li>
+<li>Static-only command governance: per-command runtime interception is the
+  deferred v2 patch (07 r2 non-goals).</li>
+</ul>
+<h2 id="next-phase-25">Next: Phase 2.5</h2>
+<p><code>probe-runner</code> + scenarios + monitor form the adversarial launch package.
+Remaining seam: a <code>--shim</code> stdin/stdout mode on probe-runner (small) so fresh
+K3 / GLM-5.2 sessions can attack the facade through the policy gate, with the
+monitor scoring their runs; successes freeze into the corpus.</p>
+</article><article id="doc-10"><span class="part-tag">Part 1 · Codex design-review ledger</span>
 <h1 id="10-codex-design-review-ledger">10 — Codex Design-Review Ledger</h1>
 <p>Per the board's REVIEW-TOOLING convention for adversarial review of a
 standalone prose artifact: numbered findings, explicit verdict, author and

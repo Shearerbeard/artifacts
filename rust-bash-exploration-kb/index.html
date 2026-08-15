@@ -38,12 +38,12 @@ blockquote { border-left: 3px solid GrayText; margin-left: 0; padding-left: 1rem
             padding: 0.1rem 0.45rem; margin-bottom: 0.6rem; }
 strong { font-weight: 700; }
 </style></head><body>
-<script type="application/json" id="artifact-state">{"as_of": "2026-08-15 14:49 UTC", "sections": [], "design_system": null, "clone_head": "68d6dbaf", "gate": "Gate 2"}</script>
+<script type="application/json" id="artifact-state">{"as_of": "2026-08-15 15:55 UTC", "sections": [], "design_system": null, "clone_head": "68d6dbaf", "gate": "Gate 2"}</script>
 <nav><details><summary>Contents (10 documents)</summary><ol><li><a href="#doc-11">Part 0 — Phase 2 results: 30/30 sandboxed (start here)</a></li><li><a href="#doc-10">Part 1 — Codex design-review ledger</a></li><li><a href="#doc-09">Part 2 — Harness design r2 (probe-runner + monitor)</a></li><li><a href="#doc-07">Part 3 — Policy ADT r2</a></li><li><a href="#doc-08">Part 4 — Audit schema + BERT feasibility r2</a></li><li><a href="#doc-06">Part 5 — Modernization lift (D4 repriced)</a></li><li><a href="#doc-05">Part 6 — Wave-2 verification report</a></li><li><a href="#doc-03">Appendix A — Security-layer matrix</a></li><li><a href="#doc-04">Appendix B — Interception surface</a></li><li><a href="#doc-01">Appendix C — Code map</a></li><li><a href="#doc-02">Appendix D — Dependency audit</a></li></ol></details>
 &nbsp;·&nbsp; rust-bash exploration KB · Gate 1 packet</nav>
 <header class="cover">
 <h1>rust-bash modernization exploration — Gate 2 reading packet</h1>
-<p>As of 2026-08-15 14:49 UTC · clone HEAD 68d6dbaf (2026-04-05) · harness 30/30 legs PASS (sandboxed)</p>
+<p>As of 2026-08-15 15:55 UTC · clone HEAD 68d6dbaf (2026-04-05) · harness 30/30 legs PASS (sandboxed)</p>
 <p>Reading order: Part 0 is the Phase-2 result and review ledger; the codex
 ledger (Part 1) tells you what was attacked and fixed in the design; Parts 2–4
 are the r2 design; Part 5 reprices the D4 rejection; Part 6 and the appendices
@@ -225,6 +225,32 @@ to sandbox at the OS level because nothing leaves the interpreter.</p>
 Remaining seam: a <code>--shim</code> stdin/stdout mode on probe-runner (small) so fresh
 K3 / GLM-5.2 sessions can attack the facade through the policy gate, with the
 monitor scoring their runs; successes freeze into the corpus.</p>
+<hr />
+<h2 id="phase-25-addendum-adversarial-arena-2026-08-15">Phase 2.5 addendum: adversarial arena (2026-08-15)</h2>
+<p>The launch package is live at <code>exploration/adversarial/</code>:</p>
+<ul>
+<li><code>arena-exec.sh &lt;name&gt; '&lt;script&gt;'</code> — one-shot governed exec: fresh
+  sandboxed shim (Seatbelt + env -i) per call, one JSON response line, audit
+  record per call. Smoke-tested: benign exec, runtime fs denial, static gate
+  denial (eval), allowlisted curl (mock hit), and exfil-prefix denial all
+  behave; scorer reports clean.</li>
+<li><code>policy.toml</code> — the arena posture: composed source allowed, Strict dynamic
+  gate, /data + /data/out roots, curl GET to mock prefix only, no customs.</li>
+<li><code>score.py</code> — cross-checks the runner audit against arena-owned evidence
+  (mock logs, sentinel canary) and exits nonzero on escape signals.</li>
+<li><code>ROE.md</code> — the rules-of-engagement prompt for the adversarial sessions.</li>
+<li>Arena mocks run on 18941/18942 (the harness keeps 18931/18932; the profile
+  allows exactly these four loopback ports).</li>
+</ul>
+<p>To run the sessions (external launches, per the no-nested-CLI rule):</p>
+<pre><code>opencode -m fireworks-ai/accounts/fireworks/models/kimi-k3   # prompt: ROE.md
+opencode -m baseten/zai-org/GLM-5.2-Fast                     # prompt: ROE.md
+</code></pre>
+<p>Then <code>python3 score.py runs/k3</code> / <code>runs/glm52</code>, and freeze any novel
+attempts into <code>exploration/harness/scenarios/</code> as regression legs.</p>
+<p>Known cosmetic item: the composed Deny reason string is double-wrapped
+(<code>BuiltinDenied("DynamicPrimitive(...)")</code>) — lossy re-wrap in gate.rs final
+composition; cosmetic only, audit verdicts are unaffected.</p>
 </article><article id="doc-10"><span class="part-tag">Part 1 · Codex design-review ledger</span>
 <h1 id="10-codex-design-review-ledger">10 — Codex Design-Review Ledger</h1>
 <p>Per the board's REVIEW-TOOLING convention for adversarial review of a

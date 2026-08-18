@@ -41,6 +41,8 @@ h2.sec { font-family: var(--font-display); font-weight: 800; font-size: var(--te
 .due { font-family: var(--font-utility); font-weight: 600; font-size: var(--text-m); color: var(--warn); }
 .video { border: 3px dashed var(--border); border-radius: var(--radius); padding: var(--space-4); display: flex; align-items: center; gap: var(--space-4); color: var(--accent); font-family: var(--font-utility); font-weight: 600; font-size: var(--text-l); }
 .stamp { margin: auto auto 0; align-self: center; width: 180px; height: 180px; border-radius: 50%; border: 5px solid var(--accent); color: var(--accent); background: var(--paper); font-family: var(--font-display); font-weight: 800; font-size: var(--text-xl); letter-spacing: .04em; box-shadow: inset 0 0 0 4px var(--paper), inset 0 0 0 7px var(--accent); transform: rotate(-4deg); cursor: pointer; }
+.stamp-waiting { border-color: var(--muted); color: var(--muted); box-shadow: inset 0 0 0 4px var(--paper), inset 0 0 0 7px var(--muted); cursor: default; display: flex; align-items: center; justify-content: center; }
+.body-text { font-size: var(--text-l); line-height: 1.35; color: var(--muted); text-align: center; }
 </style>
 </head>
 <body>
@@ -80,6 +82,34 @@ h2.sec { font-family: var(--font-display); font-weight: 800; font-size: var(--te
     <p class="due">Finish by Saturday</p>
 
     <button class="stamp" type="button">Done</button>
+  </main>
+</div>
+
+<div class="statetag"><span>State 1b - Awaiting review</span><span>added 2026-08-18, gate-approved copy</span></div>
+<div class="frame">
+  <main class="screen">
+    <h1 class="app">Your chore</h1>
+    <p class="big">Empty the dishwasher</p>
+    <p class="loc">In the kitchen</p>
+
+    <section class="card" aria-label="Steps">
+      <h2 class="sec">What to do</h2>
+      <ol class="steps" style="margin-top: var(--space-4);">
+        <li>Open the dishwasher all the way.</li>
+        <li>Put the plates on the shelf.</li>
+        <li>Put the cups in the cupboard.</li>
+        <li>Put the forks and spoons in the drawer.</li>
+        <li>Close the dishwasher.</li>
+      </ol>
+    </section>
+
+    <p class="due">Finish by Saturday</p>
+
+    <!-- copy: waiting.heading -->
+    <p class="big" style="text-align: center;">All sent!</p>
+    <div class="stamp stamp-waiting" role="img" aria-label="Done, waiting for a parent to check">Done</div>
+    <!-- copy: waiting.body -->
+    <p class="body-text">Dad will check your photos.</p>
   </main>
 </div>
 </body>

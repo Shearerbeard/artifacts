@@ -34,7 +34,11 @@ circled numerals, and a strip of check-off circles sits under them as
 the checklist graphic. An optional "Watch how" link appears when the
 card carries a how-to video. A due line ("Finish by Saturday") shows
 only when the card has a due date. The single action is the stamp: a
-large circular Done button at the bottom.
+large circular Done button at the bottom. State 1b (same file) shows
+the after-submit variant. The stamp renders disabled between "All
+sent!" above it and "{ParentName} will check your photos." below; the
+parent-name fallback is the one the reject/approve copy already uses.
+Added 2026-08-18, approved at the U(code-review) gate.
 
 ### 2. Done flow
 

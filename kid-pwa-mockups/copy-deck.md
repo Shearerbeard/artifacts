@@ -24,6 +24,8 @@ The current chore: title, location, steps, optional video, checklist graphic, du
 | `card.checklist_alt` | Steps to check off | Alt text for checklist graphic |
 | `card.due_label` | Finish by {date} | Only if the card has a due date |
 | `card.primary_button` | Done | Main action button |
+| `waiting.heading` | All sent! | Shown after photo submit, in place of the Done action |
+| `waiting.body` | {ParentName} will check your photos. | Under the disabled stamp; no parent has acted yet, so a single mapped name is used, otherwise "Your parent will check your photos." |
 
 ## 2. Done Flow
 
@@ -95,7 +97,7 @@ This prose describes each state for a parent or developer reader.
 
 ### Card View
 
-The kid sees their one assigned chore. A large title sits at the top, followed by the location in the house. Below that, step‑by‑step instructions appear as plain bullet points or a checklist graphic. An optional how‑to video link sits under the steps. If the chore has a due date, it shows in a clear line above the Done button. The screen shows exactly one thing: this chore, with a single Done button at the bottom.
+The kid sees their one assigned chore. A large title sits at the top, followed by the location in the house. Below that, step‑by‑step instructions appear as plain bullet points or a checklist graphic. An optional how‑to video link sits under the steps. If the chore has a due date, it shows in a clear line above the Done button. The screen shows exactly one thing: this chore, with a single Done button at the bottom. After photo submit the Done button turns into a disabled stamp. "All sent!" appears above the stamp and "{ParentName} will check your photos." below it; the card stays up while a parent checks.
 
 ### Done Flow
 
@@ -127,13 +129,19 @@ Decisions on the open questions from the copy-deck dispatch:
 4. The empty-state scan copy was replaced: the QR code is the URL, so the in-app action is the draw itself ("Get my chore").
 5. State 6 gained explicit `returned.*` strings for the post-approval and parent-returned moments alongside the caught-up variant.
 
+## Gate-Approved Amendments (2026-08-18)
+
+Approved by the user at S8's U(code-review) gate:
+
+1. `waiting.heading` and `waiting.body` were added for the after-submit moment, which the original deck had no copy for. The body names a parent only when the deployment maps exactly one (`CHORE_KID_PARENT_NAMES`); with zero or several mapped names it falls back to "Your parent will check your photos.", the same fallback as the reject/approve copy.
+
 ## String Count Summary
 
-- Card View: 10 strings
+- Card View: 12 strings
 - Done Flow: 4 strings
 - Photo Upload: 12 strings
 - Rejection with Notes: 6 strings
 - Empty State: 3 strings
 - Caught Up: 3 strings
 
-**Total: 38 user‑facing strings**
+**Total: 40 user‑facing strings**

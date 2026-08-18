@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parent UI - mockup review index</title>
+<style>
+  :root {
+    --ink: #191817; --paper: #FDFCF7; --accent: #2450C8; --muted: #6E6A63;
+    --border: #191817; --surface: #F2F1EA;
+  }
+  * { margin: 0; box-sizing: border-box; }
+  body { background: #3C3C3C; padding: 24px 12px 64px; font-family: system-ui, sans-serif; }
+  .wrap { max-width: 480px; margin: 0 auto; }
+  h1 { color: #FDFCF7; font-size: 22px; margin-bottom: 4px; }
+  .sub { color: #CFCFCF; font-size: 14px; margin-bottom: 20px; }
+  a.state { display: block; background: var(--paper); color: var(--ink); border: 3px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 12px; text-decoration: none; }
+  a.state b { display: block; font-size: 18px; margin-bottom: 2px; }
+  a.state span { color: var(--muted); font-size: 14px; }
+  .state-num { display: inline-block; background: var(--accent); color: var(--paper); font-weight: 800; border-radius: 50%; width: 26px; height: 26px; text-align: center; line-height: 26px; font-size: 14px; margin-right: 8px; }
+  .docs { margin-top: 24px; }
+  .docs a { color: #CFCFCF; font-size: 14px; display: block; margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Parent UI mockups (S9)</h1>
+  <p class="sub">Five states for Gate U review. Tap a state; use the back button to return. Phone and laptop widths share one column.</p>
+
+  <a class="state" href="parent-01-overview.html"><b><span class="state-num">1</span>Overview</b><span>Per-kid card: state chip, title, held-for; watched boards strip</span></a>
+  <a class="state" href="parent-02-boards.html"><b><span class="state-num">2</span>Boards</b><span>Watched list with Remove; add by board ID or URL</span></a>
+  <a class="state" href="parent-03-board-errors.html"><b><span class="state-num">3</span>Board errors</b><span>Not found, lanes missing (six names, absent struck through), already watched</span></a>
+  <a class="state" href="parent-04-kids.html"><b><span class="state-num">4</span>Kids</b><span>Kid list, Show QR / Regenerate, single-name add form</span></a>
+  <a class="state" href="parent-05-kid-qr.html"><b><span class="state-num">5</span>Kid QR</b><span>Full-screen QR + URL, Print, regenerate warning</span></a>
+
+  <div class="docs">
+    <a href="parent-ui-mockups.md">Review notes, copy table, and review ledger (markdown)</a>
+  </div>
+</div>
+</body>
+</html>

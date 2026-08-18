@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parent UI 05 - Kid QR</title>
+<!-- Token values from docs/ux/design/tokens.json (chore-chart v1); inlined so this file opens standalone. -->
+<style>
+:root {
+  --ink: #191817; --paper: #FDFCF7; --accent: #2450C8; --accent2: #2F9E5B;
+  --muted: #6E6A63; --warn: #C77F0A; --danger: #C03A2B; --border: #191817;
+  --surface: #F2F1EA; --radius: 16px;
+  --font-display: ui-rounded, 'SF Pro Rounded', 'Segoe UI Rounded', system-ui, sans-serif;
+  --font-body: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-utility: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --text-s: 14px; --text-m: 18px; --text-l: 22px; --text-xl: 28px;
+  --text-xxl: 35px; --text-xxxl: 44px;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-6: 24px; --space-8: 32px; --space-12: 48px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #F4F2EC; --paper: #17181C; --accent: #8AABFF; --accent2: #62D69A;
+    --muted: #A39E94; --warn: #E5A53D; --danger: #E4695A; --border: #F4F2EC;
+    --surface: #212329;
+  }
+}
+* { margin: 0; box-sizing: border-box; }
+body { background: var(--surface); font-family: var(--font-body); color: var(--ink); }
+.statetag { max-width: 44rem; margin: 0 auto; padding: var(--space-3) var(--space-4); color: var(--muted); font-family: var(--font-utility); font-weight: 600; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; display: flex; justify-content: space-between; }
+.page { max-width: 44rem; margin: 0 auto var(--space-12); background: var(--paper); border: 3px solid var(--border); border-radius: var(--radius); padding: var(--space-6); display: flex; flex-direction: column; gap: var(--space-6); align-items: center; text-align: center; }
+h1.app { font-family: var(--font-display); font-weight: 800; font-size: var(--text-m); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.kidname { font-family: var(--font-display); font-weight: 800; font-size: var(--text-xxl); }
+.qr { border: 3px solid var(--border); border-radius: var(--radius); padding: var(--space-4); background: #fff; }
+.url { font-family: ui-monospace, monospace; font-size: var(--text-s); color: var(--muted); word-break: break-all; }
+.actions { display: flex; gap: var(--space-3); flex-wrap: wrap; justify-content: center; }
+.btn { font-family: var(--font-utility); font-weight: 600; font-size: var(--text-m); border: 3px solid var(--border); border-radius: var(--radius); padding: var(--space-2) var(--space-4); background: var(--paper); color: var(--ink); cursor: pointer; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+.warnbox { border: 3px solid var(--warn); border-radius: var(--radius); padding: var(--space-4); text-align: left; display: flex; flex-direction: column; gap: var(--space-2); }
+.warnhead { font-family: var(--font-display); font-weight: 800; font-size: var(--text-m); color: var(--warn); }
+.warnbox p { font-size: var(--text-m); line-height: 1.35; }
+@media print {
+  body { background: #fff; }
+  .statetag, .actions, .warnbox, h1.app { display: none; }
+  .page { border: none; }
+}
+</style>
+</head>
+<body>
+<div class="statetag"><span>State 5 - Kid QR</span><span>print stylesheet strips to QR + URL</span></div>
+<main class="page">
+  <h1 class="app">Chore chart</h1>
+  <p class="kidname">Ada</p>
+
+  <!-- Placeholder QR: implementation renders the real token URL. -->
+  <svg class="qr" viewBox="0 0 120 120" width="280" height="280" role="img" aria-label="QR code for Ada's link">
+    <rect width="120" height="120" fill="#fff"/>
+    <g fill="#191817">
+      <rect x="4" y="4" width="28" height="28"/><rect x="10" y="10" width="16" height="16" fill="#fff"/><rect x="14" y="14" width="8" height="8"/>
+      <rect x="88" y="4" width="28" height="28"/><rect x="94" y="10" width="16" height="16" fill="#fff"/><rect x="98" y="14" width="8" height="8"/>
+      <rect x="4" y="88" width="28" height="28"/><rect x="10" y="94" width="16" height="16" fill="#fff"/><rect x="14" y="98" width="8" height="8"/>
+      <rect x="40" y="8" width="8" height="8"/><rect x="56" y="8" width="8" height="8"/><rect x="72" y="8" width="8" height="8"/>
+      <rect x="40" y="24" width="8" height="8"/><rect x="64" y="24" width="8" height="8"/>
+      <rect x="8" y="40" width="8" height="8"/><rect x="24" y="40" width="8" height="8"/><rect x="48" y="40" width="8" height="8"/><rect x="72" y="40" width="8" height="8"/><rect x="96" y="40" width="8" height="8"/>
+      <rect x="40" y="48" width="8" height="8"/><rect x="88" y="48" width="8" height="8"/>
+      <rect x="8" y="56" width="8" height="8"/><rect x="32" y="56" width="8" height="8"/><rect x="56" y="56" width="8" height="8"/><rect x="80" y="56" width="8" height="8"/><rect x="104" y="56" width="8" height="8"/>
+      <rect x="16" y="72" width="8" height="8"/><rect x="48" y="72" width="8" height="8"/><rect x="64" y="72" width="8" height="8"/><rect x="96" y="72" width="8" height="8"/>
+      <rect x="40" y="88" width="8" height="8"/><rect x="56" y="88" width="8" height="8"/><rect x="88" y="88" width="8" height="8"/>
+      <rect x="48" y="104" width="8" height="8"/><rect x="72" y="104" width="8" height="8"/><rect x="104" y="104" width="8" height="8"/>
+      <rect x="64" y="96" width="8" height="8"/><rect x="96" y="96" width="8" height="8"/>
+    </g>
+  </svg>
+
+  <p class="url">http://chore.local/k/9f8ba58d-6ab4-4dc1-8793-9e9032fca749</p>
+
+  <div class="actions">
+    <button class="btn primary" type="button">Print</button>
+    <button class="btn" type="button">Back to kids</button>
+  </div>
+
+  <section class="warnbox" aria-label="Regenerate warning">
+    <p class="warnhead">Regenerating replaces the link</p>
+    <p>If this link is lost or shared too widely, regenerate it from the kids list. The old link stops working the moment the new one is made - re-print or re-scan the new QR after.</p>
+  </section>
+</main>
+</body>
+</html>

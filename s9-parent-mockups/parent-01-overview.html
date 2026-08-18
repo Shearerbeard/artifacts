@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parent UI 01 - Overview</title>
+<!-- Token values from docs/ux/design/tokens.json (chore-chart v1); inlined so this file opens standalone. -->
+<style>
+:root {
+  --ink: #191817; --paper: #FDFCF7; --accent: #2450C8; --accent2: #2F9E5B;
+  --muted: #6E6A63; --warn: #C77F0A; --danger: #C03A2B; --border: #191817;
+  --surface: #F2F1EA; --radius: 16px;
+  --font-display: ui-rounded, 'SF Pro Rounded', 'Segoe UI Rounded', system-ui, sans-serif;
+  --font-body: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-utility: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --text-s: 14px; --text-m: 18px; --text-l: 22px; --text-xl: 28px;
+  --text-xxl: 35px; --text-xxxl: 44px;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-6: 24px; --space-8: 32px; --space-12: 48px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #F4F2EC; --paper: #17181C; --accent: #8AABFF; --accent2: #62D69A;
+    --muted: #A39E94; --warn: #E5A53D; --danger: #E4695A; --border: #F4F2EC;
+    --surface: #212329;
+  }
+}
+* { margin: 0; box-sizing: border-box; }
+body { background: var(--surface); font-family: var(--font-body); color: var(--ink); }
+.statetag { max-width: 44rem; margin: 0 auto; padding: var(--space-3) var(--space-4); color: var(--muted); font-family: var(--font-utility); font-weight: 600; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; display: flex; justify-content: space-between; }
+.page { max-width: 44rem; margin: 0 auto var(--space-12); background: var(--paper); border: 3px solid var(--border); border-radius: var(--radius); padding: var(--space-6); display: flex; flex-direction: column; gap: var(--space-6); }
+.topbar { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; }
+h1.app { font-family: var(--font-display); font-weight: 800; font-size: var(--text-m); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+nav { display: flex; gap: var(--space-4); font-family: var(--font-utility); font-weight: 600; font-size: var(--text-m); }
+nav a { color: var(--muted); text-decoration: none; }
+nav a[aria-current] { color: var(--accent); border-bottom: 3px solid var(--accent); }
+h2.sec { font-family: var(--font-display); font-weight: 800; font-size: var(--text-l); }
+.kid { border: 3px solid var(--border); border-radius: var(--radius); padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-2); }
+.kid .row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-4); }
+.kidname { font-family: var(--font-display); font-weight: 800; font-size: var(--text-l); }
+.chip { font-family: var(--font-utility); font-weight: 600; font-size: var(--text-s); border: 2px solid var(--border); border-radius: 999px; padding: var(--space-1) var(--space-3); white-space: nowrap; }
+.chip.progress { border-color: var(--accent); color: var(--accent); }
+.chip.review { border-color: var(--warn); color: var(--warn); }
+.chip.idle { border-color: var(--muted); color: var(--muted); }
+.cardtitle { font-size: var(--text-m); }
+.held { color: var(--muted); font-size: var(--text-s); font-family: var(--font-utility); font-weight: 600; }
+.boards { display: flex; gap: var(--space-3); flex-wrap: wrap; }
+.board { background: var(--surface); border-radius: var(--radius); padding: var(--space-2) var(--space-4); font-family: var(--font-utility); font-weight: 600; font-size: var(--text-s); display: flex; align-items: center; gap: var(--space-2); }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent2); }
+</style>
+</head>
+<body>
+<div class="statetag"><span>State 1 - Overview</span><span>mockup, not interactive</span></div>
+<main class="page">
+  <div class="topbar">
+    <h1 class="app">Chore chart</h1>
+    <nav>
+      <a href="#" aria-current="page">Overview</a>
+      <a href="#">Boards</a>
+      <a href="#">Kids</a>
+    </nav>
+  </div>
+
+  <h2 class="sec">Kids</h2>
+
+  <section class="kid" aria-label="Ada">
+    <div class="row">
+      <span class="kidname">Ada</span>
+      <span class="chip progress">In progress</span>
+    </div>
+    <p class="cardtitle">Empty the dishwasher</p>
+    <p class="held">Held for 2 days</p>
+  </section>
+
+  <section class="kid" aria-label="Ben">
+    <div class="row">
+      <span class="kidname">Ben</span>
+      <span class="chip review">In review</span>
+    </div>
+    <p class="cardtitle">Vacuum the living room</p>
+    <p class="held">Submitted 1 hour ago</p>
+  </section>
+
+  <section class="kid" aria-label="Cleo">
+    <div class="row">
+      <span class="kidname">Cleo</span>
+      <span class="chip idle">No card</span>
+    </div>
+    <p class="held">Nothing drawn right now</p>
+  </section>
+
+  <h2 class="sec">Watched boards</h2>
+  <div class="boards">
+    <span class="board"><span class="dot"></span>Household</span>
+    <span class="board"><span class="dot"></span>Garden</span>
+  </div>
+</main>
+</body>
+</html>

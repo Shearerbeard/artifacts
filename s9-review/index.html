@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>S9 Parent mini-UI - implementation review</title>
+<style>
+  /* chore-chart v1 tokens (docs/ux/design/tokens.css, chore-lottery repo) */
+  :root {
+    --ink: #191817; --paper: #FDFCF7; --accent: #2450C8; --accent2: #2F9E5B;
+    --muted: #6E6A63; --warn: #C77F0A; --danger: #C03A2B; --border: #191817;
+    --surface: #F2F1EA;
+    --radius: 16px;
+    --font-display: ui-rounded, 'SF Pro Rounded', 'Segoe UI Rounded', system-ui, sans-serif;
+    --font-body: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-utility: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --weight-display: 800; --weight-body: 400; --weight-utility: 600;
+    --text-s: 14px; --text-m: 18px; --text-l: 22px; --text-xl: 28px;
+    --text-xxl: 35px; --text-xxxl: 44px;
+    --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+    --space-6: 24px; --space-8: 32px; --space-12: 48px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #F4F2EC; --paper: #17181C; --accent: #8AABFF; --accent2: #62D69A;
+      --muted: #A39E94; --warn: #E5A53D; --danger: #E4695A; --border: #F4F2EC;
+      --surface: #212329;
+    }
+  }
+  * { box-sizing:border-box; }
+  body { font:var(--text-m)/1.6 var(--font-body); font-weight:var(--weight-body); color:var(--ink); background:var(--paper); max-width:980px; margin:1.5em auto; padding:0 var(--space-6) var(--space-8); }
+  h1,h2,h3 { font-family:var(--font-display); font-weight:var(--weight-display); line-height:1.25; margin:1.4em 0 .4em; }
+  h1 { font-size:var(--text-xxl); margin-bottom:.1em; }
+  h2 { font-size:var(--text-xl); border-bottom:1px solid var(--border); padding-bottom:.2em; }
+  h3 { font-size:var(--text-l); }
+  a { color:var(--accent); overflow-wrap:anywhere; }
+  code { background:var(--surface); padding:.15em .35em; border-radius:3px; font-size:.85em; font-family:var(--font-utility); font-weight:var(--weight-utility); overflow-wrap:anywhere; }
+  .meta { color:var(--muted); font-size:var(--text-s); }
+  .lede { font-size:var(--text-l); color:var(--muted); margin:.3em 0 1em; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:var(--space-3); margin:var(--space-4) 0; }
+  .stat { border:1px solid var(--border); border-radius:var(--radius); padding:var(--space-3) var(--space-4); }
+  .stat .n { font-size:1.9em; font-weight:var(--weight-display); line-height:1.1; color:var(--accent); }
+  .stat .l { font-size:.8em; font-family:var(--font-utility); text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+  .stat p { margin:.3em 0 0; font-size:.85em; }
+  .callout { border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:4px; padding:.7em 1em; margin:1em 0; font-size:.93em; background:color-mix(in srgb, var(--accent) 5%, var(--paper)); }
+  .callout.decide { border-left-color:var(--warn); background:color-mix(in srgb, var(--warn) 6%, var(--paper)); }
+  ol.timeline { list-style:none; padding-left:0; }
+  ol.timeline li { border-left:2px solid var(--accent); padding:.2em 0 .8em 1em; margin-left:.4em; position:relative; }
+  ol.timeline li::before { content:""; position:absolute; left:-6px; top:.55em; width:10px; height:10px; border-radius:50%; background:var(--accent); }
+  table { border-collapse:collapse; width:100%; font-size:var(--text-s); }
+  th,td { border:1px solid var(--border); padding:.45em .7em; vertical-align:top; text-align:left; overflow-wrap:anywhere; }
+  th { font-weight:600; background:var(--surface); }
+  .tscroll { overflow-x:auto; margin:.8em 0; }
+  .pill { display:inline-block; font-size:var(--text-s); padding:var(--space-1) var(--space-2); border-radius:10px; background:var(--surface); color:var(--muted); vertical-align:1px; }
+  .pill.done { background:var(--accent2); color:var(--paper); }
+  .pill.now  { background:var(--warn);   color:var(--paper); }
+  footer { border-top:1px solid var(--border); margin-top:2.5em; padding-top:.8em; color:var(--muted); font-size:.85em; }
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <h1>S9 Parent mini-UI - implementation review</h1>
+  <div class="lede">One job: rule on the parent management surface from your phone. What the /p/ subtree does, and the two modeling calls parked for you.</div>
+  <div class="meta">As of 2026-08-18 23:59 UTC &middot; branch <code>card/s9</code> &middot; range <code>da406ef..c0a554c</code> &middot; mockups: <a href="https://shearerbeard.github.io/artifacts/s9-parent-mockups/">approved set</a></div>
+</header>
+
+<section id="stats">
+  <div class="stats">
+    <div class="stat"><div class="n">14</div><div class="l">commits</div><p>skeleton, fills, two fix rounds</p></div>
+    <div class="stat"><div class="n">218</div><div class="l">tests green</div><p>workspace, including new units</p></div>
+    <div class="stat"><div class="n">19+30</div><div class="l">machinery steps</div><p>parent loop + kid loop regression</p></div>
+    <div class="stat"><div class="n">8/8</div><div class="l">findings resolved</div><p>Gate A round 2 verified the fixes</p></div>
+  </div>
+</section>
+
+<section id="surface">
+  <h2>What the surface does</h2>
+  <p>Five routes under <code>/p/</code>, server-rendered, on the same axum server as the kid PWA. Vikunja stays the board; this is management only.</p>
+  <div class="tscroll"><table>
+    <tr><th>Route</th><th>What it does</th></tr>
+    <tr><td><code>GET /p</code></td><td>Overview: per-kid chip (In progress / In review / No card), held card title, held-for; watched-board pills</td></tr>
+    <tr><td><code>GET+POST /p/boards</code></td><td>Watch list; add by ID or pasted URL, validated live against Vikunja with the three mockup-03 errors inline</td></tr>
+    <tr><td><code>POST /p/boards/&lbrace;id&rbrace;/remove</code></td><td>Drop a watch; 303 back</td></tr>
+    <tr><td><code>GET+POST /p/kids</code></td><td>Kid list; add by name, 303 straight to the new QR page. A rejected name re-renders with an inline error, never a 500</td></tr>
+    <tr><td><code>GET /p/kids/&lbrace;kid&rbrace;/qr</code> + <code>POST .../regenerate</code></td><td>Full-screen QR (server-rendered SVG, print stylesheet) and rotation; the old token 404s the moment the new one exists</td></tr>
+  </table></div>
+</section>
+
+<section id="decisions">
+  <h2>Decisions that carry the risk</h2>
+
+  <div class="callout"><b>The auth seam fails closed and invisibly.</b> <code>ParentAuth</code> is a trait; today's impl reads the tailscale-serve login header against an allowlist. Every parent route authenticates first and answers the shared bare 404 on failure - off the tailnet, the subtree is indistinguishable from nothing. And without <code>CHORE_PARENT_AUTH</code> set, <code>/p/</code> isn't mounted at all: kid-only deployments are untouched.</div>
+
+  <div class="callout"><b>Watched boards are a plain postgres table, not an event stream.</b> Operator configuration with no FSM semantics, so no events. The sync service still reads its env config at startup - watch changes take effect on sync restart this card. Hot reload is the recorded gap.</div>
+
+  <div class="callout"><b>Kid admin reuses the domain commands.</b> Register and RotateToken already existed; <code>KidAdminService</code> in lottery is the operator path that appends them (load-decide-append, ExpectedVersion discipline). crates/api stays a thin HTTP layer.</div>
+
+  <div class="callout"><b>One server-wide fix fell out of the machinery run.</b> Axum 0.8's nest serves <code>/p</code> but not <code>/p/</code>; <code>NormalizePathLayer::trim_trailing_slash()</code> now wraps the whole router. The kid loop re-ran green as the regression check.</div>
+</section>
+
+<section id="open">
+  <h2>Parked for you at this gate</h2>
+
+  <div class="callout decide"><b>1. Kid rows carry no registration date.</b> The domain has no registration timestamp, so the "Added Aug 3" meta line renders only when a source exists (the S8 location-line pattern). Nothing to decide unless you want the date - that is a small domain addition.</div>
+
+  <div class="callout decide"><b>2. The parent actor is hardcoded to VikunjaUserId 1.</b> The tailnet identity is a login string, not a Vikunja user, so parent-UI actions record parent 1. Coarse but honest; the day two parents act through this surface, the mapping needs to exist.</div>
+</section>
+
+<section id="process">
+  <h2>How it was checked</h2>
+  <ol class="timeline">
+    <li><b>Mockup phase</b> - five states approved by you at Gate U (ux-mockups), with the AI-content caveat logged (Vikunja is the review surface by design; provenance visibility is S25 scope).</li>
+    <li><b>Executor stall, recorded.</b> Both pinned executors returned empty pre-vets (opencode-go outage, same day as S19's empty return). The board owner filled every unit; Gate A's reviewer differs in family, so the invariant held.</li>
+    <li><b>Gate A round 1</b> - PASS with 8 MINOR findings (dead code, error-posture inconsistencies, a wrong machinery assertion). All accepted, fixed in one commit, parent loop re-run green.</li>
+    <li><b>Gate A round 2</b> - PASS, 8/8 verified resolved. Two cheap follow-ups applied (copy keys registered, name bound tightened); one deferred with a note.</li>
+    <li><b>Gate S full</b> - tests, clippy, fmt, ruff, vale, gitleaks, both machinery loops, and a manual no-tailnet scan, all green.</li>
+  </ol>
+  <p class="meta">One anomaly on record: the Gate A reviewer self-reported as GLM-5.2 against its gpt-5.6-sol pin (suspected provider substitution). Both families differ from the author, so the review counts either way; the pin deserves a look.</p>
+</section>
+
+<section id="verdict">
+  <h2>Your ruling</h2>
+  <p>Approve here and the board owner drives Gate M (the parent flow on phone and laptop widths), then the final UX spot-check, then merge. The full packet lives in the repo at <code>docs/board/reviews/S9/</code>.</p>
+</section>
+
+<footer>
+  Design system: chore-chart v1 (project tokens, docs/ux/design/) &middot; As of 2026-08-18 23:59 UTC &middot; chore-lottery, card S9
+</footer>
+
+<script type="application/json" id="artifact-state">
+{"as_of":"2026-08-18T23:59:00Z","sections":["hdr","stats","surface","decisions","open","process","verdict"],"design_system":{"name":"chore-chart","version":1},"gate":"u-code-review-pending","range":"da406ef..c0a554c","open_questions":["kid registration date","hardcoded parent actor"]}
+</script>
+</body>
+</html>

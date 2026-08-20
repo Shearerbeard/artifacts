@@ -61,16 +61,22 @@
 
 <header id="hdr">
   <h1>S9 Parent mini-UI - implementation review</h1>
-  <div class="lede">One job: rule on the parent management surface from your phone. What the /p/ subtree does, and the two modeling calls parked for you.</div>
-  <div class="meta">As of 2026-08-18 23:59 UTC &middot; branch <code>card/s9</code> &middot; range <code>da406ef..c0a554c</code> &middot; mockups: <a href="https://shearerbeard.github.io/artifacts/s9-parent-mockups/">approved set</a></div>
+  <div class="lede">One job: rule on the parent management surface from your phone. Your four rulings are applied; the page now says where the code actually lives.</div>
+  <div class="meta">As of 2026-08-20 02:33 UTC &middot; branch <code>card/s9</code> &middot; range <code>da406ef..048a97f</code> &middot; mockups: <a href="https://shearerbeard.github.io/artifacts/s9-parent-mockups/">approved set</a></div>
 </header>
+
+<section id="where">
+  <h2>Where the code lives</h2>
+  <div class="callout"><b>Worktree, not the main checkout.</b> The S9 code is on disk at <code>/Users/mshearer/dev/chore-lottery/.worktrees/card-s9</code> - the main checkout sits on <code>main</code> and does not have it. Browse files there. The packet (per-commit diffs plus the whole range) is at <code>docs/board/reviews/S9/</code> in the main checkout, and its REVIEW.md now says all of this up front.</div>
+  <p><b>80/20:</b> five commits carry the risk - <code>03</code> (skeleton), <code>04</code> (kid admin + watch store), <code>06</code> (auth + config), <code>07</code> (routes), and <code>14</code> (your rulings, below). <code>12</code> shows what Gate A round 1 caught. The other nine are mechanical: mockup docs, watch-validation tests, the machinery driver, the trailing-slash fix, copy keys.</p>
+</section>
 
 <section id="stats">
   <div class="stats">
-    <div class="stat"><div class="n">14</div><div class="l">commits</div><p>skeleton, fills, two fix rounds</p></div>
+    <div class="stat"><div class="n">15</div><div class="l">commits</div><p>skeleton, fills, three fix rounds</p></div>
     <div class="stat"><div class="n">218</div><div class="l">tests green</div><p>workspace, including new units</p></div>
     <div class="stat"><div class="n">19+30</div><div class="l">machinery steps</div><p>parent loop + kid loop regression</p></div>
-    <div class="stat"><div class="n">8/8</div><div class="l">findings resolved</div><p>Gate A round 2 verified the fixes</p></div>
+    <div class="stat"><div class="n">8/8+4/4</div><div class="l">findings resolved</div><p>Gate A round 2 and the delta round 2 verified the fixes</p></div>
   </div>
 </section>
 
@@ -90,7 +96,7 @@
 <section id="decisions">
   <h2>Decisions that carry the risk</h2>
 
-  <div class="callout"><b>The auth seam fails closed and invisibly.</b> <code>ParentAuth</code> is a trait; today's impl reads the tailscale-serve login header against an allowlist. Every parent route authenticates first and answers the shared bare 404 on failure - off the tailnet, the subtree is indistinguishable from nothing. And without <code>CHORE_PARENT_AUTH</code> set, <code>/p/</code> isn't mounted at all: kid-only deployments are untouched.</div>
+  <div class="callout"><b>The auth seam fails closed - and since your ruling, it also explains itself.</b> <code>ParentAuth</code> is a trait; today's impl reads the tailscale-serve login header against an allowlist. No identity at all still gets the shared bare 404 - off the tailnet, the subtree is indistinguishable from nothing. But a tailnet-identified login that isn't on the list now gets a 403 page naming that login ("Signed in as X. This surface isn't open to this login"), logged server-side. And without <code>CHORE_PARENT_AUTH</code> set, <code>/p/</code> isn't mounted at all: kid-only deployments are untouched.</div>
 
   <div class="callout"><b>Watched boards are a plain postgres table, not an event stream.</b> Operator configuration with no FSM semantics, so no events. The sync service still reads its env config at startup - watch changes take effect on sync restart this card. Hot reload is the recorded gap.</div>
 
@@ -100,11 +106,15 @@
 </section>
 
 <section id="open">
-  <h2>Parked for you at this gate</h2>
+  <h2>Your rulings, applied</h2>
 
-  <div class="callout decide"><b>1. Kid rows carry no registration date.</b> The domain has no registration timestamp, so the "Added Aug 3" meta line renders only when a source exists (the S8 location-line pattern). Nothing to decide unless you want the date - that is a small domain addition.</div>
+  <div class="callout decide"><b>1. Registration date: waits on epoch, not on a payload hack.</b> You asked whether events give it for free - almost: the postgres event rows all carry <code>created_at</code>, but epoch's read API never selects it. Rather than bake a redundant timestamp into the <code>Registered</code> payload, the ask went upstream: <a href="https://github.com/Shearerbeard/Epoch/issues/15">Epoch#15</a>. The kids.meta line renders the moment a source exists.</div>
 
-  <div class="callout decide"><b>2. The parent actor is hardcoded to VikunjaUserId 1.</b> The tailnet identity is a login string, not a Vikunja user, so parent-UI actions record parent 1. Coarse but honest; the day two parents act through this surface, the mapping needs to exist.</div>
+  <div class="callout decide"><b>2. Parent actor: fixed.</b> The allowlist entries are now <code>login:vikunja-user-id</code> pairs, and kid commands record the mapped user instead of a hardcoded 1. Two parents can act through the surface and the history tells them apart. The dev fake keeps user 1, so machinery is unchanged.</div>
+
+  <div class="callout decide"><b>3. Watch table stays a table.</b> Epoch at our pin has no projection infra, so an event-sourced watch list would be a new aggregate plus a hand-rolled fold - more architecture, not less. Your instinct is logged on S16: once checkpointed projections exist, this decision gets a revisit.</div>
+
+  <div class="callout decide"><b>4. Tailnet coupling: there is none to remove.</b> The trait is header-shaped; the tailnet impl is ten lines trusting one stamped header. That IS "tailnet as the network layer so we never write auth" - swapping in OIDC or basic auth later is one impl plus one config variant.</div>
 </section>
 
 <section id="process">
@@ -115,21 +125,23 @@
     <li><b>Gate A round 1</b> - PASS with 8 MINOR findings (dead code, error-posture inconsistencies, a wrong machinery assertion). All accepted, fixed in one commit, parent loop re-run green.</li>
     <li><b>Gate A round 2</b> - PASS, 8/8 verified resolved. Two cheap follow-ups applied (copy keys registered, name bound tightened); one deferred with a note.</li>
     <li><b>Gate S full</b> - tests, clippy, fmt, ruff, vale, gitleaks, both machinery loops, and a manual no-tailnet scan, all green.</li>
+    <li><b>Your U(code-review) feedback</b> - four rulings applied in commit 14 (the 403 split, the actor mapping, the epoch issue, the watch-table answer), plus the worktree-pointer fix you caught on this page.</li>
+    <li><b>Gate A delta</b> - the rulings commit reviewed fresh (GLM-5.2, nonce-vetted): PASS with one MINOR + three nits, all fixed in commit 15 (config guardrails, server-side 403 log), verified resolved in round 2. Both machinery loops re-run green.</li>
   </ol>
   <p class="meta">One anomaly on record: the Gate A reviewer self-reported as GLM-5.2 against its gpt-5.6-sol pin (suspected provider substitution). Both families differ from the author, so the review counts either way; the pin deserves a look.</p>
 </section>
 
 <section id="verdict">
   <h2>Your ruling</h2>
-  <p>Approve here and the board owner drives Gate M (the parent flow on phone and laptop widths), then the final UX spot-check, then merge. The full packet lives in the repo at <code>docs/board/reviews/S9/</code>.</p>
+  <p>Approve here and the board owner drives Gate M (the parent flow on phone and laptop widths), then the final UX spot-check, then merge. The full packet lives at <code>docs/board/reviews/S9/</code> with an 80/20 reading guide; the code itself is in the worktree named above.</p>
 </section>
 
 <footer>
-  Design system: chore-chart v1 (project tokens, docs/ux/design/) &middot; As of 2026-08-18 23:59 UTC &middot; chore-lottery, card S9
+  Design system: chore-chart v1 (project tokens, docs/ux/design/) &middot; As of 2026-08-20 02:33 UTC &middot; chore-lottery, card S9
 </footer>
 
 <script type="application/json" id="artifact-state">
-{"as_of":"2026-08-18T23:59:00Z","sections":["hdr","stats","surface","decisions","open","process","verdict"],"design_system":{"name":"chore-chart","version":1},"gate":"u-code-review-pending","range":"da406ef..c0a554c","open_questions":["kid registration date","hardcoded parent actor"]}
+{"as_of":"2026-08-20T02:33:42Z","sections":["hdr","where","stats","surface","decisions","open","process","verdict"],"design_system":{"name":"chore-chart","version":1},"gate":"u-code-review-pending","range":"da406ef..048a97f","open_questions":[],"rulings_applied":["403/404 auth split","login:vikunja-user-id actor mapping","registration date waits on Epoch#15","watch table stays, S16 demand signal"]}
 </script>
 </body>
 </html>

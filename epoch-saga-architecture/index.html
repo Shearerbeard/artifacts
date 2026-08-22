@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Epoch — outbox-saga architecture</title>
+<style>
+  /* epoch annex house tokens (project-local: docs/design/ panels) */
+  :root {
+    --paper:#171a19; --ink:#e6ebe8; --muted:#a4afa9; --border:#333a37; --surface:#1e2321;
+    --accent:#4dbd93; --accent2:#7aa7d9; --warn:#d4b04a; --danger:#e08a72; --radius:6px;
+    --font-display:ui-serif,"Iowan Old Style",Charter,Georgia,serif;
+    --font-body:system-ui,-apple-system,"Segoe UI",sans-serif;
+    --font-utility:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --weight-display:600; --weight-body:400; --weight-utility:500;
+    --text-s:13px; --text-m:16px; --text-l:20px; --text-xl:25px; --text-xxl:31px;
+    --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-6:24px; --space-8:32px;
+    --danger-tint:rgba(217,123,98,.10); --warn-tint:rgba(207,169,63,.10);
+  }
+  * { box-sizing:border-box; }
+  body { font:var(--text-m)/1.65 var(--font-body); color:var(--ink); background:var(--paper); max-width:82ch; margin:0 auto; padding:2.5rem var(--space-6) 4rem; }
+  h1,h2 { font-family:var(--font-display); font-weight:var(--weight-display); line-height:1.2; margin:0; text-wrap:balance; }
+  h1 { font-size:2.05rem; margin-bottom:.1em; }
+  h2 { font-size:1.35rem; margin-top:.3rem; }
+  .eyebrow { font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:600; }
+  header { display:flex; flex-direction:column; gap:.6rem; margin-bottom:1rem; }
+  .meta { color:var(--muted); font-size:.88rem; }
+  .lede { font-size:var(--text-l); color:var(--muted); }
+  section { margin-top:3rem; display:flex; flex-direction:column; gap:.9rem; }
+  p { margin:0; }
+  a { color:var(--accent2); overflow-wrap:anywhere; }
+  code { background:#262c29; padding:.1em .35em; border-radius:3px; font-size:.86em; font-family:var(--font-utility); overflow-wrap:anywhere; }
+  .figure { border:1px solid var(--border); border-radius:var(--radius); padding:.75rem; margin:0; background:var(--surface); }
+  .figure .scroll { overflow-x:auto; }
+  .figure svg { display:block; height:auto; }
+  .figure figcaption { color:var(--muted); font-size:.85rem; margin-top:.55rem; line-height:1.5; }
+  .tscroll { overflow-x:auto; margin:.8em 0; }
+  table { border-collapse:collapse; width:100%; font-size:var(--text-s); }
+  th,td { border:1px solid var(--border); padding:.45em .7em; vertical-align:top; text-align:left; overflow-wrap:anywhere; }
+  th { font-weight:600; background:#262c29; }
+  .pill { display:inline-block; font-size:.78em; font-family:var(--font-utility); padding:.1em .55em; border-radius:10px; background:#262c29; color:var(--muted); }
+  .pill.done { background:var(--accent); color:var(--paper); }
+  .pill.now { background:var(--warn); color:var(--paper); }
+  .callout { border-left:3px solid var(--warn); background:var(--warn-tint); padding:.8rem 1rem; border-radius:0 6px 6px 0; font-size:.92rem; }
+  .callout strong:first-child { display:block; margin-bottom:.25rem; }
+  footer { border-top:1px solid var(--border); margin-top:2.5em; padding-top:.8em; color:var(--muted); font-size:.85em; }
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <span class="eyebrow">epoch redesign · e6 split · option b</span>
+  <h1>The outbox-saga, end to end</h1>
+  <div class="lede">The full runtime chosen in the 2026-08-22 grill: pure reactions, effects recorded as facts, external mutations driven by an executor stream — with the allocation ledger keeping every cursor honest.</div>
+  <div class="meta">As of 2026-08-22 &middot; proposed, not shipped &middot; green = shipped &middot; amber = new work</div>
+</header>
+
+<main>
+
+<section id="arch">
+  <span class="eyebrow">the architecture</span>
+  <h2>Reactions are facts; effects are facts; cursors never lie</h2>
+  <figure class="figure">
+    <div class="scroll">
+    <svg viewBox="0 0 960 720" role="img" aria-label="Architecture: a writer appends through the allocation ledger into stream_events. The EventFeed reads the contiguous committed prefix per consumer group. The SagaRunner reacts to events producing Commands and EffectRequests, appended together in one atomic batch into the chore stream and a saga outbox stream. An outbox executor consumes the outbox stream, performs Vikunja HTTP mutations through the BoardPort, and appends done, failed, or compensation events; failure drives vikunja-sync's Revert as compensation. Both feed consumers ack their cursors after durable outcomes." style="min-width:880px">
+      <defs>
+        <marker id="fa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+        </marker>
+      </defs>
+      <g font-size="12.5" fill="currentColor">
+
+        <!-- write path -->
+        <rect x="30" y="30" width="240" height="66" rx="6" fill="none" stroke="var(--accent)"/>
+        <text x="50" y="53" fill="var(--accent)" font-weight="600">writer (any process)</text>
+        <text x="50" y="71" fill="var(--muted)">load → decide → append</text>
+
+        <rect x="330" y="24" width="270" height="78" rx="6" fill="rgba(207,169,63,0.10)" stroke="var(--warn)" stroke-dasharray="4 3"/>
+        <text x="350" y="47" fill="var(--warn)" font-weight="600">allocation ledger — E6a (new)</text>
+        <text x="350" y="65" fill="var(--muted)">IN_FLIGHT → COMMITTED | ABORTED</text>
+        <text x="350" y="83" fill="var(--muted)">one row per sequence; +1 write</text>
+
+        <line x1="270" y1="60" x2="330" y2="60" stroke="currentColor" marker-end="url(#fa)"/>
+        <line x1="600" y1="60" x2="680" y2="60" stroke="currentColor" marker-end="url(#fa)"/>
+
+        <rect x="680" y="24" width="250" height="78" rx="6" fill="none" stroke="var(--accent)"/>
+        <text x="700" y="47" fill="var(--accent)" font-weight="600">stream_events — E10 (shipped)</text>
+        <text x="700" y="65" fill="var(--muted)">the committed log; every fact</text>
+        <text x="700" y="83" fill="var(--muted)">lives here, nothing else</text>
+
+        <!-- event feed -->
+        <rect x="330" y="170" width="380" height="84" rx="6" fill="rgba(207,169,63,0.10)" stroke="var(--warn)"/>
+        <text x="350" y="193" fill="var(--warn)" font-weight="600">EventFeed — E6a (new)</text>
+        <text x="350" y="211" fill="var(--muted)">consumer groups · durable cursors · at-least-once</text>
+        <text x="350" y="229" fill="var(--muted)">delivers only the contiguous committed prefix</text>
+        <line x1="790" y1="102" x2="790" y2="150" stroke="currentColor" marker-end="url(#fa)"/>
+        <line x1="790" y1="150" x2="710" y2="190" stroke="currentColor" marker-end="url(#fa)"/>
+        <line x1="680" y1="60" x2="760" y2="60" stroke="currentColor" marker-end="url(#fa)" transform="translate(0,0)"/>
+
+        <!-- saga runner -->
+        <rect x="60" y="170" width="220" height="84" rx="6" fill="rgba(207,169,63,0.10)" stroke="var(--warn)"/>
+        <text x="80" y="193" fill="var(--warn)" font-weight="600">SagaRunner — E6b (new)</text>
+        <text x="80" y="211" fill="var(--muted)">react(ev) → Vec&lt;Reaction&gt;</text>
+        <text x="80" y="229" fill="var(--muted)">pure; no I/O; Fmodel-school</text>
+        <line x1="330" y1="212" x2="280" y2="212" stroke="currentColor" marker-end="url(#fa)"/>
+
+        <!-- atomic batch -->
+        <rect x="60" y="310" width="650" height="88" rx="6" fill="none" stroke="var(--accent)"/>
+        <text x="80" y="333" fill="var(--accent)" font-weight="600">ONE transaction — AtomicStreams append_batch (E3, shipped)</text>
+        <text x="80" y="351" fill="var(--muted)">Command arm → chore stream (load-decide-append against deciders)</text>
+        <text x="80" y="369" fill="var(--muted)">EffectRequest arm → saga-outbox stream (intent as an event)</text>
+        <text x="80" y="387" fill="var(--muted)">cursor ack is trivial: the append is the transaction</text>
+        <line x1="170" y1="254" x2="170" y2="310" stroke="currentColor" marker-end="url(#fa)"/>
+        <text x="180" y="290" fill="var(--muted)">commands + intents, atomically</text>
+
+        <!-- outbox executor -->
+        <rect x="60" y="460" width="360" height="100" rx="6" fill="rgba(207,169,63,0.10)" stroke="var(--warn)"/>
+        <text x="80" y="483" fill="var(--warn)" font-weight="600">outbox executor — E6b (new, feed consumer #2)</text>
+        <text x="80" y="501" fill="var(--muted)">consumes saga-outbox stream by cursor</text>
+        <text x="80" y="519" fill="var(--muted)">performs the mutation, appends the outcome:</text>
+        <text x="80" y="537" fill="var(--accent)">done</text><text x="115" y="537" fill="var(--danger)">failed</text><text x="165" y="537" fill="var(--muted)">compensation</text>
+        <line x1="240" y1="398" x2="240" y2="460" stroke="currentColor" marker-end="url(#fa)"/>
+        <text x="250" y="435" fill="var(--muted)">EffectRequest events</text>
+
+        <!-- vikunja context -->
+        <rect x="490" y="460" width="440" height="100" rx="6" fill="none" stroke="var(--accent2)"/>
+        <text x="510" y="483" fill="var(--accent2)" font-weight="600">vikunja-sync (chore-lottery, S9 shipped) — bounded context</text>
+        <text x="510" y="501" fill="var(--muted)">BoardPort → Vikunja API (idempotent, bot-attributed)</text>
+        <text x="510" y="519" fill="var(--muted)">Revert(restore lane, bot comment) = the compensation engine</text>
+        <text x="510" y="537" fill="var(--muted)">migrates off its in-process EventTap onto the E6a feed</text>
+        <line x1="420" y1="510" x2="490" y2="510" stroke="var(--accent2)" marker-end="url(#fa)"/>
+
+        <!-- outcomes loop -->
+        <path d="M 930 212 C 950 212 950 510 930 510" fill="none" stroke="var(--accent2)" stroke-dasharray="4 3" marker-end="url(#fa)"/>
+        <text x="905" y="360" fill="var(--accent2)" text-anchor="end" transform="rotate(90 905 360)">done / failed / compensation events append back into stream_events</text>
+
+        <!-- acks -->
+        <line x1="170" y1="254" x2="300" y2="254" stroke="var(--muted)" stroke-dasharray="2 4"/>
+        <text x="60" y="280" fill="var(--muted)" font-size="11.5">feed cursor acks only after durable outcomes (or the trivial batch-ack)</text>
+
+        <!-- legend -->
+        <g font-size="12">
+          <rect x="60" y="610" width="14" height="14" rx="3" fill="none" stroke="var(--accent)"/>
+          <text x="82" y="622">shipped (E3 / E10 / vikunja-sync)</text>
+          <rect x="300" y="610" width="14" height="14" rx="3" fill="rgba(207,169,63,0.10)" stroke="var(--warn)"/>
+          <text x="322" y="622">new: E6a feed + ledger, E6b runner + executor</text>
+          <rect x="640" y="610" width="14" height="14" rx="3" fill="none" stroke="var(--accent2)"/>
+          <text x="662" y="622">consumer side (chore-lottery)</text>
+          <text x="60" y="660" fill="var(--muted)">Everything impure sits above or below the log: writers put facts in, the feed takes facts out, reactions are computed, effects are recorded as facts first. No hidden state anywhere.</text>
+        </g>
+      </g>
+    </svg>
+    </div>
+    <figcaption>The composition that made Option B cheap: the only new primitive is the EventFeed (E6a). The runner’s append is the already-shipped atomic batch (E3); the executor is just another feed consumer; vikunja-sync keeps its port, its idempotency, and its Revert machinery — it gains a durable driver and loses its hand-rolled tap loop.</figcaption>
+  </figure>
+</section>
+
+<section id="crash">
+  <span class="eyebrow">crash table</span>
+  <h2>Every crash is a redelivery</h2>
+  <div class="tscroll">
+  <table>
+    <tr><th style="width:280px">Crash point</th><th>What happens on restart</th><th style="width:190px">Why it’s safe</th></tr>
+    <tr><td>Before the batch append (mid-react)</td><td>Nothing was written; the feed redelivers the same event.</td><td>Pure react — no partial state exists.</td></tr>
+    <tr><td>After the append, before cursor ack</td><td>Event redelivered; react runs again; batch re-appends duplicate intents.</td><td>Idempotency keys absorb duplicates — at-least-once is the contract.</td></tr>
+    <tr><td>Executor: after the Vikunja write, before the done event</td><td>Intent redelivered; the HTTP mutation repeats.</td><td>BoardPort is idempotent + bot-attributed (echo suppression sees it return).</td></tr>
+    <tr><td>Executor: mutation fails outright</td><td>A <code>failed</code> event is appended; policy decides retry or <code>compensation</code>.</td><td>Compensate, never roll back — Revert already exists.</td></tr>
+    <tr><td>Writer dies between ledger allocate and insert</td><td>Row resolves <code>ABORTED</code>; the cursor skips the hole.</td><td>The ledger’s durable hole marker.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="detail">
+  <span class="eyebrow">breakdown</span>
+  <h2>Components and their status</h2>
+  <div class="tscroll">
+  <table>
+    <tr><th style="width:220px">Component</th><th style="width:110px">Status</th><th>Role</th></tr>
+    <tr><td>AtomicStreams batch</td><td><span class="pill done">shipped · E3</span></td><td>One transaction across streams — the runner’s append and the outbox intent ride it unchanged.</td></tr>
+    <tr><td>Postgres store + <code>stream_events</code></td><td><span class="pill done">shipped · E10</span></td><td>The committed log every consumer reads.</td></tr>
+    <tr><td>Allocation ledger</td><td><span class="pill now">new · E6a</span></td><td>Commit-ordered visibility: IN_FLIGHT / COMMITTED / ABORTED per sequence; contiguous-prefix cursors.</td></tr>
+    <tr><td>EventFeed (consumer groups)</td><td><span class="pill now">new · E6a</span></td><td>Durable cursors, at-least-once, the one primitive the design adds.</td></tr>
+    <tr><td>SagaRunner (<code>react</code>)</td><td><span class="pill now">new · E6b</span></td><td>Pure event → reactions; Fmodel-school; no side effects inside.</td></tr>
+    <tr><td>Outbox executor</td><td><span class="pill now">new · E6b</span></td><td>Second feed consumer; performs effects, records outcomes, triggers compensation.</td></tr>
+    <tr><td>vikunja-sync (<code>BoardPort</code>, Revert)</td><td><span class="pill done">shipped · S9</span></td><td>First Effect impl and first compensation engine; migrates off the in-process EventTap.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="src">
+  <span class="eyebrow">caveats &amp; sources</span>
+  <h2>Where this stands</h2>
+  <ul>
+    <li>2026-08-22 grill: split accepted (Q1), Command | Effect chosen (Q2), outbox school chosen over Axon-style inline effects (Q3), allocation ledger chosen (Q4) — this page draws Q3 + Q4 composed.</li>
+    <li><code>docs/research/saga-delivery-upstream.md</code> — Fmodel saga purity, Axon tracking processors, Richardson compensation, transactional outbox (2026-08-22).</li>
+    <li>ADR 0006 (atomic batch) and ADR 0007 (deferral + erratum); chore-lottery S16 demand signal of 2026-08-19.</li>
+  </ul>
+  <div class="callout"><strong>Decisions, not code.</strong> Nothing on this page is implemented; E6a/E6b are cards to be written, gated by E12 (schema migration story) and a gate-S spike that measures the ledger’s extra write. The naming here (<code>saga-outbox</code>, <code>Reaction</code>, executor) is indicative, not final.</div>
+</section>
+
+</main>
+
+<footer>
+  epoch annex house style (project-local tokens) &middot; As of 2026-08-22 &middot; epoch-postgres redesign/bootstrap
+</footer>
+
+<script type="application/json" id="artifact-state">
+{"as_of": "2026-08-22 20:30 UTC", "sections": ["hdr", "arch", "crash", "detail", "src"], "design_system": {"name": "epoch-annex", "version": "1 (project-local, docs/design panels)", "form": "project-local token directory"}, "decision": {"option": "B (outbox-saga) + ledger option 1", "grill_questions": {"q1": "split E6", "q2": "Command | Effect", "q3": "outbox school", "q4": "allocation ledger"}, "gates": ["E12 before E6a", "gate-S ledger spike"]}}
+</script>
+
+</body>
+</html>

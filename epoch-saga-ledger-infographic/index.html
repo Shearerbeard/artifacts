@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Epoch — the allocation ledger</title>
+<style>
+  /* epoch annex house tokens (project-local: docs/design/ panels) */
+  :root {
+    --paper:#171a19; --ink:#e6ebe8; --muted:#a4afa9; --border:#333a37; --surface:#1e2321;
+    --accent:#4dbd93; --accent2:#7aa7d9; --warn:#d4b04a; --danger:#e08a72; --radius:6px;
+    --font-display:ui-serif,"Iowan Old Style",Charter,Georgia,serif;
+    --font-body:system-ui,-apple-system,"Segoe UI",sans-serif;
+    --font-utility:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --weight-display:600; --weight-body:400; --weight-utility:500;
+    --text-s:13px; --text-m:16px; --text-l:20px; --text-xl:25px; --text-xxl:31px;
+    --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-6:24px; --space-8:32px;
+    --danger-tint:rgba(217,123,98,.10); --warn-tint:rgba(207,169,63,.10);
+  }
+  * { box-sizing:border-box; }
+  body { font:var(--text-m)/1.65 var(--font-body); color:var(--ink); background:var(--paper); max-width:82ch; margin:0 auto; padding:2.5rem var(--space-6) 4rem; }
+  h1,h2 { font-family:var(--font-display); font-weight:var(--weight-display); line-height:1.2; margin:0; text-wrap:balance; }
+  h1 { font-size:2.05rem; margin-bottom:.1em; }
+  h2 { font-size:1.35rem; margin-top:.3rem; }
+  .eyebrow { font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:600; }
+  header { display:flex; flex-direction:column; gap:.6rem; margin-bottom:1rem; }
+  .meta { color:var(--muted); font-size:.88rem; }
+  .lede { font-size:var(--text-l); color:var(--muted); }
+  section { margin-top:3rem; display:flex; flex-direction:column; gap:.9rem; }
+  p { margin:0; }
+  a { color:var(--accent2); overflow-wrap:anywhere; }
+  code { background:#262c29; padding:.1em .35em; border-radius:3px; font-size:.86em; font-family:var(--font-utility); overflow-wrap:anywhere; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:var(--space-3); margin:var(--space-4) 0; }
+  .stat { border:1px solid var(--border); border-radius:var(--radius); padding:var(--space-3) var(--space-4); background:var(--surface); }
+  .stat .n { font-size:1.9em; font-weight:var(--weight-display); line-height:1.1; color:var(--accent); }
+  .stat .l { font-size:.78em; font-family:var(--font-utility); text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+  .stat p { margin:.3em 0 0; font-size:.85em; color:var(--muted); }
+  .figure { border:1px solid var(--border); border-radius:var(--radius); padding:.75rem; margin:0; background:var(--surface); }
+  .figure .scroll { overflow-x:auto; }
+  .figure svg { display:block; height:auto; }
+  .figure figcaption { color:var(--muted); font-size:.85rem; margin-top:.55rem; line-height:1.5; }
+  .tscroll { overflow-x:auto; margin:.8em 0; }
+  table { border-collapse:collapse; width:100%; font-size:var(--text-s); }
+  th,td { border:1px solid var(--border); padding:.45em .7em; vertical-align:top; text-align:left; overflow-wrap:anywhere; }
+  th { font-weight:600; background:#262c29; }
+  ol.timeline { list-style:none; padding-left:0; }
+  ol.timeline li { border-left:2px solid var(--accent); padding:.2em 0 .8em 1em; margin-left:.4em; position:relative; counter-increment:step; }
+  ol.timeline li::before { content:counter(step); position:absolute; left:-13px; top:.3em; width:24px; height:24px; border-radius:50%; background:var(--accent); color:var(--paper); font-size:.8rem; font-weight:600; text-align:center; line-height:24px; }
+  .callout { border-left:3px solid var(--warn); background:var(--warn-tint); padding:.8rem 1rem; border-radius:0 6px 6px 0; font-size:.92rem; }
+  .callout strong:first-child { display:block; margin-bottom:.25rem; }
+  footer { border-top:1px solid var(--border); margin-top:2.5em; padding-top:.8em; color:var(--muted); font-size:.85em; }
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <span class="eyebrow">epoch redesign · e6a event feed · option 1</span>
+  <h1>The allocation ledger</h1>
+  <div class="lede">Why a BIGSERIAL cursor silently misses events, and the ledger that makes it honest again — the cursor-visibility decision from the 2026-08-22 design grill.</div>
+  <div class="meta">As of 2026-08-22 &middot; proposed, not shipped &middot; feeds the E6 split ADR</div>
+</header>
+
+<main>
+
+<section id="stats">
+  <div class="stats">
+    <div class="stat"><div class="n">3</div><div class="l">ledger states</div><p>COMMITTED, IN_FLIGHT, ABORTED — every allocated sequence resolves to exactly one.</p></div>
+    <div class="stat"><div class="n">+1</div><div class="l">write per append</div><p>The price: one extra short transaction to allocate the ledger row before the event insert.</p></div>
+    <div class="stat"><div class="n">0</div><div class="l">missed events</div><p>The contiguous-prefix rule means the cursor never advances past an unresolved sequence.</p></div>
+    <div class="stat"><div class="n">1</div><div class="l">honest hole marker</div><p>ABORTED rows turn rolled-back appends into skippable facts instead of silent gaps.</p></div>
+  </div>
+</section>
+
+<section id="race">
+  <span class="eyebrow">the failure mode · adr 0007 erratum</span>
+  <h2>Why BIGSERIAL breaks the feed</h2>
+  <figure class="figure">
+    <div class="scroll">
+    <svg viewBox="0 0 880 470" role="img" aria-label="Two concurrent transactions: transaction A allocates sequence 100, transaction B allocates 101. B commits first; a naive cursor reading where sequence is greater than 99 sees only 101 and advances. A commits a moment later; event 100 is behind the cursor and is never delivered." style="min-width:760px">
+      <defs>
+        <marker id="fa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+        </marker>
+      </defs>
+      <g font-size="12.5" fill="currentColor">
+        <text x="20" y="34" fill="var(--muted)" font-weight="600">time →</text>
+        <line x1="20" y1="44" x2="860" y2="44" stroke="var(--border)" marker-end="url(#fa)"/>
+
+        <!-- txn A lane -->
+        <rect x="90" y="70" width="640" height="64" rx="6" fill="none" stroke="var(--accent2)"/>
+        <text x="110" y="93" fill="var(--accent2)" font-weight="600">txn A · append Assigned</text>
+        <text x="110" y="111" fill="var(--muted)">INSERT takes global_sequence = 100 … still committing</text>
+
+        <!-- txn B lane -->
+        <rect x="150" y="150" width="360" height="64" rx="6" fill="none" stroke="var(--accent)"/>
+        <text x="170" y="173" fill="var(--accent)" font-weight="600">txn B · append Drawn</text>
+        <text x="170" y="191" fill="var(--muted)">INSERT takes global_sequence = 101 · commits first</text>
+
+        <!-- feed poll -->
+        <rect x="330" y="236" width="420" height="64" rx="6" fill="none" stroke="var(--warn)"/>
+        <text x="350" y="259" fill="var(--warn)" font-weight="600">naive feed poll: WHERE global_sequence &gt; 99</text>
+        <text x="350" y="277" fill="var(--muted)">sees 101 only — 100 is uncommitted — advances cursor to 101</text>
+
+        <!-- A commits -->
+        <rect x="90" y="322" width="500" height="60" rx="6" fill="rgba(217,123,98,0.10)" stroke="var(--danger)"/>
+        <text x="110" y="345" fill="var(--danger)" font-weight="600">txn A commits · event 100 becomes visible</text>
+        <text x="110" y="363" fill="var(--muted)">but the cursor is already at 101</text>
+
+        <text x="90" y="425" fill="var(--danger)" font-weight="600">Event 100 is never delivered.</text>
+        <text x="90" y="445" fill="var(--muted)">BIGSERIAL allocates before commit, so sequence order ≠ commit order. A rolled-back append is worse: its hole has no marker at all.</text>
+      </g>
+    </svg>
+    </div>
+    <figcaption>The erratum recorded in ADR 0007 itself: <code>global_sequence</code> is <code>BIGSERIAL</code>, allocated at insert time, so concurrent transactions can commit in the opposite order of their sequence values. Any cursor that treats “highest sequence seen” as progress can skip a committed event permanently.</figcaption>
+  </figure>
+</section>
+
+<section id="ledger">
+  <span class="eyebrow">the fix · option 1 of the grill</span>
+  <h2>One ledger row per sequence</h2>
+  <p>Every append first allocates <code>(seq, txid, IN_FLIGHT)</code> in a small ledger table via its own short transaction. The event insert then marks its row <code>COMMITTED</code> <em>in the same transaction as the event</em>; an abort leaves the row <code>ABORTED</code> — a durable hole marker. The feed advances only over the <strong>contiguous prefix</strong> of resolved rows.</p>
+  <figure class="figure">
+    <div class="scroll">
+    <svg viewBox="0 0 880 300" role="img" aria-label="A strip of sequence slots: 98 committed, 99 committed, 100 in flight, 101 committed, 102 aborted, 103 unallocated. The cursor sits at 99 and holds at 100 until the in-flight row resolves; committed rows deliver, aborted rows skip forever." style="min-width:760px">
+      <defs>
+        <marker id="fb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+        </marker>
+      </defs>
+      <g font-size="13" fill="currentColor">
+        <!-- slot row -->
+        <g text-anchor="middle">
+          <rect x="60"  y="60" width="110" height="72" rx="6" fill="none" stroke="var(--accent)"/>
+          <text x="115" y="88" font-weight="600">98</text><text x="115" y="110" fill="var(--accent)">COMMITTED</text>
+          <rect x="190" y="60" width="110" height="72" rx="6" fill="none" stroke="var(--accent)"/>
+          <text x="245" y="88" font-weight="600">99</text><text x="245" y="110" fill="var(--accent)">COMMITTED</text>
+          <rect x="320" y="60" width="110" height="72" rx="6" fill="rgba(207,169,63,0.10)" stroke="var(--warn)" stroke-width="1.6"/>
+          <text x="375" y="88" font-weight="600">100</text><text x="375" y="110" fill="var(--warn)">IN_FLIGHT</text>
+          <rect x="450" y="60" width="110" height="72" rx="6" fill="none" stroke="var(--accent)"/>
+          <text x="505" y="88" font-weight="600">101</text><text x="505" y="110" fill="var(--accent)">COMMITTED</text>
+          <rect x="580" y="60" width="110" height="72" rx="6" fill="none" stroke="var(--muted)" stroke-dasharray="4 3"/>
+          <text x="635" y="88" font-weight="600">102</text><text x="635" y="110" fill="var(--muted)">ABORTED</text>
+          <rect x="710" y="60" width="110" height="72" rx="6" fill="none" stroke="var(--border)" stroke-dasharray="2 4"/>
+          <text x="765" y="88" fill="var(--muted)">103</text><text x="765" y="110" fill="var(--muted)">not yet</text>
+        </g>
+        <!-- cursor -->
+        <line x1="245" y1="150" x2="245" y2="196" stroke="currentColor" marker-end="url(#fb)"/>
+        <text x="245" y="216" text-anchor="middle" fill="var(--accent2)" font-weight="600">cursor = 99</text>
+        <!-- behaviors -->
+        <text x="115"  y="250" text-anchor="middle" fill="var(--accent)">deliver</text>
+        <text x="245"  y="250" text-anchor="middle" fill="var(--accent)">deliver</text>
+        <text x="375"  y="250" text-anchor="middle" fill="var(--warn)">cursor HOLDS here</text>
+        <text x="505"  y="250" text-anchor="middle" fill="var(--muted)">wait for 100</text>
+        <text x="635"  y="250" text-anchor="middle" fill="var(--muted)">skip forever</text>
+        <text x="765"  y="250" text-anchor="middle" fill="var(--muted)">—</text>
+        <text x="60" y="285" fill="var(--muted)" font-size="12">When 100 resolves to COMMITTED: deliver 100, 101, skip 102 (ABORTED is durable), continue. When it resolves to ABORTED: skip 100, 102, deliver 101. Either way the prefix rule leaves nothing behind.</text>
+      </g>
+    </svg>
+    </div>
+    <figcaption>The contiguous-prefix rule: the cursor may advance to the largest sequence with no unresolved row before it. COMMITTED delivers; ABORTED skips permanently; IN_FLIGHT parks the cursor until the owning transaction resolves.</figcaption>
+  </figure>
+</section>
+
+<section id="detail">
+  <span class="eyebrow">breakdown</span>
+  <h2>Ledger states and cursor behavior</h2>
+  <div class="tscroll">
+  <table>
+    <tr><th style="width:150px">Ledger state</th><th>What the feed does</th><th style="width:230px">Notes</th></tr>
+    <tr><td><code>COMMITTED</code></td><td>Deliver the event, cursor may pass it once everything before it is resolved.</td><td>Marked inside the same transaction as the event insert — the two cannot disagree.</td></tr>
+    <tr><td><code>IN_FLIGHT</code></td><td>Park the cursor; poll until the owning transaction resolves.</td><td>Carries the txid; a stuck writer is observable, not silent.</td></tr>
+    <tr><td><code>ABORTED</code></td><td>Advance past it; the sequence is a permanent, skip-able hole.</td><td>Durable marker for rolled-back appends — the thing BIGSERIAL cannot express.</td></tr>
+    <tr><td>(no row)</td><td>Impossible before that sequence exists — allocation precedes the insert.</td><td>Sequences are only ever issued by the ledger, never the table default.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="seq">
+  <span class="eyebrow">append path</span>
+  <h2>One append, ledger-first</h2>
+  <ol class="timeline">
+    <li><strong>Allocate.</strong> A separate short transaction inserts <code>(seq, txid, IN_FLIGHT)</code> into the ledger. One extra round trip — the cost of the whole scheme.</li>
+    <li><strong>Write.</strong> The event insert uses the allocated <code>seq</code> explicitly (no table default) and marks its ledger row <code>COMMITTED</code> in the same transaction.</li>
+    <li><strong>Resolve.</strong> Commit makes both visible atomically; abort leaves <code>ABORTED</code> behind. There is no state where the event exists but the ledger is wrong.</li>
+    <li><strong>Feed.</strong> Consumers poll the contiguous prefix; delivery is at-least-once with commit-true ordering.</li>
+    <li><strong>Reap.</strong> Ledger rows GC after every consumer cursor has passed them — the ledger is scratch state, not history.</li>
+  </ol>
+</section>
+
+<section id="src">
+  <span class="eyebrow">caveats &amp; sources</span>
+  <h2>Where this stands</h2>
+  <ul>
+    <li>ADR 0007 <em>saga and feed deferred until pulled</em> — the erratum naming the BIGSERIAL defect (epoch-postgres, docs/adr/).</li>
+    <li><code>docs/research/saga-delivery-upstream.md</code> — upstream survey: Axon token store, transactional outbox, compensation-not-rollback (2026-08-22).</li>
+    <li>2026-08-22 design grill, question 4 — Option 1 chosen by the user over single-writer (Option 2) and gap-tolerance (Option 3, rejected as unsound).</li>
+  </ul>
+  <div class="callout"><strong>Not yet validated.</strong> The one-extra-write cost and any allocation contention are claims a gate-S spike on E6a must measure before this is committed; the single-writer transactor (EvidentDB’s model, Option 2) is the named fallback. E12 — the schema migration story — lands before E6a so this schema change ships repeatably.</div>
+</section>
+
+</main>
+
+<footer>
+  epoch annex house style (project-local tokens) &middot; As of 2026-08-22 &middot; epoch-postgres redesign/bootstrap
+</footer>
+
+<script type="application/json" id="artifact-state">
+{"as_of": "2026-08-22 20:30 UTC", "sections": ["hdr", "stats", "race", "ledger", "detail", "seq", "src"], "design_system": {"name": "epoch-annex", "version": "1 (project-local, docs/design panels)", "form": "project-local token directory"}, "decision": {"option": 1, "rejected": ["single-writer transactor (fallback, not rejected)", "gap-tolerant cursor (rejected: unsound)"], "grill_date": "2026-08-22"}}
+</script>
+
+</body>
+</html>

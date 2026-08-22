@@ -57,17 +57,17 @@
   <span class="eyebrow">epoch redesign · e6a event feed · option 1</span>
   <h1>The allocation ledger</h1>
   <div class="lede">Why a BIGSERIAL cursor silently misses events, and the ledger that makes it honest again — the cursor-visibility decision from the 2026-08-22 design grill.</div>
-  <div class="meta">As of 2026-08-22 &middot; proposed, not shipped &middot; feeds the E6 split ADR</div>
+  <div class="meta">As of 2026-08-22, rev 2 (post-adversarial-review) &middot; proposed, not shipped &middot; feeds the E19 card and ADR 0010</div>
 </header>
 
 <main>
 
 <section id="stats">
   <div class="stats">
-    <div class="stat"><div class="n">3</div><div class="l">ledger states</div><p>COMMITTED, IN_FLIGHT, ABORTED — every allocated sequence resolves to exactly one.</p></div>
-    <div class="stat"><div class="n">+1</div><div class="l">write per append</div><p>The price: one extra short transaction to allocate the ledger row before the event insert.</p></div>
-    <div class="stat"><div class="n">0</div><div class="l">missed events</div><p>The contiguous-prefix rule means the cursor never advances past an unresolved sequence.</p></div>
-    <div class="stat"><div class="n">1</div><div class="l">honest hole marker</div><p>ABORTED rows turn rolled-back appends into skippable facts instead of silent gaps.</p></div>
+    <div class="stat"><div class="n">3</div><div class="l">ledger states</div><p>COMMITTED, IN_FLIGHT, ABORTED — every allocated range resolves to exactly one.</p></div>
+    <div class="stat"><div class="n">+1</div><div class="l">txn per append</div><p>The price: one extra short transaction (two commits, three writes) — the serialized allocation.</p></div>
+    <div class="stat"><div class="n">1</div><div class="l">advisory lock</div><p>Allocation draw→insert→commit is serialized, so rows become visible in sequence order.</p></div>
+    <div class="stat"><div class="n">0</div><div class="l">missed events</div><p>Range-ordered cursor + serialization: the cursor never advances past an unresolved range, and gaps below a visible row are provably burned.</p></div>
   </div>
 </section>
 
@@ -116,9 +116,10 @@
 </section>
 
 <section id="ledger">
-  <span class="eyebrow">the fix · option 1 of the grill</span>
-  <h2>One ledger row per sequence</h2>
-  <p>Every append first allocates <code>(seq, txid, IN_FLIGHT)</code> in a small ledger table via its own short transaction. The event insert then marks its row <code>COMMITTED</code> <em>in the same transaction as the event</em>; an abort leaves the row <code>ABORTED</code> — a durable hole marker. The feed advances only over the <strong>contiguous prefix</strong> of resolved rows.</p>
+  <span class="eyebrow">the fix · option 1 of the grill, hardened by four review rounds</span>
+  <h2>One ledger row per event transaction</h2>
+  <p>Every append or batch first allocates a <code>(first_seq, last_seq, txid, IN_FLIGHT)</code> <strong>range</strong> from the same sequence object that backs <code>global_sequence</code> — one counter, explicit inserts, column default retired. The allocation critical section (draw, insert, commit) runs under <strong>one advisory lock</strong>, so rows become visible in <code>first_seq</code> order — that serialization is what makes "a gap below a visible row is burned" a theorem. The event transaction marks its row <code>COMMITTED</code> alongside the events; aborts leave <code>ABORTED</code> — durable hole markers. The feed advances only over resolved <strong>ranges</strong> in <code>first_seq</code> order.</p>
+  <p>Orphaned <code>IN_FLIGHT</code> rows (writer died between allocation and append) are reaped by a <strong>row-lock protocol</strong>, not by transaction-status inspection — an uncommitted claim is invisible under MVCC, so the reaper instead selects old NULL-txid rows <code>FOR UPDATE</code>, re-checks the state, and flips to <code>ABORTED</code>; a late claimer then loses the race loudly through the <code>IN_FLIGHT</code> guard.</p>
   <figure class="figure">
     <div class="scroll">
     <svg viewBox="0 0 880 300" role="img" aria-label="A strip of sequence slots: 98 committed, 99 committed, 100 in flight, 101 committed, 102 aborted, 103 unallocated. The cursor sits at 99 and holds at 100 until the in-flight row resolves; committed rows deliver, aborted rows skip forever." style="min-width:760px">
@@ -157,7 +158,7 @@
       </g>
     </svg>
     </div>
-    <figcaption>The contiguous-prefix rule: the cursor may advance to the largest sequence with no unresolved row before it. COMMITTED delivers; ABORTED skips permanently; IN_FLIGHT parks the cursor until the owning transaction resolves.</figcaption>
+    <figcaption>The contiguous-range rule: the cursor may advance to the next resolved ledger row in <code>first_seq</code> order. COMMITTED ranges deliver (per-event; the group acks whole ranges, monotonically); ABORTED ranges skip permanently; IN_FLIGHT ranges park the cursor until the row-lock reaper resolves them. Burned values — allocation-abort gaps with no row — are not feed sequences and are never waited on.</figcaption>
   </figure>
 </section>
 
@@ -167,10 +168,10 @@
   <div class="tscroll">
   <table>
     <tr><th style="width:150px">Ledger state</th><th>What the feed does</th><th style="width:230px">Notes</th></tr>
-    <tr><td><code>COMMITTED</code></td><td>Deliver the event, cursor may pass it once everything before it is resolved.</td><td>Marked inside the same transaction as the event insert — the two cannot disagree.</td></tr>
-    <tr><td><code>IN_FLIGHT</code></td><td>Park the cursor; poll until the owning transaction resolves.</td><td>Carries the txid; a stuck writer is observable, not silent.</td></tr>
-    <tr><td><code>ABORTED</code></td><td>Advance past it; the sequence is a permanent, skip-able hole.</td><td>Durable marker for rolled-back appends — the thing BIGSERIAL cannot express.</td></tr>
-    <tr><td>(no row)</td><td>Impossible before that sequence exists — allocation precedes the insert.</td><td>Sequences are only ever issued by the ledger, never the table default.</td></tr>
+    <tr><td><code>COMMITTED</code></td><td>Deliver the range's events (per-event delivery; whole-range monotonic ack).</td><td>Marked inside the same transaction as the event inserts — the two cannot disagree.</td></tr>
+    <tr><td><code>IN_FLIGHT</code></td><td>Park the cursor; the row-lock reaper resolves orphans after an age bound.</td><td>NULL txid; the reaper's FOR UPDATE vs the claimer's UPDATE is the serialization point.</td></tr>
+    <tr><td><code>ABORTED</code></td><td>Advance past it; the range is a permanent, skip-able hole.</td><td>Durable marker for rolled-back appends — the thing BIGSERIAL cannot express.</td></tr>
+    <tr><td>(no row)</td><td>Burned values: allocation-transaction aborts, plus BIGSERIAL-era history. Not feed sequences.</td><td>Serialization makes "no row below a visible row" provably burned, never merely assumed.</td></tr>
   </table>
   </div>
 </section>
@@ -179,11 +180,11 @@
   <span class="eyebrow">append path</span>
   <h2>One append, ledger-first</h2>
   <ol class="timeline">
-    <li><strong>Allocate.</strong> A separate short transaction inserts <code>(seq, txid, IN_FLIGHT)</code> into the ledger. One extra round trip — the cost of the whole scheme.</li>
-    <li><strong>Write.</strong> The event insert uses the allocated <code>seq</code> explicitly (no table default) and marks its ledger row <code>COMMITTED</code> in the same transaction.</li>
-    <li><strong>Resolve.</strong> Commit makes both visible atomically; abort leaves <code>ABORTED</code> behind. There is no state where the event exists but the ledger is wrong.</li>
-    <li><strong>Feed.</strong> Consumers poll the contiguous prefix; delivery is at-least-once with commit-true ordering.</li>
-    <li><strong>Reap.</strong> Ledger rows GC after every consumer cursor has passed them — the ledger is scratch state, not history.</li>
+    <li><strong>Allocate (serialized).</strong> Under the advisory lock, a short transaction draws n sequences and inserts the <code>(first_seq, last_seq, NULL, IN_FLIGHT)</code> row. One extra transaction — the cost of the whole scheme, and exactly what the gate-S spike measures.</li>
+    <li><strong>Write.</strong> The event transaction inserts events with explicit sequence values from the range and marks the row <code>COMMITTED</code> in the same transaction (guarded on IN_FLIGHT; zero rows aborts loudly).</li>
+    <li><strong>Resolve.</strong> Commit makes both visible atomically; a caught rollback writes <code>ABORTED</code>. An orphaned row is reaped by the row-lock protocol. No state exists where the events exist but the ledger is wrong.</li>
+    <li><strong>Feed.</strong> Consumers poll resolved ranges in <code>first_seq</code> order; delivery is per-event, at-least-once, with whole-range monotonic acks and one active poller per group.</li>
+    <li><strong>Reap.</strong> Terminal ledger rows GC only behind every group cursor (dead groups are reclaimed by a logged operator action); IN_FLIGHT rows are never GC'd, only reaped.</li>
   </ol>
 </section>
 
@@ -193,9 +194,9 @@
   <ul>
     <li>ADR 0007 <em>saga and feed deferred until pulled</em> — the erratum naming the BIGSERIAL defect (epoch-postgres, docs/adr/).</li>
     <li><code>docs/research/saga-delivery-upstream.md</code> — upstream survey: Axon token store, transactional outbox, compensation-not-rollback (2026-08-22).</li>
-    <li>2026-08-22 design grill, question 4 — Option 1 chosen by the user over single-writer (Option 2) and gap-tolerance (Option 3, rejected as unsound).</li>
+    <li>Four adversarial review rounds, 2026-08-22 (kimi-k3 ×3, codex gpt-5.6-sol ×1) — packets in epoch-board docs/board/reviews/saga-feed-wave/. This page reflects all applied dispositions.</li>
   </ul>
-  <div class="callout"><strong>Not yet validated.</strong> The one-extra-write cost and any allocation contention are claims a gate-S spike on E6a must measure before this is committed; the single-writer transactor (EvidentDB’s model, Option 2) is the named fallback. E12 — the schema migration story — lands before E6a so this schema change ships repeatably.</div>
+  <div class="callout"><strong>Not yet validated.</strong> The design is review-hardened but unimplemented. The gate-S spike on E19 carries a pre-registered verdict — FAIL pivots to the single-writer fallback if p99 append latency overhead exceeds 2x at 8 concurrent writers over 10k appends, or batch lock-wait p99 regresses more than 50% under 4 concurrent multi-stream batches. E12 (migrations) dispatches first so the schema changes ship repeatably.</div>
 </section>
 
 </main>
@@ -205,7 +206,7 @@
 </footer>
 
 <script type="application/json" id="artifact-state">
-{"as_of": "2026-08-22 20:30 UTC", "sections": ["hdr", "stats", "race", "ledger", "detail", "seq", "src"], "design_system": {"name": "epoch-annex", "version": "1 (project-local, docs/design panels)", "form": "project-local token directory"}, "decision": {"option": 1, "rejected": ["single-writer transactor (fallback, not rejected)", "gap-tolerant cursor (rejected: unsound)"], "grill_date": "2026-08-22"}}
+{"as_of": "2026-08-22 23:00 UTC", "sections": ["hdr", "stats", "race", "ledger", "detail", "seq", "src"], "design_system": {"name": "epoch-annex", "version": "1 (project-local, docs/design panels)", "form": "project-local token directory"}, "decision": {"option": "1 (serialized allocation, concurrent event transactions)", "fallback": "2 (single-writer everything; spike adjudicates)", "rejected": ["gap-tolerant cursor (unsound)"], "review_rounds_applied": 4, "rev": 2, "changes_rev2": ["per-transaction ranges replace per-sequence rows", "advisory-lock serialization of allocation", "row-lock reaper replaces txid_status (MVCC-impossible)", "per-event delivery with whole-range monotonic ack", "burned values defined"]}}
 </script>
 
 </body>

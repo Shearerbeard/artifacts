@@ -52,8 +52,7 @@
   <span class="eyebrow">epoch redesign · e6 split · option b</span>
   <h1>The outbox-saga, end to end</h1>
   <div class="lede">The full runtime chosen in the 2026-08-22 grill: pure reactions, effects recorded as facts, external mutations driven by an executor stream — with the allocation ledger keeping every cursor honest.</div>
-  <div class="meta">As of 2026-08-22 &middot; proposed, not shipped &middot; green = shipped &middot; amber = new work</div>
-</header>
+  <div class="meta">As of 2026-08-22, rev 2 (post-adversarial-review) &middot; proposed, not shipped &middot; green = shipped &middot; amber = new work</div></header>
 
 <main>
 
@@ -76,9 +75,9 @@
         <text x="50" y="71" fill="var(--muted)">load → decide → append</text>
 
         <rect x="330" y="24" width="270" height="78" rx="6" fill="rgba(207,169,63,0.10)" stroke="var(--warn)" stroke-dasharray="4 3"/>
-        <text x="350" y="47" fill="var(--warn)" font-weight="600">allocation ledger — E6a (new)</text>
-        <text x="350" y="65" fill="var(--muted)">IN_FLIGHT → COMMITTED | ABORTED</text>
-        <text x="350" y="83" fill="var(--muted)">one row per sequence; +1 write</text>
+        <text x="350" y="47" fill="var(--warn)" font-weight="600">allocation ledger — E19 (new)</text>
+        <text x="350" y="65" fill="var(--muted)">serialized ranges; row-lock reaper</text>
+        <text x="350" y="83" fill="var(--muted)">+1 txn per append (the spike measures it)</text>
 
         <line x1="270" y1="60" x2="330" y2="60" stroke="currentColor" marker-end="url(#fa)"/>
         <line x1="600" y1="60" x2="680" y2="60" stroke="currentColor" marker-end="url(#fa)"/>
@@ -90,18 +89,18 @@
 
         <!-- event feed -->
         <rect x="330" y="170" width="380" height="84" rx="6" fill="rgba(207,169,63,0.10)" stroke="var(--warn)"/>
-        <text x="350" y="193" fill="var(--warn)" font-weight="600">EventFeed — E6a (new)</text>
+        <text x="350" y="193" fill="var(--warn)" font-weight="600">EventFeed — E19 (new)</text>
         <text x="350" y="211" fill="var(--muted)">consumer groups · durable cursors · at-least-once</text>
-        <text x="350" y="229" fill="var(--muted)">delivers only the contiguous committed prefix</text>
+        <text x="350" y="229" fill="var(--muted)">per-event delivery, whole-range monotonic ack, one poller/group</text>
         <line x1="790" y1="102" x2="790" y2="150" stroke="currentColor" marker-end="url(#fa)"/>
         <line x1="790" y1="150" x2="710" y2="190" stroke="currentColor" marker-end="url(#fa)"/>
         <line x1="680" y1="60" x2="760" y2="60" stroke="currentColor" marker-end="url(#fa)" transform="translate(0,0)"/>
 
         <!-- saga runner -->
         <rect x="60" y="170" width="220" height="84" rx="6" fill="rgba(207,169,63,0.10)" stroke="var(--warn)"/>
-        <text x="80" y="193" fill="var(--warn)" font-weight="600">SagaRunner — E6b (new)</text>
+        <text x="80" y="193" fill="var(--warn)" font-weight="600">SagaRunner — E20 (new)</text>
         <text x="80" y="211" fill="var(--muted)">react(ev) → Vec&lt;Reaction&gt;</text>
-        <text x="80" y="229" fill="var(--muted)">pure; no I/O; Fmodel-school</text>
+        <text x="80" y="229" fill="var(--muted)">pure; reaction keys; typed duplicate no-op</text>
         <line x1="330" y1="212" x2="280" y2="212" stroke="currentColor" marker-end="url(#fa)"/>
 
         <!-- atomic batch -->
@@ -115,10 +114,10 @@
 
         <!-- outbox executor -->
         <rect x="60" y="460" width="360" height="100" rx="6" fill="rgba(207,169,63,0.10)" stroke="var(--warn)"/>
-        <text x="80" y="483" fill="var(--warn)" font-weight="600">outbox executor — E6b (new, feed consumer #2)</text>
-        <text x="80" y="501" fill="var(--muted)">consumes saga-outbox stream by cursor</text>
+        <text x="80" y="483" fill="var(--warn)" font-weight="600">outbox executor — E20 (new, feed consumer #2)</text>
+        <text x="80" y="501" fill="var(--muted)">durable retry budget; park TERMINAL-FAILED (intent key)</text>
         <text x="80" y="519" fill="var(--muted)">performs the mutation, appends the outcome:</text>
-        <text x="80" y="537" fill="var(--accent)">done</text><text x="115" y="537" fill="var(--danger)">failed</text><text x="165" y="537" fill="var(--muted)">compensation</text>
+        <text x="80" y="537" fill="var(--accent)">done</text><text x="115" y="537" fill="var(--danger)">failed</text><text x="165" y="537" fill="var(--muted)">compensation (hook fires once, at park)</text>
         <line x1="240" y1="398" x2="240" y2="460" stroke="currentColor" marker-end="url(#fa)"/>
         <text x="250" y="435" fill="var(--muted)">EffectRequest events</text>
 
@@ -127,7 +126,7 @@
         <text x="510" y="483" fill="var(--accent2)" font-weight="600">vikunja-sync (chore-lottery, S9 shipped) — bounded context</text>
         <text x="510" y="501" fill="var(--muted)">BoardPort → Vikunja API (idempotent, bot-attributed)</text>
         <text x="510" y="519" fill="var(--muted)">Revert(restore lane, bot comment) = the compensation engine</text>
-        <text x="510" y="537" fill="var(--muted)">migrates off its in-process EventTap onto the E6a feed</text>
+        <text x="510" y="537" fill="var(--muted)">migrates off its in-process EventTap onto the E19 feed</text>
         <line x1="420" y1="510" x2="490" y2="510" stroke="var(--accent2)" marker-end="url(#fa)"/>
 
         <!-- outcomes loop -->
@@ -143,7 +142,7 @@
           <rect x="60" y="610" width="14" height="14" rx="3" fill="none" stroke="var(--accent)"/>
           <text x="82" y="622">shipped (E3 / E10 / vikunja-sync)</text>
           <rect x="300" y="610" width="14" height="14" rx="3" fill="rgba(207,169,63,0.10)" stroke="var(--warn)"/>
-          <text x="322" y="622">new: E6a feed + ledger, E6b runner + executor</text>
+          <text x="322" y="622">new: E19 feed + ledger, E20 runner + executor</text>
           <rect x="640" y="610" width="14" height="14" rx="3" fill="none" stroke="var(--accent2)"/>
           <text x="662" y="622">consumer side (chore-lottery)</text>
           <text x="60" y="660" fill="var(--muted)">Everything impure sits above or below the log: writers put facts in, the feed takes facts out, reactions are computed, effects are recorded as facts first. No hidden state anywhere.</text>
@@ -151,7 +150,7 @@
       </g>
     </svg>
     </div>
-    <figcaption>The composition that made Option B cheap: the only new primitive is the EventFeed (E6a). The runner’s append is the already-shipped atomic batch (E3); the executor is just another feed consumer; vikunja-sync keeps its port, its idempotency, and its Revert machinery — it gains a durable driver and loses its hand-rolled tap loop.</figcaption>
+    <figcaption>The composition that made Option B cheap: the only new primitive is the EventFeed (E19). The runner’s append is the already-shipped atomic batch (E3); the executor is just another feed consumer; vikunja-sync keeps its port, its idempotency, and its Revert machinery — it gains a durable driver and loses its hand-rolled tap loop.</figcaption>
   </figure>
 </section>
 
@@ -162,10 +161,13 @@
   <table>
     <tr><th style="width:280px">Crash point</th><th>What happens on restart</th><th style="width:190px">Why it’s safe</th></tr>
     <tr><td>Before the batch append (mid-react)</td><td>Nothing was written; the feed redelivers the same event.</td><td>Pure react — no partial state exists.</td></tr>
-    <tr><td>After the append, before cursor ack</td><td>Event redelivered; react runs again; batch re-appends duplicate intents.</td><td>Idempotency keys absorb duplicates — at-least-once is the contract.</td></tr>
+    <tr><td>After the append, before cursor ack</td><td>Event redelivered; react runs again; the duplicate intent is rejected.</td><td>Framework-enforced reaction-key uniqueness returns a typed DuplicateIntent no-op.</td></tr>
+    <tr><td>Indeterminate batch failure (connection loss, deadlock)</td><td>Retried, then propagated — never classified as a conflict.</td><td>Only a confirmed unique-violation with the key present is the duplicate no-op.</td></tr>
     <tr><td>Executor: after the Vikunja write, before the done event</td><td>Intent redelivered; the HTTP mutation repeats.</td><td>BoardPort is idempotent + bot-attributed (echo suppression sees it return).</td></tr>
-    <tr><td>Executor: mutation fails outright</td><td>A <code>failed</code> event is appended; policy decides retry or <code>compensation</code>.</td><td>Compensate, never roll back — Revert already exists.</td></tr>
-    <tr><td>Writer dies between ledger allocate and insert</td><td>Row resolves <code>ABORTED</code>; the cursor skips the hole.</td><td>The ledger’s durable hole marker.</td></tr>
+    <tr><td>Executor: mutation fails repeatedly</td><td>Durable retry budget (derived from failed events) exhausts; intent parks TERMINAL-FAILED carrying the intent key; group advances; compensation hook fires once.</td><td>Head-of-line blocking is terminal-only; park replay is a no-op.</td></tr>
+    <tr><td>Executor: crash between parking and ack</td><td>Park record replays as a no-op append; hook re-fires idempotently.</td><td>Parking identity = intent key.</td></tr>
+    <tr><td>Writer dies between ledger allocate and insert</td><td>Row resolves <code>ABORTED</code> — client-caught rollback, or the row-lock reaper; a late claimer aborts loudly.</td><td>The ledger’s guarded transitions.</td></tr>
+    <tr><td>Allocation transaction itself aborts</td><td>Values burn with no ledger row; the cursor passes them.</td><td>Serialization makes gaps below a visible row provably burned.</td></tr>
   </table>
   </div>
 </section>
@@ -178,10 +180,10 @@
     <tr><th style="width:220px">Component</th><th style="width:110px">Status</th><th>Role</th></tr>
     <tr><td>AtomicStreams batch</td><td><span class="pill done">shipped · E3</span></td><td>One transaction across streams — the runner’s append and the outbox intent ride it unchanged.</td></tr>
     <tr><td>Postgres store + <code>stream_events</code></td><td><span class="pill done">shipped · E10</span></td><td>The committed log every consumer reads.</td></tr>
-    <tr><td>Allocation ledger</td><td><span class="pill now">new · E6a</span></td><td>Commit-ordered visibility: IN_FLIGHT / COMMITTED / ABORTED per sequence; contiguous-prefix cursors.</td></tr>
-    <tr><td>EventFeed (consumer groups)</td><td><span class="pill now">new · E6a</span></td><td>Durable cursors, at-least-once, the one primitive the design adds.</td></tr>
-    <tr><td>SagaRunner (<code>react</code>)</td><td><span class="pill now">new · E6b</span></td><td>Pure event → reactions; Fmodel-school; no side effects inside.</td></tr>
-    <tr><td>Outbox executor</td><td><span class="pill now">new · E6b</span></td><td>Second feed consumer; performs effects, records outcomes, triggers compensation.</td></tr>
+    <tr><td>Allocation ledger</td><td><span class="pill now">new · E19</span></td><td>Serialized per-transaction ranges from the shared sequence; guarded transitions; row-lock reaper; burned values are not feed sequences.</td></tr>
+    <tr><td>EventFeed (consumer groups)</td><td><span class="pill now">new · E19</span></td><td>Durable cursors, at-least-once, per-event delivery with whole-range monotonic ack, one poller per group; the keyed event-envelope seam rides the same card.</td></tr>
+    <tr><td>SagaRunner (<code>react</code>)</td><td><span class="pill now">new · E20</span></td><td>Pure event → reactions; deterministic reaction keys; typed DuplicateIntent; one write per stream per batch.</td></tr>
+    <tr><td>Outbox executor</td><td><span class="pill now">new · E20</span></td><td>Second feed consumer; durable retry budget; TERMINAL-FAILED parking with intent-key identity; compensation hook once at park.</td></tr>
     <tr><td>vikunja-sync (<code>BoardPort</code>, Revert)</td><td><span class="pill done">shipped · S9</span></td><td>First Effect impl and first compensation engine; migrates off the in-process EventTap.</td></tr>
   </table>
   </div>
@@ -195,7 +197,7 @@
     <li><code>docs/research/saga-delivery-upstream.md</code> — Fmodel saga purity, Axon tracking processors, Richardson compensation, transactional outbox (2026-08-22).</li>
     <li>ADR 0006 (atomic batch) and ADR 0007 (deferral + erratum); chore-lottery S16 demand signal of 2026-08-19.</li>
   </ul>
-  <div class="callout"><strong>Decisions, not code.</strong> Nothing on this page is implemented; E6a/E6b are cards to be written, gated by E12 (schema migration story) and a gate-S spike that measures the ledger’s extra write. The naming here (<code>saga-outbox</code>, <code>Reaction</code>, executor) is indicative, not final.</div>
+  <div class="callout"><strong>Decisions, not code.</strong> Nothing on this page is implemented; the design carries four adversarial review rounds (kimi-k3 ×3, codex gpt-5.6-sol ×1 — packets in epoch-board docs/board/reviews/saga-feed-wave/), all dispositions applied 2026-08-22. E12 (migrations) dispatches first; E19’s gate-S spike holds a pre-registered verdict with the single-writer transactor as the named fallback. Naming (<code>saga-outbox</code>, <code>Reaction</code>) is indicative until gate A.</div>
 </section>
 
 </main>
@@ -205,7 +207,7 @@
 </footer>
 
 <script type="application/json" id="artifact-state">
-{"as_of": "2026-08-22 20:30 UTC", "sections": ["hdr", "arch", "crash", "detail", "src"], "design_system": {"name": "epoch-annex", "version": "1 (project-local, docs/design panels)", "form": "project-local token directory"}, "decision": {"option": "B (outbox-saga) + ledger option 1", "grill_questions": {"q1": "split E6", "q2": "Command | Effect", "q3": "outbox school", "q4": "allocation ledger"}, "gates": ["E12 before E6a", "gate-S ledger spike"]}}
+{"as_of": "2026-08-22 23:00 UTC", "sections": ["hdr", "arch", "crash", "detail", "src"], "design_system": {"name": "epoch-annex", "version": "1 (project-local, docs/design panels)", "form": "project-local token directory"}, "decision": {"option": "B (outbox-saga) + ledger option 1 (serialized allocation)", "cards": {"feed": "E19", "runner": "E20"}, "review_rounds_applied": 4, "rev": 2, "changes_rev2": ["card ids E19/E20 after the E6 split", "row-lock reaper", "typed DuplicateIntent + indeterminate-failure handling", "TERMINAL-FAILED parking identity + hook-once", "ack granularity row in crash table", "allocation-abort burn row"]}, "gates": ["E12 dispatches first", "gate-S spike with pre-registered verdict"]}}
 </script>
 
 </body>

@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>K3 Stage 1.1 — dock resolver: review package</title>
+<style>
+  :root { --ink:#1a1a1a; --paper:#fdfdfd; --accent:#0a7d4a; --accent2:#1d4ed8; --warn:#b45309; --danger:#b91c1c; --muted:#666; --border:#ddd; --surface:#f5f5f5; --radius:8px;
+          --font-display:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-utility:ui-monospace,SFMono-Regular,Menlo,monospace;
+          --weight-display:600; --weight-body:400; --weight-utility:500;
+          --text-s:13px; --text-m:16px; --text-l:20px; --text-xl:25px; --text-xxl:31px;
+          --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-6:24px; --space-8:32px; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink:#e4e4e4; --paper:#1a1a1a; --accent:#4ade80; --accent2:#60a5fa; --warn:#fbbf24; --danger:#f87171; --muted:#999; --border:#333; --surface:#262626; }
+  }
+  * { box-sizing:border-box; }
+  body { font:var(--text-m)/1.6 var(--font-body); font-weight:var(--weight-body); color:var(--ink); background:var(--paper); max-width:980px; margin:1.5em auto; padding:0 var(--space-6) var(--space-8); }
+  h1,h2,h3 { font-family:var(--font-display); font-weight:var(--weight-display); line-height:1.25; margin:1.4em 0 .4em; }
+  h1 { font-size:var(--text-xxl); margin-bottom:.1em; }
+  h2 { font-size:var(--text-xl); border-bottom:1px solid var(--border); padding-bottom:.2em; }
+  h3 { font-size:var(--text-l); }
+  a { color:var(--accent2); overflow-wrap:anywhere; }
+  code { background:var(--surface); padding:.15em .35em; border-radius:3px; font-size:.92em; font-family:var(--font-utility); font-weight:var(--weight-utility); overflow-wrap:anywhere; }
+  .tscroll { overflow-x:auto; margin:.8em 0; }
+  .tscroll table { margin:0; }
+  table { border-collapse:collapse; width:100%; font-size:var(--text-s); }
+  th,td { border:1px solid var(--border); padding:.45em .7em; vertical-align:top; text-align:left; overflow-wrap:anywhere; }
+  th { font-weight:600; background:var(--surface); }
+  .meta { color:var(--muted); font-size:var(--text-s); }
+  .lede { font-size:var(--text-l); color:var(--muted); margin:.3em 0 1em; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:var(--space-3); margin:var(--space-4) 0; }
+  .stat { border:1px solid var(--border); border-radius:var(--radius); padding:var(--space-3) var(--space-4); }
+  .stat .n { font-size:1.9em; font-weight:var(--weight-display); line-height:1.1; color:var(--accent); }
+  .stat .l { font-size:.8em; font-family:var(--font-utility); text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+  .stat p { margin:.3em 0 0; font-size:.85em; }
+  .figure { border:1px solid var(--border); border-radius:var(--radius); padding:1em; margin:1.2em 0; }
+  .figure .scroll { overflow-x:auto; }
+  .figure svg { height:auto; display:block; }
+  .figure figcaption { color:var(--muted); font-size:var(--text-s); margin-top:.6em; }
+  .pill { display:inline-block; font-size:var(--text-s); padding:var(--space-1) var(--space-2); border-radius:10px; background:var(--surface); color:var(--muted); vertical-align:1px; }
+  .pill.done { background:var(--accent); color:var(--paper); }
+  .pill.now  { background:var(--warn);   color:var(--paper); }
+  .pill.warn { background:var(--danger); color:var(--paper); }
+  .callout { border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:4px; padding:.7em 1em; margin:1em 0; font-size:.93em; background:color-mix(in srgb, var(--accent) 5%, var(--paper)); }
+  ol.timeline { list-style:none; padding-left:0; }
+  ol.timeline li { border-left:2px solid var(--accent); padding:.2em 0 .8em 1em; margin-left:.4em; position:relative; }
+  ol.timeline li::before { content:""; position:absolute; left:-6px; top:.55em; width:10px; height:10px; border-radius:50%; background:var(--accent); }
+  footer { border-top:1px solid var(--border); margin-top:2.5em; padding-top:.8em; color:var(--muted); font-size:.85em; }
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <h1>K3 Stage 1.1 — dock resolver: review package</h1>
+  <div class="lede">Everything needed to review the landed Stage 1.1 work and its gate evidence from a phone.</div>
+  <div class="meta">As of 2026-08-24 20:57 UTC &middot; wiki-kit branch <code>k3</code>, commits <code>58be7b9..972c630</code> (5 commits over master <code>a6933a2</code>)</div>
+</header>
+
+<main>
+
+  <section id="stats">
+    <div class="stats">
+      <div class="stat"><div class="n">563</div><div class="l">tests green</div><p>74 new this stage; ruff + sweep clean</p></div>
+      <div class="stat"><div class="n">4/4</div><div class="l">Gate A verdicts PASS</div><p>every lane failed round 1, passed round 2</p></div>
+      <div class="stat"><div class="n">30</div><div class="l">findings fixed</div><p>7 blocking, 23 minor; 1 rejected with justification</p></div>
+      <div class="stat"><div class="n">29/29</div><div class="l">install-smoke</div><p>docker ubuntu:24.04, offline, full PASS</p></div>
+    </div>
+  </section>
+
+  <section id="fig">
+    <h2>What landed: the dock resolution order</h2>
+    <figure class="figure">
+      <div class="scroll">
+        <svg viewBox="0 0 640 470" width="640" role="img" aria-label="Dock resolution order flow">
+          <defs>
+            <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/>
+            </marker>
+          </defs>
+
+          <rect x="40" y="14" width="420" height="52" rx="8" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="56" y="35" font-size="13" font-weight="600" fill="var(--ink)">1 &middot; --wiki flag</text>
+          <text x="56" y="53" font-size="12" fill="var(--muted)">the wiki repo root itself; bypasses discovery</text>
+
+          <line x1="250" y1="66" x2="250" y2="78" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#arr)"/>
+
+          <rect x="40" y="80" width="420" height="52" rx="8" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="56" y="101" font-size="13" font-weight="600" fill="var(--ink)">2 &middot; WIKI_DOCK env</text>
+          <text x="56" y="119" font-size="12" fill="var(--muted)">names a dock dir (or a directory holding one)</text>
+
+          <line x1="250" y1="132" x2="250" y2="144" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#arr)"/>
+
+          <rect x="40" y="146" width="420" height="52" rx="8" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="56" y="167" font-size="13" font-weight="600" fill="var(--ink)">3 &middot; walk-up, bounded at the git toplevel</text>
+          <text x="56" y="185" font-size="12" fill="var(--muted)">wiki.toml = inside the wiki; .wiki/ = a consumer dock</text>
+
+          <line x1="250" y1="198" x2="250" y2="210" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#arr)"/>
+
+          <rect x="40" y="212" width="420" height="52" rx="8" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="56" y="233" font-size="13" font-weight="600" fill="var(--ink)">4 &middot; common-dir fallback</text>
+          <text x="56" y="251" font-size="12" fill="var(--muted)">a linked worktree reaches the main checkout's dock</text>
+
+          <line x1="250" y1="264" x2="250" y2="276" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#arr)"/>
+
+          <rect x="40" y="278" width="420" height="52" rx="8" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="56" y="299" font-size="13" font-weight="600" fill="var(--ink)">5 &middot; legacy channel (read-only)</text>
+          <text x="56" y="317" font-size="12" fill="var(--muted)">env var + orientation symlink; retired at adoption</text>
+
+          <line x1="250" y1="330" x2="250" y2="342" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#arr)"/>
+
+          <rect x="40" y="344" width="420" height="52" rx="8" fill="var(--paper)" stroke="var(--danger)" stroke-dasharray="5 3"/>
+          <text x="56" y="365" font-size="13" font-weight="600" fill="var(--danger)">fail loud</text>
+          <text x="56" y="383" font-size="12" fill="var(--muted)">names the incomplete dock + the wiki-dock.py complete command</text>
+
+          <rect x="478" y="80" width="146" height="184" rx="8" fill="var(--paper)" stroke="var(--accent2)" stroke-dasharray="5 3"/>
+          <text x="490" y="104" font-size="12" font-weight="600" fill="var(--accent2)">incomplete dock</text>
+          <text x="490" y="124" font-size="11" fill="var(--muted)">manifest present,</text>
+          <text x="490" y="139" font-size="11" fill="var(--muted)">overlay missing:</text>
+          <text x="490" y="159" font-size="11" fill="var(--muted)">falls through, but its</text>
+          <text x="490" y="174" font-size="11" fill="var(--muted)">identity still binds</text>
+          <text x="490" y="189" font-size="11" fill="var(--muted)">whichever step</text>
+          <text x="490" y="204" font-size="11" fill="var(--muted)">completes; a complete</text>
+          <text x="490" y="219" font-size="11" fill="var(--muted)">dock is never silently</text>
+          <text x="490" y="234" font-size="11" fill="var(--muted)">passed</text>
+          <line x1="551" y1="264" x2="551" y2="336" stroke="var(--accent2)" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+
+          <text x="40" y="430" font-size="12" fill="var(--muted)">First hit wins. Step 4 locates the main checkout via</text>
+          <text x="40" y="447" font-size="12" fill="var(--muted)">git worktree list, and fails loud in the layouts where git does not record it.</text>
+        </svg>
+      </div>
+      <figcaption>The ratified docking-spec order, now implemented and tested: flag, env, bounded walk-up, worktree fallback, legacy. Every kit CLI resolves through it — no --wiki needed from a docked consumer.</figcaption>
+    </figure>
+  </section>
+
+  <section id="commits">
+    <h2>The five commits on k3</h2>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:90px">Commit</th><th style="width:150px">Scope</th><th>What it is</th></tr>
+      <tr><td><code>58be7b9</code></td><td>feat(config)</td><td>The resolver itself — full spec resolution order, <code>Dock</code>/<code>load_dock</code>/<code>verify_dock_identity</code>, G14 <code>projects_root</code> overlay key. Inherited from the prior Claude session; verified and committed unchanged.</td></tr>
+      <tr><td><code>04cf9f3</code></td><td>fix(config) + 47 tests</td><td>Hardening from two Gate A rounds: absolute overlay paths after <code>~</code> expansion, table-type guards, legacy channels named in terminal errors, git probes fail loud, explicit <code>[wiki].name</code> at the identity boundary, malformed-dock walk-up stop, main checkout via <code>git worktree list</code>.</td></tr>
+      <tr><td><code>b91c448</code></td><td>feat(dock) + 20 tests</td><td><code>wiki-dock install/complete/status</code> — the command the resolver's fail-loud messages name. Posture mechanics cover the generated wiring (nothing wiki-related in <code>git status</code>); renders the post-commit hook wrapper and opencode handoff plugin (G10).</td></tr>
+      <tr><td><code>8a3f213</code></td><td>fix(doctor)</td><td>G13: <code>check_board</code> reads <code>boardkit.toml</code> <code>[board].cards_dir</code> instead of hardcoding <code>planning/</code>; invalid or unreadable config fails as findings, never a silent fallback.</td></tr>
+      <tr><td><code>972c630</code></td><td>fix(install-smoke)</td><td>Kit-repo detection works from linked worktrees (<code>.git</code> is a file there).</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <section id="gates">
+    <h2>Gate evidence</h2>
+    <p>Gate S ran after every change: <code>uv run pytest -q</code>, <code>uv run ruff check .</code>, the sweep test, and a full docker install-smoke. Gate A ran per stage with a non-author reviewer each time (author: Kimi; reviewers: GLM / GPT). Every lane failed round 1 with real findings and passed round 2 after fixes.</p>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:170px">Lane</th><th style="width:190px">Model</th><th>Scope</th><th style="width:150px">Round 1</th><th style="width:110px">Round 2</th></tr>
+      <tr><td>opencode code review</td><td><code>zai-coding-plan/glm-5.3</code></td><td>resolver + tests vs spec</td><td>FAIL — 1 blocking, 7 minor</td><td><span class="pill done">PASS</span> (+3 minors fixed)</td></tr>
+      <tr><td>opencode code review</td><td><code>zai-coding-plan/glm-5.3</code></td><td>wiki-dock CLI</td><td>FAIL — 3 blocking, 6 minor</td><td><span class="pill done">PASS</span> (+3 minors fixed)</td></tr>
+      <tr><td>opencode code review</td><td><code>zai-coding-plan/glm-5.3</code></td><td>doctor G13</td><td>FAIL — 1 blocking, 2 minor</td><td><span class="pill done">PASS</span> zero findings</td></tr>
+      <tr><td>codex semantics + worktree attack</td><td><code>gpt-5.6-sol</code> (medium)</td><td>resolution order vs spec; adversarial linked-worktree pass</td><td>FAIL — 3 blocking, 2 minor</td><td><span class="pill done">PASS</span> zero findings</td></tr>
+    </table>
+    </div>
+    <h3>Findings worth your attention</h3>
+    <ul>
+      <li><strong>Worktree fallback redesigned.</strong> Codex's attack was right that the common-dir parent is not the main checkout — but its proposed fix (<code>git worktree list</code>) doesn't locate it either in separate-git-dir or submodule layouts: git reports the git dir itself as the first worktree, verified empirically. The resolver uses <code>worktree list</code> and fails loud in those layouts rather than docking to an unrelated directory. Codex accepted this on re-review.</li>
+      <li><strong>Reviewer routing re-ruled in-session.</strong> The Phase 0 pin (<code>kimi-for-coding/k3</code> as code reviewer) assumed a Claude author; the board's same-family rule bars it over Kimi-authored code, so GLM-5.3 + codex ran these gates.</li>
+      <li><strong>One rejection.</strong> Codex flagged <code>ruff format --check</code> drift; rejected — the repo is not format-normalized at baseline (master fails it on pre-existing files), and <code>ruff check</code> is the deterministic gate. Repo-wide formatting is a separate decision.</li>
+      <li><strong>Posture is the companion table's fact.</strong> <code>--posture</code> must agree with the posture recorded in <code>wiki.toml</code>; D8 (which repo gets which posture) stays reserved for the Stage 1.3 decision gate.</li>
+    </ul>
+    <div class="callout">Where things live: code at <code>~/dev/wiki-kit</code> branch <code>k3</code>; raw gate packets (prompts + full reviewer logs) in <code>.review/gate-a-*</code> (gitignored, sweep-skipped); board card <code>k3-docking-onboarding.md</code> is in-progress with phase-scoped results logged.</div>
+  </section>
+
+  <section id="next">
+    <h2>What stands between here and spreading</h2>
+    <ol class="timeline">
+      <li><strong>Stage 1.2</strong> — kit version pinning / contract stamp (G4): deployments record kit commit + contract version; doctor detects drift. Gates S&rarr;A.</li>
+      <li><strong>Stage 1.3</strong> <span class="pill now">USER GATE</span> — permissions-postures decision gate: D8 consumer postures, D11 harness scope, D12 skill distribution (incl. the logged requirement that install directories are consumer-selectable).</li>
+      <li><strong>Stage 1.4</strong> — skills port: garden / handoff / morning / session-feedback, parameterized and project-scoped. Gates S&rarr;A&rarr;M.</li>
+      <li><strong>Stage 1.5</strong> — scheduler + notifier portability: systemd alongside launchd, notifier abstraction. Gates S&rarr;A.</li>
+      <li><strong>Stage 1.6</strong> — cold-start docs: AGENTS.md, ADOPTION, doctor-triage, ADRs. Gates S&rarr;A&rarr;M.</li>
+      <li><strong>Stage 1.7</strong> <span class="pill now">USER GATE + TEST</span> — K3 acceptance: cold install on a scratch chore-lottery clone, then the deny-rule test. K3 closes here.</li>
+      <li><strong>Phase 2–3</strong> — canary foundations and the multi-agent drive matrix (docker full-loop, aura testbed, Claude/opencode/codex drives, human cold-start).</li>
+      <li><strong>Phase 4</strong> — the spread itself: K8 live into chore-lottery (precondition: s9 closed), then epoch and epoch-postgres (the worktree/split posture Stage 1.1's fallback was built for).</li>
+    </ol>
+  </section>
+
+  <section id="src">
+    <h2>Sources</h2>
+    <ul>
+      <li>wiki-kit branch <code>k3</code> @ <code>972c630</code>, commits <code>58be7b9..972c630</code> (verified locally, 2026-08-24).</li>
+      <li>Gate logs: <code>.review/gate-a-stage1-r2</code>, <code>gate-a-stage2-r2</code>, <code>gate-a-stage3-r2</code>, <code>gate-a-stage5</code> (codex r1+r2) in the kit repo (2026-08-24).</li>
+      <li>Contract: <code>docs/docking-spec.md</code> (ratified at K1); card: <code>k3-docking-onboarding.md</code> in the wiki-kit program board.</li>
+      <li>Plan: rollout plan stages 1.1–1.7 and phases 2–4 (session-approved, 2026-08-24).</li>
+    </ul>
+    <div class="callout">Scope of this page: Stage 1.1 only. Stages 1.2 onward are unstarted and unreviewed; the timeline above is the plan, not evidence.</div>
+  </section>
+
+</main>
+
+<footer>
+  Default theme (one-off page)
+  &middot; As of 2026-08-24 20:57 UTC
+  &middot; wiki-kit program board, card K3
+</footer>
+
+<script type="application/json" id="artifact-state">
+{"as_of": "2026-08-24 20:57 UTC", "sections": ["stats", "fig", "commits", "gates", "next", "src"], "design_system": null, "branch": "k3", "range": "58be7b9..972c630", "tests": 563, "smoke": "29/29", "verdicts": {"glm_resolver": "PASS r2", "glm_wiki_dock": "PASS r2", "glm_doctor_g13": "PASS r2", "codex_semantics_worktree": "PASS r2"}, "findings_fixed": 30, "findings_rejected": 1, "stage": "1.1 done; 1.2 next"}
+</script>
+
+</body>
+</html>

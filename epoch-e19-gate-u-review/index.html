@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="light">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>E19 Gate U review - the EventFeed single-writer pivot</title>
+<style>
+  :root { --ink:#1a1a1a; --paper:#ffffff; --accent:#0a7d4a; --accent2:#1d4ed8; --warn:#b45309; --danger:#b91c1c; --muted:#666; --border:#ddd; --surface:#f5f5f5; --radius:8px;
+          --font-display:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-utility:ui-monospace,SFMono-Regular,Menlo,monospace;
+          --weight-display:600; --weight-body:400; --weight-utility:500;
+          --text-s:13px; --text-m:16px; --text-l:20px; --text-xl:25px; --text-xxl:31px;
+          --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-6:24px; --space-8:32px; }
+  * { box-sizing:border-box; }
+  html { color-scheme:light; }
+  body { font:var(--text-m)/1.6 var(--font-body); font-weight:var(--weight-body); color:var(--ink); background:var(--paper); max-width:980px; margin:1.5em auto; padding:0 var(--space-6) var(--space-8); }
+  h1,h2,h3 { font-family:var(--font-display); font-weight:var(--weight-display); line-height:1.25; margin:1.4em 0 .4em; }
+  h1 { font-size:var(--text-xxl); margin-bottom:.1em; }
+  h2 { font-size:var(--text-xl); border-bottom:1px solid var(--border); padding-bottom:.2em; }
+  h3 { font-size:var(--text-l); }
+  a { color:var(--accent2); overflow-wrap:anywhere; }
+  code { background:var(--surface); padding:.15em .35em; border-radius:3px; font-size:.92em; font-family:var(--font-utility); font-weight:var(--weight-utility); overflow-wrap:anywhere; }
+  .tscroll { overflow-x:auto; margin:.8em 0; }
+  .tscroll table { margin:0; }
+  table { border-collapse:collapse; width:100%; font-size:var(--text-s); }
+  th,td { border:1px solid var(--border); padding:.45em .7em; vertical-align:top; text-align:left; overflow-wrap:anywhere; }
+  th { font-weight:600; background:var(--surface); }
+  .meta { color:var(--muted); font-size:var(--text-s); }
+  .lede { font-size:var(--text-l); color:var(--muted); margin:.3em 0 1em; }
+  .kicker { color:var(--muted); font-size:.8rem; letter-spacing:.04em; margin:0 0 .5rem; text-transform:uppercase; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:var(--space-3); margin:var(--space-4) 0; }
+  .stat { border:1px solid var(--border); border-radius:var(--radius); padding:var(--space-3) var(--space-4); }
+  .stat .n { font-size:1.9em; font-weight:var(--weight-display); line-height:1.1; color:var(--accent); }
+  .stat .n.bad { color:var(--danger); }
+  .stat .l { font-size:.8em; font-family:var(--font-utility); text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+  .stat p { margin:.3em 0 0; font-size:.85em; }
+  .figure { border:1px solid var(--border); border-radius:var(--radius); padding:1em; margin:1.2em 0; }
+  .figure .scroll { overflow-x:auto; }
+  .figure svg { height:auto; display:block; }
+  .figure figcaption { color:var(--muted); font-size:var(--text-s); margin-top:.6em; }
+  .pill { display:inline-block; font-size:var(--text-s); padding:var(--space-1) var(--space-2); border-radius:10px; background:var(--surface); color:var(--muted); vertical-align:1px; }
+  .pill.done { background:var(--accent); color:#fff; }
+  .pill.now  { background:var(--warn);   color:#fff; }
+  .callout { border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:4px; padding:.7em 1em; margin:1em 0; font-size:.93em; background:color-mix(in srgb, var(--accent) 5%, var(--paper)); }
+  .callout.cost { border-left-color:var(--danger); background:color-mix(in srgb, var(--danger) 5%, var(--paper)); }
+  ol.timeline { list-style:none; padding-left:0; }
+  ol.timeline li { border-left:2px solid var(--accent); padding:.2em 0 .8em 1em; margin-left:.4em; position:relative; }
+  ol.timeline li::before { content:""; position:absolute; left:-6px; top:.55em; width:10px; height:10px; border-radius:50%; background:var(--accent); }
+  ol.timeline li h3 { margin:.1em 0 .2em; font-size:1.05rem; }
+  footer { border-top:1px solid var(--border); margin-top:2.5em; padding-top:.8em; color:var(--muted); font-size:.85em; }
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <p class="kicker">Epoch &middot; board card E19 &middot; awaiting Gate U (code-review)</p>
+  <h1>E19 EventFeed: the single-writer pivot</h1>
+  <div class="lede">What is awaiting the maintainer's Gate U decision, and why the shipped architecture moved from an allocation ledger to a single-writer funnel.</div>
+  <div class="meta">As of 2026-08-23 &middot; rendered 2026-08-24 02:41 UTC &middot; sources gathered 2026-08-23</div>
+</header>
+
+<main>
+
+  <!-- The decision pending -->
+  <section id="decision">
+    <h2>1. The decision pending</h2>
+    <p>Card E19 (<em>Ship the EventFeed with an honest cursor</em>) has passed Gates S, A, and M and now sits at <strong>Gate U, the code-review user gate</strong>: the review packet has been presented, and the maintainer decides one of:</p>
+    <ul>
+      <li><strong>Approve</strong> E19 to done (commit-range recorded in the Done log entry), or</li>
+      <li><strong>Request changes</strong> (findings go back to the card), or</li>
+      <li><strong>Park</strong> the card.</li>
+    </ul>
+    <p>
+      <span class="pill done">Gate S done</span>
+      <span class="pill done">Gate A done (3 rounds)</span>
+      <span class="pill done">Gate M done</span>
+      <span class="pill now">Gate U open</span>
+    </p>
+    <p>The work under decision: local branch <code>card/e19</code> in <code>epoch-postgres</code> (cut from <code>redesign/bootstrap</code>, not main), <strong>9 commits <code>094cd1c..dd7b9ce</code>, unpushed</strong> &mdash; the board's rule is no pushes before gates pass. Blast radius: 15 files, +2,537 / &minus;276 lines. Final HEAD <code>dd7b9ce</code>.</p>
+  </section>
+
+  <!-- Key numbers -->
+  <section id="stats">
+    <div class="stats">
+      <div class="stat"><div class="n bad">4.444&times;</div><div class="l">append p99 ratio</div><p>Ledgered vs unledgered append p99 &mdash; against the pre-registered <strong>2.000&times; limit</strong>. The spike number that forced the pivot.</p></div>
+      <div class="stat"><div class="n">39,814</div><div class="l">ledgered append p99, us</div><p>Vs 8,960us unledgered &mdash; 8 concurrent writers &times; 10k appends each (80k samples per path). Batch path passed at 1.079 vs 1.500.</p></div>
+      <div class="stat"><div class="n">9</div><div class="l">commits on card/e19</div><p>15 files, +2,537 / &minus;276, range <code>094cd1c..dd7b9ce</code>, unpushed.</p></div>
+      <div class="stat"><div class="n">200</div><div class="l">interleavings checked</div><p>Property proofs against a model, plus burn pass-through, no-latecomer under 8 writers, and crash redelivery &mdash; green at final HEAD.</p></div>
+    </div>
+  </section>
+
+  <!-- The architectural drift -->
+  <section id="drift">
+    <h2>2. The architectural drift: designed vs shipped</h2>
+    <p>The card was designed and adversarially reviewed around an <strong>allocation ledger</strong>; what shipped is a <strong>single-writer funnel</strong>. The pivot was not improvised &mdash; the gate-S spike's verdict was pre-registered (round-1 finding 4), ADR 0010 chartered it as the record's validation gate, and the pivot's consequences were named in advance in both the card and the ADR. When the append threshold broke, the named fallback executed.</p>
+
+    <figure class="figure">
+      <div class="scroll">
+      <svg viewBox="0 0 960 444" width="960" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Designed allocation ledger versus shipped single-writer funnel">
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#666666"/></marker>
+          <marker id="ahr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b91c1c"/></marker>
+        </defs>
+        <style>
+          .bx { fill:#f5f5f5; stroke:#dddddd; stroke-width:1.2; }
+          .t  { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; fill:#1a1a1a; }
+          .tb { font-weight:600; font-size:12.5px; }
+          .tm { font-size:11px; fill:#666666; }
+          .tc { font-size:11.5px; }
+          .hdr { font-weight:700; font-size:13px; letter-spacing:.03em; }
+          .arr { stroke:#666666; stroke-width:1.4; fill:none; }
+        </style>
+
+        <!-- left panel: designed -->
+        <rect x="4" y="4" width="410" height="436" rx="8" fill="#ffffff" stroke="#dddddd"/>
+        <text class="t hdr" x="209" y="28" text-anchor="middle" fill="#1d4ed8">DESIGNED: ALLOCATION LEDGER</text>
+        <text class="t tm" x="209" y="45" text-anchor="middle">ADR 0010 option 4</text>
+        <text class="t tm" x="209" y="59" text-anchor="middle">serialized allocation &middot; concurrent event transactions</text>
+
+        <rect class="bx" x="24" y="76" width="110" height="26" rx="5"/><text class="t tc" x="79" y="93" text-anchor="middle">writer 1</text>
+        <rect class="bx" x="152" y="76" width="110" height="26" rx="5"/><text class="t tc" x="207" y="93" text-anchor="middle">writer 2</text>
+        <rect class="bx" x="280" y="76" width="110" height="26" rx="5"/><text class="t tc" x="335" y="93" text-anchor="middle">writer 3</text>
+        <line class="arr" x1="79"  y1="102" x2="79"  y2="112" marker-end="url(#ah)"/>
+        <line class="arr" x1="207" y1="102" x2="207" y2="112" marker-end="url(#ah)"/>
+        <line class="arr" x1="335" y1="102" x2="335" y2="112" marker-end="url(#ah)"/>
+
+        <rect class="bx" x="24" y="116" width="370" height="56" rx="5" stroke="#1d4ed8"/>
+        <text class="t tb" x="209" y="136" text-anchor="middle">allocation transaction</text>
+        <text class="t tc" x="209" y="152" text-anchor="middle">ONE advisory lock &mdash; serialized</text>
+        <text class="t tm" x="209" y="166" text-anchor="middle">draw n nextval &middot; insert ledger row &middot; commit</text>
+        <line class="arr" x1="209" y1="172" x2="209" y2="182" marker-end="url(#ah)"/>
+
+        <rect class="bx" x="24" y="186" width="370" height="30" rx="5"/>
+        <text class="t tc" x="209" y="205" text-anchor="middle">ledger row (first_seq, last_seq, txid) &mdash; IN_FLIGHT</text>
+        <line class="arr" x1="209" y1="216" x2="209" y2="226" marker-end="url(#ah)"/>
+
+        <rect class="bx" x="24" y="230" width="370" height="40" rx="5"/>
+        <text class="t tb" x="209" y="248" text-anchor="middle">event transactions &mdash; CONCURRENT</text>
+        <text class="t tm" x="209" y="264" text-anchor="middle">explicit sequence values drawn from the range</text>
+        <line class="arr" x1="209" y1="270" x2="209" y2="280" marker-end="url(#ah)"/>
+
+        <rect class="bx" x="24" y="284" width="370" height="30" rx="5"/>
+        <text class="t tc" x="209" y="303" text-anchor="middle">guarded flip &rarr; COMMITTED (WHERE state = 'IN_FLIGHT')</text>
+
+        <rect class="bx" x="24" y="324" width="370" height="40" rx="5" stroke-dasharray="5,3"/>
+        <text class="t tc" x="209" y="342" text-anchor="middle">reaper: row-lock + re-check</text>
+        <text class="t tm" x="209" y="357" text-anchor="middle">flips orphaned IN_FLIGHT &rarr; ABORTED</text>
+
+        <rect class="bx" x="24" y="374" width="370" height="48" rx="5" stroke="#1d4ed8" fill="#ffffff"/>
+        <text class="t tb" x="209" y="393" text-anchor="middle">cursor = resolved ledger ranges, first_seq order</text>
+        <text class="t tm" x="209" y="409" text-anchor="middle">burned values are not feed sequences</text>
+
+        <!-- pivot band -->
+        <text class="t" x="480" y="168" text-anchor="middle" font-size="26" font-weight="700" fill="#b91c1c">4.444&times;</text>
+        <text class="t tm" x="480" y="188" text-anchor="middle">append p99 ratio</text>
+        <text class="t tm" x="480" y="203" text-anchor="middle" font-weight="700" fill="#b91c1c">limit 2.000&times;</text>
+        <line x1="424" y1="248" x2="534" y2="248" stroke="#b91c1c" stroke-width="3" marker-end="url(#ahr)"/>
+        <text class="t tm" x="480" y="272" text-anchor="middle">pre-registered FAIL</text>
+        <text class="t tm" x="480" y="287" text-anchor="middle">pre-named pivot</text>
+        <text class="t tm" x="480" y="302" text-anchor="middle">executed at gate S</text>
+        <text class="t tm" x="480" y="328" text-anchor="middle">batch 1.079 vs 1.500:</text>
+        <text class="t tm" x="480" y="343" text-anchor="middle">passed; either broken</text>
+        <text class="t tm" x="480" y="358" text-anchor="middle">is a FAIL</text>
+
+        <!-- right panel: shipped -->
+        <rect x="546" y="4" width="410" height="436" rx="8" fill="#ffffff" stroke="#dddddd"/>
+        <text class="t hdr" x="751" y="28" text-anchor="middle" fill="#0a7d4a">SHIPPED: SINGLE-WRITER FUNNEL</text>
+        <text class="t tm" x="751" y="45" text-anchor="middle">option 3, the named fallback</text>
+        <text class="t tm" x="751" y="59" text-anchor="middle">serialized everything</text>
+
+        <rect class="bx" x="566" y="76" width="110" height="26" rx="5"/><text class="t tc" x="621" y="93" text-anchor="middle">writer 1</text>
+        <rect class="bx" x="694" y="76" width="110" height="26" rx="5"/><text class="t tc" x="749" y="93" text-anchor="middle">writer 2</text>
+        <rect class="bx" x="822" y="76" width="110" height="26" rx="5"/><text class="t tc" x="877" y="93" text-anchor="middle">writer 3</text>
+        <line class="arr" x1="621" y1="102" x2="681" y2="112" marker-end="url(#ah)"/>
+        <line class="arr" x1="749" y1="102" x2="751" y2="112" marker-end="url(#ah)"/>
+        <line class="arr" x1="877" y1="102" x2="821" y2="112" marker-end="url(#ah)"/>
+
+        <rect x="566" y="116" width="370" height="56" rx="5" fill="#0a7d4a"/>
+        <text class="t tb" x="751" y="136" text-anchor="middle" fill="#ffffff">ONE GLOBAL ADVISORY LOCK</text>
+        <text class="t tc" x="751" y="152" text-anchor="middle" fill="#ffffff">WRITER_LOCK fronts append AND transact</text>
+        <text class="t" x="751" y="166" text-anchor="middle" font-size="11" fill="#ffffff" opacity="0.85">every stream_events write funnels here</text>
+        <line class="arr" x1="751" y1="172" x2="751" y2="182" marker-end="url(#ah)"/>
+
+        <rect class="bx" x="566" y="186" width="370" height="40" rx="5"/>
+        <text class="t tb" x="751" y="204" text-anchor="middle">one event transaction at a time</text>
+        <text class="t tm" x="751" y="220" text-anchor="middle">version checks + head reads unchanged (ADR 0006)</text>
+        <line class="arr" x1="751" y1="226" x2="751" y2="236" marker-end="url(#ah)"/>
+
+        <rect class="bx" x="566" y="240" width="370" height="40" rx="5"/>
+        <text class="t tb" x="751" y="258" text-anchor="middle">insert order IS commit order</text>
+        <text class="t tm" x="751" y="274" text-anchor="middle">BIGSERIAL stays &mdash; no explicit-sequence write path</text>
+        <line class="arr" x1="751" y1="280" x2="751" y2="290" marker-end="url(#ah)"/>
+
+        <rect class="bx" x="566" y="294" width="370" height="40" rx="5"/>
+        <text class="t tc" x="751" y="312" text-anchor="middle">wedged writer &rarr; lock_timeout (5s default)</text>
+        <text class="t tm" x="751" y="327" text-anchor="middle">retryable AppendError::LockTimeout</text>
+
+        <text class="t tm" x="751" y="352" text-anchor="middle">no ledger table &middot; no reaper &middot; no prefix machinery</text>
+
+        <rect class="bx" x="566" y="364" width="370" height="48" rx="5" stroke="#0a7d4a" fill="#ffffff"/>
+        <text class="t tb" x="751" y="383" text-anchor="middle">cursor = plain maximum over global_sequence</text>
+        <text class="t tm" x="751" y="399" text-anchor="middle">rolled-back burns pass without waiting</text>
+      </svg>
+      </div>
+      <figcaption>Designed (left): one ledger row per event transaction, allocation serialized under one advisory lock so visibility order equals first_seq order; event transactions stay concurrent; a row-lock reaper resolves orphans; guarded transitions (IN_FLIGHT &rarr; COMMITTED / ABORTED) make reaping unable to orphan a committed event. Shipped (right): one global advisory lock (<code>WRITER_LOCK</code>) fronts every event transaction &mdash; append and atomic batch alike &mdash; so insert order is commit order by construction and the cursor is a plain maximum. The spike's 4.444&times; append p99 ratio against the 2.000&times; pre-registered limit is what moved the design from left to right.</figcaption>
+    </figure>
+
+    <div class="callout cost">
+      <strong>What the pivot costs, stated plainly.</strong> Writes serialize completely on postgres: exactly <strong>one writer at a time, globally</strong> &mdash; every event transaction, whatever its streams, waits on one lock, so append throughput is bounded by a single writer's commit latency. A wedged writer stalls all writes until its <code>lock_timeout</code> (default 5s) expires, surfacing as the retryable <code>LockTimeout</code> error. ADR 0010 records the trade as taken with eyes open: any future that needs concurrent writers must reopen the record. The spike priced the alternative at 4.4&times; p99 per append.
+    </div>
+    <p>The payoff, in the ADR's words: the original failure mode (a committed event landing below an already-advanced cursor and being skipped forever) becomes <em>unrepresentable</em> rather than defended against &mdash; no event transaction is ever in flight below a committed value, so a poll can neither skip a committed event nor wait on a value that will never appear. The append path also keeps one transaction (no second commit), and the advisory-lock key space shrinks to a single global key with no acquisition ordering to maintain.</p>
+  </section>
+
+  <!-- The spike verdict -->
+  <section id="spike">
+    <h2>3. The spike verdict that forced it</h2>
+    <p>Run of record: live compose postgres, fixed harness (committed as <code>tests/spike_ledger.rs</code>), complete run 242.8s. Append path: 8 concurrent writers &times; 10k appends each &mdash; 80k samples per path. Batch path: 4 concurrent multi-stream batches over a shared 8-stream pool, 1000 batches per path.</p>
+    <div class="tscroll">
+    <table>
+      <tr><th>Path</th><th>Unledgered p50 / p99</th><th>Ledgered p50 / p99</th><th>p99 ratio</th><th>Pre-registered limit</th><th>Verdict</th></tr>
+      <tr><td>Single append<br>(8 writers &times; 10k)</td><td>3,815us / 8,960us</td><td>17,315us / 39,814us</td><td><strong>4.444</strong></td><td>2.000</td><td><strong>FAIL &mdash; pivot executes</strong></td></tr>
+      <tr><td>Multi-stream batch<br>(4 concurrent, 8-stream pool)</td><td>15,868us / 29,486us</td><td>21,113us / 31,820us</td><td>1.079</td><td>1.500</td><td>pass</td></tr>
+    </table>
+    </div>
+    <p>Either threshold broken is a FAIL; the append threshold broke by more than 2&times;. The cost is real, not a harness artifact: the allocation transaction's second commit fsync roughly quadruples steady-state per-append p50 (3.8ms &rarr; 17.3ms), stable across runs. An earlier partial run on cold tables had measured the append ratio at 1.598, but its <em>baseline</em> p99 was 3&times; slower than the warm run (26ms vs 9ms) while the ledgered path held steady (41.6ms then 39.8ms) &mdash; the disagreement was baseline cold-start variance, and the declared run of record governs.</p>
+    <p>The pivot executed per the consequences pre-named in the record: the card keeps the <code>EventFeed</code> trait, consumer groups, and cursor semantics; the ledger and prefix machinery drop (no ledger table, no reaper, no explicit-sequence rewrite &mdash; BIGSERIAL stays, because a single serialized writer makes insert order commit order); the cursor becomes a plain maximum over the committed log; E20 (the runner) is unchanged except ADR 0010's cursor section rewrites; E12 (migrations) is unchanged. Numbers were recorded on the card either way.</p>
+  </section>
+
+  <!-- What shipped -->
+  <section id="shipped">
+    <h2>4. What shipped (the surface under review)</h2>
+    <ul>
+      <li><strong>Keyed envelope seam</strong> (landed at <code>094cd1c</code>, the review range's base commit): <code>EventMetadata</code> (opaque string-to-string map) + <code>RecordedEvent</code> + <code>EventBatch</code> over records; bare construction unchanged via a <code>new</code>/<code>from_records</code> split. Persisted by <strong>both</strong> backends (in-memory root inspection + postgres SQL asserts). Migration 0003 adds the <code>event_metadata</code> JSONB column so no commit drops what the write path carries.</li>
+      <li><strong><code>EventFeed</code> trait + types</strong>: consumer groups (<code>ConsumerGroup</code>, empty string unconstructible), <code>FeedCursor</code> (the ack watermark), <code>DeliveredWatermark</code> (a distinct newtype &mdash; the design panel's repair), <code>PollLimit</code>, <code>FeedEntry</code>; validating ack-rejection payloads (<code>Regression</code> / <code>Undelivered</code> carrying <code>NotARegression</code> / <code>AlreadyDelivered</code> rejections, unconstructible in meaningless cross-field forms); spec-suite conformance cases in the E11 pattern, both backends.</li>
+      <li><strong>Both backends' impls</strong>: <code>in_memory::feed</code> (root mutex is the writer; log indexes are positions; group progress in the root) and <code>postgres::feed</code> (pool + the <code>epoch_feed_cursors</code> table).</li>
+      <li><strong>Migrations</strong>: 0003 (<code>event_metadata</code> JSONB, NOT NULL, <code>'{}'</code> default) and 0004 (<code>epoch_feed_cursors</code> &mdash; one row per (category, group) with cursor and delivered watermark, CHECK delivered_to &ge; cursor &mdash; plus the outbox intent-key partial unique index). Idempotent; <code>migrate()</code> carries an old-shape database to current alone, pinned by a live test.</li>
+      <li><strong>Property proofs</strong> (green at final HEAD): 200 randomized interleavings against a model (in-memory); burn pass-through; complete-delivery-no-latecomer under 8 writers; crash redelivery through a fresh handle (live pg). Two test-authoring errors were caught <em>by</em> the property tests before commit &mdash; both fixed in the tests, the implementation unchanged.</li>
+    </ul>
+    <h3>The nine commits, in range order</h3>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:76px">Commit</th><th>Subject</th><th>What it landed</th></tr>
+      <tr><td><code>a5bc747</code></td><td>test(streams): add the E19 allocation-ledger spike harness</td><td>517-line run-of-record harness, <code>tests/spike_ledger.rs</code></td></tr>
+      <tr><td><code>ab322e4</code></td><td>feat(streams): lay the feed type surface, post-pivot shape</td><td>trait + types + conformance spec skeleton (612 lines)</td></tr>
+      <tr><td><code>2b3d67c</code></td><td>fix(streams): apply the feed design-panel repairs</td><td><code>DeliveredWatermark</code> newtype, validating payloads, total <code>next_position</code></td></tr>
+      <tr><td><code>0a481b4</code></td><td>feat(streams): implement the in-memory event feed</td><td>root-mutex writer; positions are log indexes</td></tr>
+      <tr><td><code>f7a4da8</code></td><td>feat(streams): enforce the single-writer funnel and implement the pg feed</td><td><code>WRITER_LOCK</code> fronts append + transact; migration 0004</td></tr>
+      <tr><td><code>d5bd5f9</code></td><td>test(streams): pin the feed properties post-pivot</td><td>the 4 property proofs (200 interleavings, burn, no-latecomer, crash)</td></tr>
+      <tr><td><code>f65f40c</code></td><td>docs(adr): revise 0010 with the spike verdict and the pivot</td><td>measured numbers + executed pivot into the record</td></tr>
+      <tr><td><code>626ba31</code></td><td>fix(streams): bound the append funnel wait, gate-a repairs</td><td><code>lock_timeout</code> bound (5s default), retryable <code>AppendError::LockTimeout</code>, live wedged-funnel test</td></tr>
+      <tr><td><code>dd7b9ce</code></td><td>fix(streams): classify every append-statement lock expiry, wrap the funnel test</td><td>one <code>append_statement_error</code> classifier; <code>under_deadline</code> wrapper</td></tr>
+    </table>
+    </div>
+    <p class="meta">Five files carry 65% of the net diff (the two test files, the feed trait + spec, and the ADR revision); the generated review packet's <code>full-range.diff</code> is the honest way to read the five files whose per-commit patches partially supersede each other.</p>
+  </section>
+
+  <!-- Review ledger -->
+  <section id="review">
+    <h2>5. The review ledger</h2>
+    <p>Every design and gate review on this card was run adversarially by a fresh-context reviewing model (kimi-k3, via the opencode route) against the authoring model (GLM-5.3) &mdash; different families, the board's differing-model invariant held throughout. Four further adversarial rounds (2026-08-22) shaped the ledger design before drafting; those live on the card and in ADR 0010's own review ledger.</p>
+    <ol class="timeline">
+      <li><h3>Design panel at Gate S &mdash; FAIL &times;2 seats, then confirmation PASS</h3>
+        <p>Two fresh-context seats over the staged skeleton; both returned FAIL. The shared <strong>blocking</strong> finding, found independently by both seats: the undelivered-ack conformance case was <strong>unsatisfiable by any backend</strong> &mdash; it asserted <code>delivered_to == FeedCursor::START</code> after the case's own poll had delivered two entries, conflating the ack cursor with the delivery watermark. A second blocking (seat 2): the ack doc called every at-or-below-cursor ack a no-op, making the <code>Regression</code> variant dead code. Five minors across the seats (watermark type, <code>next_position</code> at <code>u64::MAX</code>, payload validation, spec-header portability, a doc contradiction). All repaired at <code>2b3d67c</code>; a fresh-context confirmation re-review verified every repair against its finding: <strong>PASS, zero new findings</strong>.</p></li>
+      <li><h3>Gate A round 1 &mdash; FAIL, 1 blocking + 3 minor</h3>
+        <p><strong>Blocking</strong>: the append funnel wait was <strong>unbounded</strong> and a lock-wait expiry collapsed into a generic backend error &mdash; under the funnel, one wedged writer stalled all appends indefinitely. Repaired at <code>626ba31</code>: <code>SET LOCAL lock_timeout</code> (default 5s, <code>with_lock_timeout</code> builder) precedes the funnel acquisition; expiry surfaces as the <strong>retryable <code>AppendError::LockTimeout(Duration)</code></strong>; a live test pins the wedged-funnel outcome storing nothing. Alongside: funnel coverage PASS (every <code>stream_events</code> write fronts <code>WRITER_LOCK</code>), feed contract verified on both backends, migrations correct. The <strong>LISTEN/NOTIFY deferral was formally accepted as chartered</strong>: the shipped poll is pull-shaped, so the push optimization belongs to a wait-capable poll variant, chartered separately.</p></li>
+      <li><h3>Gate A round 2 &mdash; 2 minors</h3>
+        <p>Over the <code>626ba31</code> fix diff: the <code>LockTimeout</code> classification covered only the funnel-acquisition statement (the head read, inserts, and commit still misclassified a lock expiry as a generic backend error &mdash; reachable via a concurrent <code>migrate()</code> index build blocking an insert past the funnel), and the wedged-funnel test lacked the <code>under_deadline</code> wrapper its batch twin carries. Both repaired at <code>dd7b9ce</code>.</p></li>
+      <li><h3>Gate A round 3 &mdash; PASS, zero findings</h3>
+        <p>Over the <code>dd7b9ce</code> delta: diff verified byte-identical to the commit, every post-bound statement classified, pre-bound statements correctly excluded (the GUC is not yet in effect). <strong>Gate A passed over the full range <code>094cd1c..dd7b9ce</code></strong> after three rounds.</p></li>
+      <li><h3>Gate M &mdash; live proofs green at final HEAD</h3>
+        <p>Live compose postgres at <code>dd7b9ce</code>: <code>cargo test --features postgres --test e19_feed_properties</code> &mdash; 4 passed, 0 failed. The funnel's ordering shadow (8 concurrent writers; one poll delivers every committed row; no latecomer below the acked tip), the durable hole (a rolled-back insert burns a value the cursor passes without blocking), and crash redelivery (a consumer dropped between delivery and ack; a fresh handle receives the same entries in the same order). The wedged-funnel timeout proof ran in the main pg suite (61 passed). Re-scoped to the pivot by the same pre-named consequences: the ledger-era scenarios (reverse-order commits, allocation reorder, orphan reaping) are unconstructible under the funnel and moot with no ledger.</p></li>
+    </ol>
+  </section>
+
+  <!-- Highest-risk changes -->
+  <section id="risk">
+    <h2>6. Highest-risk changes to weigh</h2>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:190px">Risk</th><th>What to weigh at Gate U</th></tr>
+      <tr><td><strong>Complete write serialization</strong></td><td>The structural trade: one writer at a time, globally, on postgres. Throughput is bounded by one writer's commit latency; a wedged writer stalls all writes until <code>lock_timeout</code> (default 5s). The retryable <code>LockTimeout</code> is the contract for riding that out &mdash; consumers must treat it as retry (ADR 0006 already required this). Any future needing concurrent writers must reopen ADR 0010.</td></tr>
+      <tr><td><strong>Public surface widened</strong></td><td>A new <code>AppendError::LockTimeout(Duration)</code> arm <strong>breaks exhaustive matches</strong> downstream (the <code>TransactError</code> precedent; the flash-sale spec case retries on it). <code>EventBatch</code> now carries <code>RecordedEvent</code>s &mdash; bare construction is unchanged via the <code>new</code>/<code>from_records</code> split, but keyed writers construct differently.</td></tr>
+      <tr><td><strong>Two schema migrations</strong></td><td>0003 (<code>event_metadata</code> JSONB NOT NULL DEFAULT <code>'{}'</code>) and 0004 (<code>epoch_feed_cursors</code> + the outbox intent-key partial unique index, <code>WHERE category = 'saga-outbox'</code>). Both idempotent, applied through E12's versioned-migration mechanism, and <strong>proven against an old-shape database</strong> &mdash; <code>migrate()</code> alone carries a seeded pre-metadata schema to current, pinned by a live test.</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <!-- Sources and links -->
+  <section id="links">
+    <h2>Sources and links</h2>
+    <ul>
+      <li><strong>ADR 0010 (revised), hosted render</strong>: <a href="https://shearerbeard.github.io/artifacts/epoch-adr-0010-allocation-ledger/">shearerbeard.github.io/artifacts/epoch-adr-0010-allocation-ledger</a> &mdash; the design-time record plus the measured verdict and executed pivot.</li>
+      <li><strong>ADR 0010 source</strong>: <code>/Users/mshearer/dev/epoch-postgres/docs/adr/0010-allocation-ledger-honest-cursor.md</code></li>
+      <li><strong>Card E19</strong> (the authoritative log &mdash; spike numbers, panel findings with dispositions, gate rounds): <code>/Users/mshearer/dev/epoch-board/docs/board/cards/e19-event-feed-honest-cursor.md</code></li>
+      <li><strong>Review packet</strong> (generated index, per-commit patches, full-range diff): <code>/Users/mshearer/dev/epoch-board/docs/board/reviews/E19/REVIEW.md</code></li>
+      <li><strong>Design record</strong> (type-to-rule map, residual risks): <code>/Users/mshearer/dev/epoch-postgres/docs/design/e19-feed-DESIGN.md</code></li>
+      <li><strong>Git</strong>: <code>git -C /Users/mshearer/dev/epoch-postgres log --oneline 094cd1c..dd7b9ce</code> and <code>git diff --stat 094cd1c..dd7b9ce</code> (read 2026-08-23).</li>
+    </ul>
+    <div class="callout">
+      The board and the review packet are <strong>private-repo paths, cited here for the maintainer only</strong>; this page summarizes them so a reader who was not in the room can follow the decision, but the card log and ADR are authoritative where they disagree. The spike measured one compose postgres &mdash; a single machine's measurement, adjudicated by thresholds registered before the run, not after.
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  Pinned-light default template style &middot; As of 2026-08-23 &middot; epoch-postgres branch <code>card/e19</code> at <code>dd7b9ce</code>, unpushed &mdash; awaiting Gate U (code-review) &middot; board card E19, private redesign board
+</footer>
+
+<script type="application/json" id="artifact-state">
+{"as_of": "2026-08-24 02:41 UTC", "as_of_local": "2026-08-23", "sections": ["decision", "stats", "drift", "spike", "shipped", "review", "risk", "links"], "design_system": null, "card": "E19", "repo": "/Users/mshearer/dev/epoch-postgres", "branch": "card/e19", "head": "dd7b9ce", "range": "094cd1c..dd7b9ce", "commits": 9, "gate": "U pending", "spike": {"append_p99_ratio": 4.444, "append_limit": 2.0, "unledgered_append_p99_us": 8960, "ledgered_append_p99_us": 39814, "batch_p99_ratio": 1.079, "batch_limit": 1.5}, "design": "single-writer funnel (ADR 0010 option 3, pivot from the allocation ledger)"}
+</script>
+
+</body>
+</html>

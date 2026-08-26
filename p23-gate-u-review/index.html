@@ -52,7 +52,7 @@
 <header id="hdr">
   <h1>P23 Gate U review &mdash; session-guard fill unit&nbsp;1</h1>
   <div class="lede">Everything needed to decide the P23 user gate: what was filled, what the adversarial review caught, and the one judgment call that needs your eyes before P24+P25 pull.</div>
-  <div class="meta">As of 2026-08-26 02:50 UTC &middot; branch <code>mshearer/session-guard</code> &middot; push HELD (your Stage-3 scrub) &middot; board aura, card P23</div>
+  <div class="meta">As of 2026-08-26 03:10 UTC &middot; branch <code>mshearer/session-guard</code> &middot; push HELD (your Stage-3 scrub) &middot; board aura, card P23</div>
 </header>
 
 <main>
@@ -152,14 +152,13 @@
   </section>
 
   <section id="decision">
-    <h2>The decision, and the one thing flagged for your eyes</h2>
-    <div class="callout flag">
-      <b>P22 frame corrected inside P23's range.</b> The fold fixed a defect in an artifact from the already-done P22 card: the <code>pod_id_parse_rules</code> frame had wrongly asserted <code>Pod.Name-2</code> (uppercase) as a <em>valid</em> PodId &mdash; contradicting the RFC-1123 type-map row. The edit is one line plus one new assertion; the codex re-review judged it spec-correct and minimal. <b>Approving P23 ratifies this frame correction.</b> Rejecting it means re-opening P22's frame set.
+    <h2>The decision &mdash; APPROVED</h2>
+    <div class="callout">
+      <b>Gate U decision: approved by Mike, 2026-08-26.</b> The approval ratifies the P22 frame correction described below (uppercase PodId rejection in <code>pod_id_parse_rules</code>). P23 is done; P24 (u2 manifest wire, 2 holes) + P25 (u5 local admission, 2 holes) pull next under WIP&nbsp;2.
     </div>
-    <ul>
-      <li><b>Approve</b> &rarr; P23 done; P24 (u2 manifest wire, 2 holes) + P25 (u5 local admission, 2 holes) pull under WIP&nbsp;2, normal in-harness routing expected.</li>
-      <li><b>Direct changes</b> &rarr; card bounces; fix commits extend the range; fresh Gate A over the extended range before this gate reopens.</li>
-    </ul>
+    <div class="callout flag">
+      <b>P22 frame corrected inside P23's range.</b> The fold fixed a defect in an artifact from the already-done P22 card: the <code>pod_id_parse_rules</code> frame had wrongly asserted <code>Pod.Name-2</code> (uppercase) as a <em>valid</em> PodId &mdash; contradicting the RFC-1123 type-map row. The edit is one line plus one new assertion; the codex re-review judged it spec-correct and minimal. <b>Approving P23 ratifies this frame correction.</b> Rejecting it would have meant re-opening P22's frame set.
+    </div>
     <p>Standing context: push stays HELD everywhere in the wave (your Stage-3 scrub); no rig runs are scheduled until P35, so no <code>aura-a</code> kills and no Archil-mount activity in this card.</p>
   </section>
 
@@ -194,11 +193,11 @@
 </main>
 
 <footer>
-  Default theme (pinned light, matching the gate-review artifact convention) &middot; As of 2026-08-26 02:50 UTC &middot; aura board &middot; wave P22&ndash;P35
+  Default theme (pinned light, matching the gate-review artifact convention) &middot; As of 2026-08-26 03:10 UTC &middot; aura board &middot; wave P22&ndash;P35
 </footer>
 
 <script type="application/json" id="artifact-state">
-{"as_of": "2026-08-26 02:50 UTC", "sections": ["hdr", "stats", "fig", "detail", "findings", "decision", "seq", "src"], "design_system": null, "card": "P23", "commits": ["48ab2324", "527a52ee", "8dd8ce74"], "holes": {"before": 36, "after": 27}, "gate_a": {"round1": "FAIL 2 BLOCKING + 1 MINOR", "round2": "PASS zero findings"}, "gate_u": "pending"}
+{"as_of": "2026-08-26 02:50 UTC", "sections": ["hdr", "stats", "fig", "detail", "findings", "decision", "seq", "src"], "design_system": null, "card": "P23", "commits": ["48ab2324", "527a52ee", "8dd8ce74"], "holes": {"before": 36, "after": 27}, "gate_a": {"round1": "FAIL 2 BLOCKING + 1 MINOR", "round2": "PASS zero findings"}, "gate_u": "approved 2026-08-26"}
 </script>
 
 </body>

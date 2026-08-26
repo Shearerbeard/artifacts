@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Park/Reify V1 — review brief &amp; flow map</title>
+<style>
+  :root { --ink:#1a1a1a; --paper:#fdfdfd; --accent:#0a7d4a; --accent2:#1d4ed8; --warn:#b45309; --danger:#b91c1c; --muted:#666; --border:#ddd; --surface:#f5f5f5; --radius:8px;
+          --font-display:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-utility:ui-monospace,SFMono-Regular,Menlo,monospace;
+          --weight-display:600; --weight-body:400; --weight-utility:500;
+          --text-s:13px; --text-m:16px; --text-l:20px; --text-xl:25px; --text-xxl:31px;
+          --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-6:24px; --space-8:32px;
+          color-scheme: light; }
+  * { box-sizing:border-box; }
+  body { font:var(--text-m)/1.6 var(--font-body); font-weight:var(--weight-body); color:var(--ink); background:var(--paper); max-width:980px; margin:1.5em auto; padding:0 var(--space-6) var(--space-8); }
+  h1,h2,h3 { font-family:var(--font-display); font-weight:var(--weight-display); line-height:1.25; margin:1.4em 0 .4em; }
+  h1 { font-size:var(--text-xxl); margin-bottom:.1em; }
+  h2 { font-size:var(--text-xl); border-bottom:1px solid var(--border); padding-bottom:.2em; }
+  h3 { font-size:var(--text-l); }
+  a { color:var(--accent2); overflow-wrap:anywhere; }
+  code { background:var(--surface); padding:.15em .35em; border-radius:3px; font-size:.92em; font-family:var(--font-utility); font-weight:var(--weight-utility); overflow-wrap:anywhere; }
+  pre { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:var(--space-3) var(--space-4); font-family:var(--font-utility); font-size:var(--text-s); line-height:1.5; overflow-x:auto; }
+  .tscroll { overflow-x:auto; margin:.8em 0; }
+  .tscroll table { margin:0; }
+  table { border-collapse:collapse; width:100%; font-size:var(--text-s); }
+  th,td { border:1px solid var(--border); padding:.45em .7em; vertical-align:top; text-align:left; overflow-wrap:anywhere; }
+  th { font-weight:600; background:var(--surface); }
+  .meta { color:var(--muted); font-size:var(--text-s); }
+  .lede { font-size:var(--text-l); color:var(--muted); margin:.3em 0 1em; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:var(--space-3); margin:var(--space-4) 0; }
+  .stat { border:1px solid var(--border); border-radius:var(--radius); padding:var(--space-3) var(--space-4); }
+  .stat .n { font-size:1.9em; font-weight:var(--weight-display); line-height:1.1; color:var(--accent); }
+  .stat .l { font-size:.8em; font-family:var(--font-utility); text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+  .stat p { margin:.3em 0 0; font-size:.85em; }
+  .figure { border:1px solid var(--border); border-radius:var(--radius); padding:1em; margin:1.2em 0; }
+  .figure .scroll { overflow-x:auto; }
+  .figure svg { height:auto; display:block; }
+  .figure figcaption { color:var(--muted); font-size:var(--text-s); margin-top:.6em; }
+  .pill { display:inline-block; font-size:var(--text-s); padding:var(--space-1) var(--space-2); border-radius:10px; background:var(--surface); color:var(--muted); vertical-align:1px; }
+  .pill.done { background:var(--accent); color:var(--paper); }
+  .pill.now  { background:var(--warn);   color:var(--paper); }
+  .pill.warn { background:var(--danger); color:var(--paper); }
+  .callout { border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:4px; padding:.7em 1em; margin:1em 0; font-size:.93em; background:color-mix(in srgb, var(--accent) 5%, var(--paper)); }
+  .callout.ruling { border-left-color:var(--accent2); background:color-mix(in srgb, var(--accent2) 5%, var(--paper)); }
+  .callout.gap { border-left-color:var(--danger); background:color-mix(in srgb, var(--danger) 5%, var(--paper)); }
+  ol.timeline { list-style:none; padding-left:0; }
+  ol.timeline li { border-left:2px solid var(--accent); padding:.2em 0 .8em 1em; margin-left:.4em; position:relative; }
+  ol.timeline li::before { content:""; position:absolute; left:-6px; top:.55em; width:10px; height:10px; border-radius:50%; background:var(--accent); }
+  footer { border-top:1px solid var(--border); margin-top:2.5em; padding-top:.8em; color:var(--muted); font-size:.85em; }
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <h1>Park/Reify V1 — review brief &amp; flow map</h1>
+  <div class="lede">The one page to rule from to unblock HITL park/reify V1: the decision queue, both flows with their persistence side effects, the /approvals ingress logic, and the Postgres seam.</div>
+  <div class="meta">As of 2026-08-26 23:55 UTC &middot; stack <code>mshearer/271-park-reify-stack</code> @ <code>dd6ba150</code> on main <code>f5a7af47</code> &middot; board <code>aura</code></div>
+</header>
+
+<main>
+
+  <section id="stats">
+    <div class="stats">
+      <div class="stat"><div class="n">1</div><div class="l">Blocker</div><p>P7 sits at Gate U(code-review). Nothing downstream merges until the packet is ruled.</p></div>
+      <div class="stat"><div class="n">6</div><div class="l">Gate A rounds</div><p>P7 passed cross-family review after six rounds; every finding dispositioned in the card log.</p></div>
+      <div class="stat"><div class="n">4</div><div class="l">Red frames</div><p>dispatch_claim_crash, headless_reify, completion, retrieval_by_handle — all wait on P9's claim/reify surface.</p></div>
+      <div class="stat"><div class="n">5</div><div class="l">Rulings today</div><p>2026-08-26 session rulings, pre-filled below: P38, P39, PgRunStore, release-at-park, this desk.</p></div>
+    </div>
+  </section>
+
+  <section id="decisions">
+    <h2>Decision queue</h2>
+
+    <h3>A. Ruled today (2026-08-26) — recorded, awaiting fold into the board</h3>
+    <div class="callout ruling"><b>1. P38 ratified — async webhook.</b> The outbound webhook POST becomes a signed <i>notification</i> (response body ignored; 2xx = delivered). The decision returns later through the existing HMAC'd <code>POST /v1/approvals/{decision_id}</code> ingress. Zero new ingress surface. Park + durable resolve + reify then work identically across routes.</div>
+    <div class="callout ruling"><b>2. P39 ratified — V1 includes single-agent park+reify.</b> "The approval record is durable on redis" was never enough: without a single-agent checkpoint the agent's conversation and plan die with the process. P39 builds the minimal run record, the tool-boundary park boundary, and the same ownership transfer the orchestrated path uses.</div>
+    <div class="callout ruling"><b>3. RedisRunStore killed; PgRunStore carded.</b> Redis is never the run-store answer — the reify claim must atomically check Parked + consume the wake reason + transition + fence, which is one predicated UPDATE in Postgres and a multi-key Lua shim in redis. PgRunStore is carded now, parked behind the session-guard merge (its trigger).</div>
+    <div class="callout ruling"><b>4. Release-at-park ruled.</b> The park commit releases the session lease after the CAS commits. The <code>Parked</code> state plus its wake reasons — not a held lease — gate the reify claim. This is session-guard's shape (commit-then-release with the park latch set) and it fixes the wrinkle where a decision landing one minute after a park would otherwise wait out the lease (up to <code>park_timeout</code> after run start).</div>
+    <div class="callout ruling"><b>5. This page is the review desk.</b> One artifact carries the brief and the flows; the copy-rulings block below is the Stage-0 input for the next board-owner session.</div>
+
+    <h3>B. P7 U(code-review) packet — the standing blocker</h3>
+    <p>Reading order: <code>evidence/2026-08-26-271-stage0/u-packet-README.md</code>, then <code>adr-amendment-draft.md</code>, then <code>docs/board/reviews/P7/</code>. Each item is one function or one field, reversible in a commit:</p>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:34px">#</th><th>Item</th><th>As implemented on the stack</th></tr>
+      <tr><td>1</td><td>Approval retention policy (addendum M)</td><td>Pending: redis TTL from <code>expires_at</code>; memory/file no expiry. Resolved-unclaimed: decision sits beside the approval; redis PX = approval's remaining TTL + 60s, set once. Claimed/terminal: approval + decision deleted together. Run-level expiry: P8's reaper consumes this policy.</td></tr>
+      <tr><td>2</td><td>Migration strategy (option A)</td><td>Inline <code>version</code> tag on <code>DecidedRecord</code> (v1); unknown/missing version is a loud decode error. Redis key is main's existing <code>decision:{id}</code> — an old node reads what a new node writes.</td></tr>
+      <tr><td>3</td><td>Transfer-before-CAS with abort</td><td>ADR ordered CAS-then-transfer; the landing does transfer → CAS → <code>abort_transfer</code> on failure. The failure window (transfer done, CAS failed) is compensated in one call; the ADR order's window had no compensation.</td></tr>
+      <tr><td>4</td><td>Drain-time reconciliation</td><td>A decision that landed during wave drain moves its task <code>Blocked → Pending</code> carrying the binding; a vanished approval record is a park error, never a continue.</td></tr>
+      <tr><td>5</td><td><code>[hitl] park_timeout_secs</code></td><td>Default 3600, zero rejected. Bounds the parked run's <code>expires_at</code>, the approval register TTL on the park path, and the factory's lease TTL. No lease heartbeat — a run whose time-to-quiescence exceeds the horizon fails its park CAS expired (named P8 limitation).</td></tr>
+      <tr><td>6</td><td>Who arms parking</td><td>Only <code>aura webserver</code> via <code>AppState.run_store</code>, only on the conversational route. CLI standalone, A2A, and webhook-route deployments keep held-await. (P38 changes the webhook half.)</td></tr>
+      <tr><td>7</td><td>Wire name</td><td><code>aura.orchestrator.run_parked</code>, matching the harness vocabulary and ADR prose.</td></tr>
+      <tr><td>8</td><td>Deferrals</td><td>R3-1 durable dispatch claim → carded as P36. R3-4 identity-header allowlist → carded as P37. S2A-5 redis decision-TTL reading → yours to rule (reviewer rejected, author defended; the ADR amendment carries it).</td></tr>
+    </table>
+    </div>
+
+    <h3>C. Stage 1 open questions (asked at the U(surface) stop; recommendations in the plan)</h3>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:34px">#</th><th>Question</th><th>Plan proposes</th></tr>
+      <tr><td>1</td><td>Reaper cadence: new knob or derived?</td><td>Derived from <code>park_timeout_secs</code> (a tenth, clamped [5s, 300s])</td></tr>
+      <tr><td>2</td><td>Redis dispatch record placement</td><td>Separate <code>{p}:approval:dispatch:{id}</code> key; three-key removal; main's DecisionRecord byte-identical</td></tr>
+      <tr><td>3</td><td>Ingress answer for a decision on an expired run</td><td>404 unchanged (no new status vocabulary until P10)</td></tr>
+      <tr><td>4</td><td>ExecutionUnknown division</td><td>P36 owns gate-side refusal; P9 owns the reify-side handling (fail the task closed, decision named)</td></tr>
+      <tr><td>5</td><td>Precedence at the horizon: decided-but-unclaimed vs reaper</td><td>Option A: horizon is absolute; the summary names the decided ids. Re-asked when P9 lands.</td></tr>
+      <tr><td>6</td><td>Backend-native-expiry row can't run this wave (redis has no RunStore)</td><td>Numbered expected-failure deferral — now tied to PgRunStore, not RedisRunStore (ruling 3)</td></tr>
+      <tr><td>7</td><td>Terminal frame for reaper-driven failure</td><td>Reuse the failure frame; cause carried in the payload</td></tr>
+      <tr><td>8</td><td>Gate F for the two-card Stage 4 packet</td><td>You decide: pre-approve a frontier review over the accumulated diff, or log the skip</td></tr>
+    </table>
+    </div>
+
+    <h3>D. New questions surfaced by the codex cross-check (2026-08-26)</h3>
+    <div class="callout gap"><b>Config fingerprint is a placeholder.</b> The park commits <code>ConfigFingerprint::new("")</code> (TODO at <code>orchestrator.rs:3385</code>). P9 refuses reify on fingerprint mismatch — if the real fingerprint function lands before P9, every parked run refuses. Fill it, or pin the check to the placeholder, before P9's rehydration is reviewed.</div>
+    <div class="callout gap"><b>The fail-closed refusal helper is unwired.</b> <code>run_store_for_parking</code> exists and is tested, but has no production caller: a redis-configured deployment silently keeps held-await instead of the loud refusal addendum B promised. One wiring fix at <code>AppState</code> construction or gate-arm time; belongs in the Stage 0 fold or a named follow-up.</div>
+
+    <h3>Copy rulings</h3>
+<pre>2026-08-26 rulings (this desk):
+1. P38 RATIFIED — async webhook: notify-only outbound POST (signed
+   approval-request:{decision_id}, response ignored); decision returns via
+   existing POST /v1/approvals/{decision_id} ingress. on_notify_failure
+   posture: park proceeds, approval stays pending, P8 reaper is the
+   fail-closed backstop (confirm at Stage 1).
+2. P39 RATIFIED — V1 includes single-agent park+reify (tool boundary is the
+   single-agent park boundary; reuses RunRecordV1/SessionRecord + P7
+   ownership transfer).
+3. RedisRunStore KILLED. PgRunStore CARDED, trigger: session-guard merge.
+   PG is the sole cross-pod claim answer.
+4. RELEASE-AT-PARK RULED — park commit releases the session lease after the
+   CAS; Parked state + wake reasons gate the reify claim. ADR amendment
+   item; P9's claim path assumes it.
+5. This artifact is the review desk (brief + flows, one URL).
+Standing: P7 U-packet items 1-8 and Stage 1 questions 1-8 ruled separately;
+two new gaps carded from the codex cross-check (config-fingerprint
+placeholder; run_store_for_parking unwired).</pre>
+  </section>
+
+  <section id="fig-park">
+    <h2>Park flow — detection to durable commit (landed on the stack)</h2>
+    <figure class="figure">
+      <div class="scroll">
+        <svg width="1180" height="430" viewBox="0 0 1180 430" xmlns="http://www.w3.org/2000/svg" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12">
+          <defs>
+            <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+            </marker>
+          </defs>
+          <text x="16" y="24" font-weight="600" fill="var(--muted)">DETECT (per gated tool call, in the worker)</text>
+          <text x="620" y="24" font-weight="600" fill="var(--muted)">COMMIT (once, at the quiescent wave boundary)</text>
+
+          <rect x="16" y="40" width="150" height="44" rx="6" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="91" y="58" text-anchor="middle" fill="var(--ink)">gate pre_call</text>
+          <text x="91" y="74" text-anchor="middle" fill="var(--muted)">glob match?</text>
+
+          <rect x="196" y="40" width="150" height="44" rx="6" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="271" y="58" text-anchor="middle" fill="var(--ink)">sticky block?</text>
+          <text x="271" y="74" text-anchor="middle" fill="var(--muted)">yes → ShortCircuit</text>
+
+          <rect x="376" y="40" width="170" height="44" rx="6" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="461" y="58" text-anchor="middle" fill="var(--ink)">binding in cell?</text>
+          <text x="461" y="74" text-anchor="middle" fill="var(--muted)">(re-dispatched task)</text>
+
+          <rect x="16" y="130" width="220" height="58" rx="6" fill="var(--surface)" stroke="var(--accent2)"/>
+          <text x="126" y="148" text-anchor="middle" fill="var(--ink)">consume_binding</text>
+          <text x="126" y="164" text-anchor="middle" fill="var(--muted)">atomic take · tool name ·</text>
+          <text x="126" y="180" text-anchor="middle" fill="var(--muted)">args-digest CAS → Proceed/Deny</text>
+
+          <rect x="266" y="130" width="230" height="58" rx="6" fill="var(--surface)" stroke="var(--accent)"/>
+          <text x="381" y="148" text-anchor="middle" fill="var(--ink)">register_durable (fail-closed)</text>
+          <text x="381" y="164" text-anchor="middle" fill="var(--accent)">WRITE approvals/{id}.json</text>
+          <text x="381" y="180" text-anchor="middle" fill="var(--muted)">tmp+fsync→rename→dir-fsync</text>
+
+          <rect x="16" y="234" width="220" height="44" rx="6" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="126" y="252" text-anchor="middle" fill="var(--ink)">deposit Blocked(ApprovalRef)</text>
+          <text x="126" y="268" text-anchor="middle" fill="var(--muted)">BlockedSignal side channel</text>
+
+          <rect x="266" y="234" width="230" height="44" rx="6" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="381" y="252" text-anchor="middle" fill="var(--ink)">wave drain → quiescent</text>
+          <text x="381" y="268" text-anchor="middle" fill="var(--muted)">frontier empty · none running · ≥1 Blocked</text>
+
+          <rect x="620" y="40" width="180" height="44" rx="6" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="710" y="58" text-anchor="middle" fill="var(--ink)">A. guards (fail-closed)</text>
+          <text x="710" y="74" text-anchor="middle" fill="var(--muted)">run store · route · ids</text>
+
+          <rect x="830" y="40" width="180" height="44" rx="6" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="920" y="58" text-anchor="middle" fill="var(--ink)">B. drain reconcile</text>
+          <text x="920" y="74" text-anchor="middle" fill="var(--muted)">decided → Blocked→Pending</text>
+
+          <rect x="1040" y="40" width="124" height="44" rx="6" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="1102" y="58" text-anchor="middle" fill="var(--ink)">C. checkpoint</text>
+          <text x="1102" y="74" text-anchor="middle" fill="var(--muted)">RunCheckpoint v1</text>
+
+          <rect x="620" y="130" width="180" height="44" rx="6" fill="var(--surface)" stroke="var(--danger)"/>
+          <text x="710" y="148" text-anchor="middle" fill="var(--ink)">D. credential refusal</text>
+          <text x="710" y="164" text-anchor="middle" fill="var(--muted)">MCP forwarded headers → Err</text>
+
+          <rect x="830" y="130" width="180" height="44" rx="6" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="920" y="148" text-anchor="middle" fill="var(--ink)">E. transfer_to_session</text>
+          <text x="920" y="164" text-anchor="middle" fill="var(--muted)">request-scope → session-scope</text>
+
+          <rect x="1040" y="130" width="124" height="44" rx="6" fill="var(--surface)" stroke="var(--accent)"/>
+          <text x="1102" y="148" text-anchor="middle" fill="var(--ink)">F. park CAS</text>
+          <text x="1102" y="164" text-anchor="middle" fill="var(--accent)">WRITE runs/{sid}.json</text>
+
+          <rect x="830" y="234" width="180" height="44" rx="6" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="920" y="252" text-anchor="middle" fill="var(--ink)">G. emit run_parked</text>
+          <text x="920" y="268" text-anchor="middle" fill="var(--muted)">only after CAS commits</text>
+
+          <rect x="1040" y="234" width="124" height="44" rx="6" fill="var(--surface)" stroke="var(--accent2)"/>
+          <text x="1102" y="252" text-anchor="middle" fill="var(--ink)">release lease</text>
+          <text x="1102" y="268" text-anchor="middle" fill="var(--accent2)">RULING 4 (new)</text>
+
+          <line x1="166" y1="62" x2="196" y2="62" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="346" y1="62" x2="376" y2="62" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
+          <path d="M 461 84 L 461 110 L 240 110 L 160 130" fill="none" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="300" y="104" fill="var(--muted)">yes</text>
+          <path d="M 500 84 L 500 110 L 430 110 L 400 130" fill="none" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="512" y="104" fill="var(--muted)">no</text>
+          <line x1="381" y1="188" x2="160" y2="234" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="236" y1="256" x2="266" y2="256" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
+          <path d="M 496 256 L 560 256 L 560 62 L 620 62" fill="none" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="800" y1="62" x2="830" y2="62" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="1010" y1="62" x2="1040" y2="62" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="1102" y1="84" x2="1102" y2="106" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M 1102 106 L 710 106 L 710 130" fill="none" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="800" y1="152" x2="830" y2="152" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="1010" y1="152" x2="1040" y2="152" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
+          <path d="M 1102 174 L 1102 210 L 920 210 L 920 234" fill="none" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="1010" y1="256" x2="1040" y2="256" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
+
+          <text x="16" y="330" fill="var(--muted)">CAS failure after transfer → abort_transfer (ownership rolls back to request scope; teardown deletes as usual).</text>
+          <text x="16" y="350" fill="var(--muted)">Store fault at registration → tool call fails closed, nothing published, run never parks on an unwritten approval.</text>
+          <text x="16" y="370" fill="var(--muted)">SSE closes after the parked frame; the process may die. Parked record + approval records + decisions persist.</text>
+          <text x="16" y="396" font-weight="600" fill="var(--ink)">Green on the harness today: park_at_quiescence, checkpoint_commit_crash (file backend). Redis refuses parking — no RunStore there, by design.</text>
+        </svg>
+      </div>
+      <figcaption>Park is only ever committed at a drained wave boundary (ADR decision 1). Registration precedes the block; the parked frame emits only after the CAS; ownership transfers before the CAS with a one-call abort. Ruling 4 adds the lease release after the commit so a reify claim never waits out a dead holder's lease.</figcaption>
+    </figure>
+  </section>
+
+  <section id="fig-reify">
+    <h2>Reify flow — decision ingress to headless completion (P9; pinned red by the harness)</h2>
+    <figure class="figure">
+      <div class="scroll">
+        <svg width="1180" height="300" viewBox="0 0 1180 300" xmlns="http://www.w3.org/2000/svg" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12">
+          <defs>
+            <marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+            </marker>
+          </defs>
+          <rect x="16" y="40" width="170" height="58" rx="6" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="101" y="58" text-anchor="middle" fill="var(--ink)">approver service</text>
+          <text x="101" y="74" text-anchor="middle" fill="var(--muted)">POST /v1/approvals/{id}</text>
+          <text x="101" y="90" text-anchor="middle" fill="var(--muted)">HMAC approval-decision:{id}</text>
+
+          <rect x="226" y="40" width="170" height="58" rx="6" fill="var(--surface)" stroke="var(--accent)"/>
+          <text x="311" y="58" text-anchor="middle" fill="var(--ink)">resolve_durable</text>
+          <text x="311" y="74" text-anchor="middle" fill="var(--accent)">WRITE decision (NX)</text>
+          <text x="311" y="90" text-anchor="middle" fill="var(--muted)">first-write-wins · 204/404</text>
+
+          <rect x="436" y="40" width="170" height="58" rx="6" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="521" y="58" text-anchor="middle" fill="var(--ink)">claim (P9 endpoint)</text>
+          <text x="521" y="74" text-anchor="middle" fill="var(--muted)">acquire_lease — free after</text>
+          <text x="521" y="90" text-anchor="middle" fill="var(--muted)">release-at-park (ruling 4)</text>
+
+          <rect x="646" y="40" width="170" height="58" rx="6" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="731" y="58" text-anchor="middle" fill="var(--ink)">verify + rehydrate</text>
+          <text x="731" y="74" text-anchor="middle" fill="var(--muted)">Parked? wake in reason?</text>
+          <text x="731" y="90" text-anchor="middle" fill="var(--muted)">fingerprint · MCP rebuild</text>
+
+          <rect x="856" y="40" width="140" height="58" rx="6" fill="var(--surface)" stroke="var(--accent)"/>
+          <text x="926" y="58" text-anchor="middle" fill="var(--ink)">Reify CAS</text>
+          <text x="926" y="74" text-anchor="middle" fill="var(--accent)">WRITE runs/{sid}.json</text>
+          <text x="926" y="90" text-anchor="middle" fill="var(--muted)">Parked → Running</text>
+
+          <rect x="1036" y="40" width="128" height="58" rx="6" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="1100" y="58" text-anchor="middle" fill="var(--ink)">headless loop</text>
+          <text x="1100" y="74" text-anchor="middle" fill="var(--muted)">blocked task re-runs;</text>
+          <text x="1100" y="90" text-anchor="middle" fill="var(--muted)">gate consumes decision</text>
+
+          <rect x="436" y="160" width="170" height="50" rx="6" fill="var(--surface)" stroke="var(--danger)"/>
+          <text x="521" y="178" text-anchor="middle" fill="var(--ink)">refuse fail-closed</text>
+          <text x="521" y="194" text-anchor="middle" fill="var(--muted)">fingerprint mismatch ·</text>
+          <text x="521" y="206" text-anchor="middle" fill="var(--muted)">unresolvable pod-local refs</text>
+
+          <rect x="856" y="160" width="308" height="50" rx="6" fill="var(--surface)" stroke="var(--border)"/>
+          <text x="1010" y="178" text-anchor="middle" fill="var(--ink)">completion → retrieval by handle (P10)</text>
+          <text x="1010" y="194" text-anchor="middle" fill="var(--muted)">snapshot-authoritative; no transcript merge (decisions 4, 15)</text>
+
+          <line x1="186" y1="69" x2="226" y2="69" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr2)"/>
+          <line x1="396" y1="69" x2="436" y2="69" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr2)"/>
+          <line x1="606" y1="69" x2="646" y2="69" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr2)"/>
+          <line x1="816" y1="69" x2="856" y2="69" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr2)"/>
+          <line x1="996" y1="69" x2="1036" y2="69" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr2)"/>
+          <line x1="731" y1="98" x2="521" y2="160" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr2)"/>
+          <line x1="1100" y1="98" x2="1010" y2="160" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr2)"/>
+
+          <text x="16" y="250" fill="var(--muted)">The bus is notification-only; the store is truth. A lost publish costs nothing — the claim reads the durable decision (the M1 window is closed).</text>
+          <text x="16" y="270" fill="var(--muted)">Consumption is exactly-once at the gate: atomic binding take + tool-name check + args-digest revalidation; P36 makes the dispatch claim itself durable (R3-1 gap until then).</text>
+        </svg>
+      </div>
+      <figcaption>Reify is ingress-driven pull-and-claim (decision 5): whichever instance receives the decision claims the session. The four red harness frames (dispatch_claim_crash, headless_reify, completion, retrieval_by_handle) pin this shape and turn green under P9/P10 without edits.</figcaption>
+    </figure>
+  </section>
+
+  <section id="detail">
+    <h2>Side-effect ledger — every durable write, in order</h2>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:170px">Moment</th><th>Write</th><th style="width:200px">Store / key</th><th>Atomicity discipline</th></tr>
+      <tr><td>Gate registration (park path)</td><td><code>ParkedApprovalRecord</code> (version-tagged; scope, origin, items, expiry = park horizon)</td><td>file: <code>approvals/{id}.json</code> · redis: <code>{p}:approval:{id}</code></td><td>file: tmp+fsync → rename → dir-fsync. redis: SET with PX from <code>expires_at</code>. Registration precedes the block — a store fault fails the tool call with nothing published.</td></tr>
+      <tr><td>Park commit (CAS)</td><td><code>RunRecordV1</code>: <code>Running → Parked{reason, parked_at, expires_at, checkpoint}</code>, generation +1</td><td>file: <code>runs/{session}.json</code></td><td>flock on a stable <code>.lock</code> inode + in-process Mutex; presented generation must equal the record's; lease must be live. One write — no reader sees Parked without its checkpoint.</td></tr>
+      <tr><td>Post-CAS (ruling 4)</td><td>lease release (generation-predicated)</td><td>same run record</td><td>Release checks generation only; after it, the session is claimable by any instance that presents a valid wake reason.</td></tr>
+      <tr><td>Decision ingress</td><td><code>DecidedRecord{version, decision, wake}</code> beside the kept approval</td><td>file: <code>approvals/{id}.decided</code> · redis: <code>{p}:approval:decision:{id}</code></td><td>file: tmp+fsync → <b>hard-link create-new</b> (first-write-wins at the FS level) → dir-fsync, then re-check the approval exists. redis: one Lua — EXISTS guard, <code>SET NX PX</code> (approval PTTL + 60s). A contradicting second decision records nothing.</td></tr>
+      <tr><td>Consumption (settled)</td><td>approval + decision removed together</td><td>both keys / both files</td><td>redis: <code>REMOVE_SCRIPT</code> (GET + DEL both keys, one script); cancel_request is an atomic MULTI/EXEC. No window where a decision is readable for a gone approval.</td></tr>
+      <tr><td>Dispatch claim (P36, pending)</td><td><code>DispatchRecordV1{version, state, digest}</code>: Unclaimed → Claimed → Executed | ExecutionUnknown</td><td>redis: <code>{p}:approval:dispatch:{id}</code> (third key) · file: sidecar next to <code>.decided</code></td><td>Store holds the digest authority (computed from the parked approval's stored arguments at record creation); CAS on presented generation + persisted digest; three-key removal on every backend.</td></tr>
+      <tr><td>Reaper sweep (P8, pending)</td><td>approvals removed → <code>apply(Expire{summary})</code> → <code>Failed{ParkExpired}</code> + manifest write + terminal frame</td><td>run record + approval keys</td><td>Ordered so every crash is re-enumerable: removals before the fenced Expire; Expire is the commit point and fails stale if a reifier claimed in between.</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <section id="ingress">
+    <h2>/approvals request logic — the webhook HITL flow</h2>
+    <p><b>Ingress (unchanged by the stack, unchanged by P38):</b> <code>POST /v1/approvals/{decision_id}</code>. With <code>AURA_HITL_WEBHOOK_SECRET</code> set, the body is verified before parsing — <code>X-Aura-Signature-256: sha256=…</code> over <code>"{unix_seconds}.approval-decision:{decision_id}.{raw_body}"</code>, ±300s default skew, primary-then-secondary constant-time verify, every pre-verification failure a uniform 401. Success: <code>204</code>. Unknown id: <code>404</code>. The handler calls <code>PendingApprovals::resolve</code>, which on the stack is <code>resolve_durable</code> — first-write-wins, record kept, wake reason durable. <b>HMAC is opt-in</b>: with no secret configured the endpoint parses unverified JSON (feature-off by design; the webhook flow below assumes it on).</p>
+    <p><b>Egress today (sync webhook route):</b> the gate POSTs <code>ApprovalRequestWire</code> to the configured URL (signed <code>approval-request:{decision_id}</code> when HMAC is on) and <i>holds the round-trip open</i> — the decision arrives as the response body, verified under <code>approval-decision:{decision_id}</code>. This route never parks; the run dies with the process.</p>
+    <p><b>Egress after P38 (ratified today):</b> the outbound POST is a <i>notification</i> — same signed body, response ignored, 2xx = delivered. The run parks (same commit path as conversational). The approver service decides whenever it decides and POSTs the ingress. Notification failure does not deny: the park proceeds, the approval stays pending, the P8 reaper is the fail-closed backstop, and an operator can drive the <code>decision_id</code> from logs/events. An optional <code>on_notify_failure = "deny"</code> posture is a Stage 1 ruling.</p>
+  </section>
+
+  <section id="schemas">
+    <h2>Schemas — what sits on disk and in redis</h2>
+    <h3>File backend (the V1 park substrate; single-writer, single-pod)</h3>
+<pre>{root}/approvals/{decision_id}.json      ParkedApprovalRecord { version, decision_id, request_id,
+                                         scope: Single|Worker|Coordinator, origin: ConfigGate|
+                                         AgentRequested, items[], registered_at, expires_at }
+{root}/approvals/{decision_id}.decided   DecidedRecord { version, decision: { approved, reason,
+                                         decided_at }, wake: DecisionResolved { decision_id,
+                                         resolved_at } }
+{root}/runs/{session_id}.json            RunRecordV1 { version, session, run_id, state, lease,
+                                         generation } — state: Created | Running | Parked { reason,
+                                         parked_at, expires_at, checkpoint } | Completed |
+                                         Failed { cause } | Cancelled
+{root}/runs/{session_id}.lock            stable flock inode (never renamed)
+*.tmp / *.taken / *.probe                crash debris; no read path considers them</pre>
+    <p>The checkpoint rides inside the Parked record as opaque JSON through its own version gate (<code>CheckpointEnvelope</code>, schema v1, golden fixture <code>checkpoint-v1.json</code>): run/session/chat ids, config fingerprint, original query, external history, coordinator conversation, plan, blocked bindings, approval snapshots, wake reasons, resume point, identity headers, pod-local refs, iteration, timings.</p>
+    <h3>Redis keys (approvals + bus only — never a run store)</h3>
+    <div class="tscroll">
+    <table>
+      <tr><th>Key</th><th>Holds</th><th>TTL</th></tr>
+      <tr><td><code>{p}:approval:{decision_id}</code></td><td>ParkedApprovalRecord JSON</td><td>from <code>expires_at</code> (park horizon on the park path)</td></tr>
+      <tr><td><code>{p}:approval:decision:{decision_id}</code></td><td>DecisionRecord JSON (main's shape, byte-identical)</td><td>approval's remaining TTL + 60s, set once (S2A-5 reading — yours to rule)</td></tr>
+      <tr><td><code>{p}:approval:dispatch:{decision_id}</code></td><td>DispatchRecordV1 JSON (P36, pending)</td><td>with the approval; three-key removal</td></tr>
+      <tr><td><code>{p}:approval:req:{request_id}</code></td><td>set of decision ids (cancel_request fan-out)</td><td>record TTL + 60s margin</td></tr>
+      <tr><td><code>{p}:bus:{topic}</code></td><td>pub/sub channel (<code>approval:{decision_id}</code>) — notification only</td><td>—</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <section id="pg-seam">
+    <h2>The Postgres seam — where session-guard takes over</h2>
+    <p>V1 ships the file RunStore only (prod is one pod). The <code>RunStore</code> trait is already an optional factory capability — that trait is the documented swap point. When session-guard merges (its branch already carries all nine fill units + live-PG frames), a <code>PgRunStore</code> takes over the claim/fence role. RedisRunStore is killed (ruling 3): the reify claim must atomically check Parked + consume the wake reason + transition + fence — one predicated UPDATE in Postgres, a multi-key Lua shim in redis.</p>
+    <div class="tscroll">
+    <table>
+      <tr><th>271 RunStore (file, V1)</th><th>session-guard (PG, HA)</th></tr>
+      <tr><td><code>acquire_lease</code> — steal when expired</td><td>S1 upsert-under-row-lock election (<code>INSERT … ON CONFLICT … WHERE lease_expires_at &lt; clock_timestamp()</code>)</td></tr>
+      <tr><td><code>park</code> CAS <code>Running → Parked</code> + release (ruling 4)</td><td>commit with <code>TurnEnd::Park</code> → latch = committing turn, then release</td></tr>
+      <tr><td>reify claim + wake-reason check</td><td>re-claim with the <b>same TurnId</b>; others read <code>AdmissionError::Parked</code> (honest HITL, no retry hint)</td></tr>
+      <tr><td>fencing generation (u64, monotonic)</td><td>fence triple: epoch + holder (fresh UUIDv7 per attempt) + unexpired lease</td></tr>
+      <tr><td>checkpoint embedded in the run record</td><td>manifest JSONB on the claim row (the claim read IS the handshake)</td></tr>
+    </table>
+    </div>
+    <p class="meta">v1 posture on the session-guard side: single-primary fail-stop Postgres; (epoch, holder)-namespaced run dirs are the deferred fix that must land before the claims table ever sits on async-failover PG.</p>
+  </section>
+
+  <section id="gaps">
+    <h2>Named gaps — honest, numbered, none counted green</h2>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:34px">#</th><th>Gap</th><th>Owner / disposition</th></tr>
+      <tr><td>1</td><td><b>R3-1: no durable dispatch claim.</b> A crash between decision consumption and tool execution can lose or double the approved call. Ships in the pushed preview by ruling.</td><td>P36 (carded; gate-side write + ExecutionUnknown refusal)</td></tr>
+      <tr><td>2</td><td><b>Config fingerprint placeholder.</b> Parks commit <code>ConfigFingerprint::new("")</code>; P9's mismatch refusal needs the real function or a pinned placeholder check.</td><td>P9 packet blocker (new, from the codex cross-check)</td></tr>
+      <tr><td>3</td><td><b><code>run_store_for_parking</code> unwired.</b> Redis deployments silently held-await instead of the loud refusal addendum B promised.</td><td>Stage 0 fold or named follow-up (new, from the codex cross-check)</td></tr>
+      <tr><td>4</td><td><b>R3-4: identity-header allowlist.</b> Interim fail-closed refusal names any MCP <code>headers_from_request</code> server; the identity/credential classification goes live with P38.</td><td>P37 (carded, backlog)</td></tr>
+      <tr><td>5</td><td><b>Backend-native-expiry row</b> can't run this wave (redis has no RunStore, memory/file don't TTL-prune pendings).</td><td>Expected-failure deferral, now tied to PgRunStore (ruling 3)</td></tr>
+      <tr><td>6</td><td><b>Board drift:</b> session-guard cards P22–P35 read backlog while the branch carries all nine fills + live-PG frames.</td><td>Board tidy pass (Gate U-board, after this review)</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <section id="seq">
+    <h2>Path across the line</h2>
+    <ol class="timeline">
+      <li><b>Rule the P7 U packet</b> (items B1–B8 above) → fold rulings as one-function commits → integration PR <code>mshearer/271-park-reify-stack → main</code> opens; the merge is yours. P7 → done; P8 → ready.</li>
+      <li><b>Stage 1</b>: card P36/P37/P38/P39/PgRunStore; typed-holes skeleton (<code>parked_expired</code>, <code>dispatch</code>/<code>apply_dispatch</code>, three-key removal, reaper holes, <code>park_expiry</code> frame red); design panel; your U(surface) stop with questions C1–C8.</li>
+      <li><b>P8 + P36 fills in parallel</b> (disjoint files), Gate A each, integrate on the stack; Gate M observes the <code>park_expiry</code> frame end to end.</li>
+      <li><b>P9 claim + headless reify</b> — the four red frames turn green unedited; your U(semantics) stop covers live park-reify behavior and the claim semantics (release-at-park assumed, ruling 4).</li>
+      <li><b>P39 single-agent park + P10 retrieval</b> — tool-boundary park, minimal run record, result by handle.</li>
+      <li><b>P38 async-webhook route</b> + P11 integration matrix → milestone acceptance.</li>
+      <li><b>Board tidy pass (Gate U-board)</b> folds this desk into the board: cards created, rulings logged, superseded plan text pruned, session-guard statuses reconciled, <code>boardkit check</code> green — so the next board owner steers from one clean source.</li>
+    </ol>
+  </section>
+
+  <section id="src">
+    <h2>Sources</h2>
+    <ul>
+      <li>Board <code>aura</code>: cards P1–P39 area, DECISIONS-2026-07-20 (17 decisions + addenda A–N), DECISIONS-2026-08-24 (session-guard rulings), plans hitl-271-reactivation / stage0 / stage1 (2026-08-26)</li>
+      <li>Code verified by direct read: stack @ <code>dd6ba150</code> — gate.rs, orchestrator.rs (commit_quiescent_park), session_store/{mod,record,file}.rs, redis approval_store.rs, handlers.rs, route.rs, registry.rs, park/session.rs, factory.rs (2026-08-26)</li>
+      <li>session-guard DESIGN.md rev 12.4 + branch <code>mshearer/session-guard</code> @ <code>a28b9499</code> (2026-08-26)</li>
+      <li>Codex CLI cross-check (gpt-5.6-sol, 2026-08-26, 156,951 tokens): VERDICT FAIL, 5 findings — all dispositioned (2 wording corrections, 3 real gaps now numbered above)</li>
+    </ul>
+    <div class="callout">This page describes the <b>stack branch</b>, not main: the park path is landed there and unmerged; the reify path is a design pinned by red harness frames, not built code. HMAC is opt-in everywhere it appears — the webhook flow assumes it configured. Nothing here counts a known gap as green.</div>
+  </section>
+
+</main>
+
+<footer>
+  Template defaults, pinned light (gate-review artifact convention) &middot; As of 2026-08-26 23:55 UTC
+  &middot; <a href="https://github.com/mezmo/aura">mezmo/aura</a>
+</footer>
+
+<script type="application/json" id="artifact-state">
+{"as_of": "2026-08-26 23:55 UTC", "sections": ["stats", "decisions", "fig-park", "fig-reify", "detail", "ingress", "schemas", "pg-seam", "gaps", "seq", "src"], "design_system": null, "stack_sha": "dd6ba150", "main_sha": "f5a7af47", "board": "aura", "rulings_today": 5, "red_frames_file": ["dispatch_claim_crash", "headless_reify", "completion", "retrieval_by_handle"], "red_frames_redis": ["park_at_quiescence", "publish_loss_wake_discovery"], "codex_check": {"model": "gpt-5.6-sol", "verdict": "FAIL", "findings": 5, "dispositioned": 5}}
+</script>
+
+</body>
+</html>

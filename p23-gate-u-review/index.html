@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>P23 Gate U review - session-guard fill unit 1</title>
+<style>
+  :root { --ink:#1a1a1a; --paper:#fdfdfd; --accent:#0a7d4a; --accent2:#1d4ed8; --warn:#b45309; --danger:#b91c1c; --muted:#666; --border:#ddd; --surface:#f5f5f5; --radius:8px;
+          --font-display:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-utility:ui-monospace,SFMono-Regular,Menlo,monospace;
+          --weight-display:600; --weight-body:400; --weight-utility:500;
+          --text-s:13px; --text-m:16px; --text-l:20px; --text-xl:25px; --text-xxl:31px;
+          --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-6:24px; --space-8:32px;
+          color-scheme: light; }
+  * { box-sizing:border-box; }
+  body { font:var(--text-m)/1.6 var(--font-body); font-weight:var(--weight-body); color:var(--ink); background:var(--paper); max-width:980px; margin:1.5em auto; padding:0 var(--space-6) var(--space-8); }
+  h1,h2,h3 { font-family:var(--font-display); font-weight:var(--weight-display); line-height:1.25; margin:1.4em 0 .4em; }
+  h1 { font-size:var(--text-xxl); margin-bottom:.1em; }
+  h2 { font-size:var(--text-xl); border-bottom:1px solid var(--border); padding-bottom:.2em; }
+  h3 { font-size:var(--text-l); }
+  a { color:var(--accent2); overflow-wrap:anywhere; }
+  code { background:var(--surface); padding:.15em .35em; border-radius:3px; font-size:.92em; font-family:var(--font-utility); font-weight:var(--weight-utility); overflow-wrap:anywhere; }
+  .tscroll { overflow-x:auto; margin:.8em 0; }
+  .tscroll table { margin:0; }
+  table { border-collapse:collapse; width:100%; font-size:var(--text-s); }
+  th,td { border:1px solid var(--border); padding:.45em .7em; vertical-align:top; text-align:left; overflow-wrap:anywhere; }
+  th { font-weight:600; background:var(--surface); }
+  .meta { color:var(--muted); font-size:var(--text-s); }
+  .lede { font-size:var(--text-l); color:var(--muted); margin:.3em 0 1em; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:var(--space-3); margin:var(--space-4) 0; }
+  .stat { border:1px solid var(--border); border-radius:var(--radius); padding:var(--space-3) var(--space-4); }
+  .stat .n { font-size:1.9em; font-weight:var(--weight-display); line-height:1.1; color:var(--accent); }
+  .stat .l { font-size:.8em; font-family:var(--font-utility); text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+  .stat p { margin:.3em 0 0; font-size:.85em; }
+  .figure { border:1px solid var(--border); border-radius:var(--radius); padding:1em; margin:1.2em 0; }
+  .figure .scroll { overflow-x:auto; }
+  .figure svg { height:auto; display:block; }
+  .figure figcaption { color:var(--muted); font-size:var(--text-s); margin-top:.6em; }
+  .pill { display:inline-block; font-size:var(--text-s); padding:var(--space-1) var(--space-2); border-radius:10px; background:var(--surface); color:var(--muted); vertical-align:1px; }
+  .pill.done { background:var(--accent); color:var(--paper); }
+  .pill.now  { background:var(--warn);   color:var(--paper); }
+  .pill.warn { background:var(--danger); color:var(--paper); }
+  .callout { border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:4px; padding:.7em 1em; margin:1em 0; font-size:.93em; background:color-mix(in srgb, var(--accent) 5%, var(--paper)); }
+  .callout.flag { border-left-color:var(--warn); background:color-mix(in srgb, var(--warn) 6%, var(--paper)); }
+  ol.timeline { list-style:none; padding-left:0; }
+  ol.timeline li { border-left:2px solid var(--accent); padding:.2em 0 .8em 1em; margin-left:.4em; position:relative; }
+  ol.timeline li::before { content:""; position:absolute; left:-6px; top:.55em; width:10px; height:10px; border-radius:50%; background:var(--accent); }
+  footer { border-top:1px solid var(--border); margin-top:2.5em; padding-top:.8em; color:var(--muted); font-size:.85em; }
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <h1>P23 Gate U review &mdash; session-guard fill unit&nbsp;1</h1>
+  <div class="lede">Everything needed to decide the P23 user gate: what was filled, what the adversarial review caught, and the one judgment call that needs your eyes before P24+P25 pull.</div>
+  <div class="meta">As of 2026-08-26 02:50 UTC &middot; branch <code>mshearer/session-guard</code> &middot; push HELD (your Stage-3 scrub) &middot; board aura, card P23</div>
+</header>
+
+<main>
+
+  <section id="stats">
+    <div class="stats">
+      <div class="stat"><div class="n">36&rarr;27</div><div class="l">tracked holes</div><p>Delta exactly &minus;9, the card's acceptance: identity&nbsp;6, config&nbsp;2, lib&nbsp;1.</p></div>
+      <div class="stat"><div class="n">7/7</div><div class="l">u1 frames green</div><p>The P22 red frames this unit waits on all turned green; u2+ correctly still red.</p></div>
+      <div class="stat"><div class="n">20</div><div class="l">env-free unit tests</div><p>The P22 stop-report homes: from_env_chain / from_values seams, no env mutation (forbidden crate-wide).</p></div>
+      <div class="stat"><div class="n">2</div><div class="l">BLOCKING folded</div><p>Codex Gate A round 1: non-UTF-8 env conflation + RFC-1123 gaps. Re-review: PASS, zero findings.</p></div>
+      <div class="stat"><div class="n">+632/&minus;45</div><div class="l">4 files, 3 commits</div><p><code>48ab2324</code> fills &middot; <code>527a52ee</code> clippy fixups &middot; <code>8dd8ce74</code> Gate-A fold.</p></div>
+    </div>
+  </section>
+
+  <section id="fig">
+    <h2>How the card got here</h2>
+    <figure class="figure">
+      <div class="scroll">
+        <svg viewBox="0 0 960 150" width="960" role="img" aria-label="P23 execution and gate flow">
+          <style>
+            .box { fill:var(--surface); stroke:var(--border); stroke-width:1.2; }
+            .hot { stroke:var(--accent); stroke-width:1.6; }
+            .bad { stroke:var(--danger); stroke-width:1.6; }
+            .lbl { font:600 12.5px var(--font-display); fill:var(--ink); }
+            .tiny{ font:11px var(--font-utility); fill:var(--muted); }
+            .edg { stroke:var(--muted); stroke-width:1.2; fill:none; }
+            .arr { fill:var(--muted); }
+          </style>
+          <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arr"/></marker></defs>
+          <rect x="10" y="30" width="130" height="58" rx="8" class="box"/>
+          <text x="75" y="53" text-anchor="middle" class="lbl">flash fills</text>
+          <text x="75" y="70" text-anchor="middle" class="tiny">identity.rs +6</text>
+          <text x="75" y="84" text-anchor="middle" class="tiny">config.rs +2</text>
+          <rect x="170" y="30" width="120" height="58" rx="8" class="box bad"/>
+          <text x="230" y="53" text-anchor="middle" class="lbl">stall</text>
+          <text x="230" y="70" text-anchor="middle" class="tiny">lib.rs body,</text>
+          <text x="230" y="84" text-anchor="middle" class="tiny">rerouted smart lane</text>
+          <rect x="320" y="30" width="120" height="58" rx="8" class="box hot"/>
+          <text x="380" y="53" text-anchor="middle" class="lbl">build_admission</text>
+          <text x="380" y="70" text-anchor="middle" class="tiny">both mode arms,</text>
+          <text x="380" y="84" text-anchor="middle" class="tiny">shared arbiter</text>
+          <rect x="470" y="30" width="120" height="58" rx="8" class="box hot"/>
+          <text x="530" y="53" text-anchor="middle" class="lbl">Gate S</text>
+          <text x="530" y="70" text-anchor="middle" class="tiny">tests + clippy + fmt</text>
+          <text x="530" y="84" text-anchor="middle" class="tiny">exit-code checked</text>
+          <rect x="620" y="30" width="150" height="58" rx="8" class="box bad"/>
+          <text x="695" y="53" text-anchor="middle" class="lbl">Gate A r1: FAIL</text>
+          <text x="695" y="70" text-anchor="middle" class="tiny">2 BLOCKING + 1 MINOR</text>
+          <text x="695" y="84" text-anchor="middle" class="tiny">folded in 8dd8ce74</text>
+          <rect x="800" y="30" width="140" height="58" rx="8" class="box hot"/>
+          <text x="870" y="53" text-anchor="middle" class="lbl">r2: PASS</text>
+          <text x="870" y="70" text-anchor="middle" class="tiny">zero findings,</text>
+          <text x="870" y="84" text-anchor="middle" class="tiny">fresh codex context</text>
+          <rect x="470" y="115" width="330" height="26" rx="8" class="box"/>
+          <text x="635" y="132" text-anchor="middle" class="tiny">Gate U &mdash; this packet &mdash; stops for Mike</text>
+          <path class="edg" d="M140,59 L170,59" marker-end="url(#a)"/>
+          <path class="edg" d="M290,59 L320,59" marker-end="url(#a)"/>
+          <path class="edg" d="M440,59 L470,59" marker-end="url(#a)"/>
+          <path class="edg" d="M590,59 L620,59" marker-end="url(#a)"/>
+          <path class="edg" d="M770,59 L800,59" marker-end="url(#a)"/>
+          <path class="edg" d="M870,88 C 870,115 800,128 800,128" marker-end="url(#a)"/>
+        </svg>
+      </div>
+      <figcaption>Red border = friction (flash-lane stall, Gate A round 1). Green border = verified green. The stall reroute is the executor-floor ruling working as designed, not a blocker.</figcaption>
+    </figure>
+  </section>
+
+  <section id="detail">
+    <h2>What was filled &mdash; the nine bodies vs the type map</h2>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:150px">File / body</th><th>Rule as reviewed (DESIGN.md type map, normative)</th><th style="width:150px">Review note</th></tr>
+      <tr><td><code>SessionId::parse</code></td><td>Exactly 1..=128 bytes ASCII <code>[A-Za-z0-9._-]</code>; rejects empty, non-ASCII, <code>.</code>, <code>..</code>, <code>latest</code> (traversal / symlink-collision guard).</td><td>Fail-loud, distinguishing reasons</td></tr>
+      <tr><td><code>TurnId::parse</code></td><td>UUID from string form (HTTP/PG text wire); <code>new()</code> already minted UUIDv7, serde the compact manifest wire.</td><td>Rejects every non-UUID</td></tr>
+      <tr><td><code>PodId::parse</code></td><td>RFC-1123: 1..=253 bytes; each dot-segment 1..=63, starts AND ends <code>[a-z0-9]</code>, interior <code>[a-z0-9-]</code>; uppercase rejected; interior double hyphen legal.</td><td>Hardened in the Gate-A fold</td></tr>
+      <tr><td><code>PodId::from_env</code></td><td>Chain AURA_POD_ID &rarr; POD_NAME &rarr; HOSTNAME: first present wins; <em>invalid</em> first-present fails loud (no fall-through); none present errors. Thin env read over the values-injected <code>from_env_chain</code> seam; <code>var_os</code> distinguishes absent from present-but-non-UTF-8.</td><td>Both BLOCKINGs landed here</td></tr>
+      <tr><td><code>HolderId::parse</code> / <code>OpId::parse</code></td><td>UUID wire parse (any version &mdash; freshness-by-mint is <code>mint</code>'s job, invariant I2).</td><td>Symmetry with TurnId</td></tr>
+      <tr><td><code>PgUrl::parse</code></td><td>Scheme check: <code>postgres://</code> or <code>postgresql://</code> only.</td><td>Bare strings rejected</td></tr>
+      <tr><td><code>AdmissionEnv::from_env</code></td><td>Thin reader over <code>from_values</code>: margin&nbsp;&lt;&nbsp;ttl required; non-zero durations by construction; pg mode requires URL; unknown mode / repair lane / non-numeric millis all fail loud.</td><td>8 vars, all in the seam</td></tr>
+      <tr><td><code>build_admission</code></td><td>Mode dispatch: one shared <code>SessionArbiter</code>, pod identity, mandatory root; off &rarr; <code>LocalAdmission</code>, pg &rarr; <code>PgAdmission</code> with <code>PgStore</code> + repair lane, both via narrowed config proofs.</td><td>Smart-lane fill after stall</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <section id="findings">
+    <h2>Gate A record &mdash; what the adversarial review caught</h2>
+    <p>Reviewer: codex CLI <code>gpt-5.6-sol</code>, fresh context both rounds. Routing reason: P23's authorship spanned DeepSeek (flash fills), Kimi (smart-lane fill + fold), and GLM (board-owner mechanical commits) &mdash; both in-harness reviewer lanes were family-conflicted, so the review went to the tools-table fallback.</p>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:90px">Severity</th><th>Finding (round 1)</th><th>Disposition &rarr; fold in <code>8dd8ce74</code></th></tr>
+      <tr><td><span class="pill warn">BLOCKING</span></td><td>Env reads via <code>var().ok()</code> treated non-UTF-8 values as absent &mdash; a garbage <code>AURA_POD_ID</code> would silently fall through to <code>POD_NAME</code>; a non-UTF-8 mode var would silently default to <code>off</code>.</td><td><b>Fixed.</b> <code>var_os</code> throughout; present-but-invalid-encoding is its own fail-loud outcome naming the var; seams carry OsStr-shaped input; unit tests cover both paths.</td></tr>
+      <tr><td><span class="pill warn">BLOCKING</span></td><td><code>PodId::parse</code> accepted <code>-pod</code>, <code>pod-</code>, <code>a.-b</code> &mdash; RFC-1123 segment start/end rules were missing.</td><td><b>Fixed.</b> Per-segment validation (start/end alphanumeric, 1..=63, interior <code>[a-z0-9-]</code>, total 1..=253); rejection tests added; <code>pod--name</code> verified still legal.</td></tr>
+      <tr><td><span class="pill">MINOR</span></td><td>Test seams (<code>AdmissionEnvValues</code>, <code>from_values</code>, <code>from_env_chain</code>) were <code>pub(crate)</code> but only used in-module.</td><td><b>Fixed.</b> Tightened private; compiler demanded no wider visibility.</td></tr>
+    </table>
+    </div>
+    <p><b>Re-review (fresh context, extended range):</b> <span class="pill done">PASS</span> zero findings &mdash; "All prior defects are repaired; the P22 frame edit is spec-correct and minimal. Tests pass; hole count is 36&rarr;27." (Clippy was sandbox-blocked for the reviewer; the board owner ran it with exit-code verification &mdash; clean.)</p>
+  </section>
+
+  <section id="decision">
+    <h2>The decision, and the one thing flagged for your eyes</h2>
+    <div class="callout flag">
+      <b>P22 frame corrected inside P23's range.</b> The fold fixed a defect in an artifact from the already-done P22 card: the <code>pod_id_parse_rules</code> frame had wrongly asserted <code>Pod.Name-2</code> (uppercase) as a <em>valid</em> PodId &mdash; contradicting the RFC-1123 type-map row. The edit is one line plus one new assertion; the codex re-review judged it spec-correct and minimal. <b>Approving P23 ratifies this frame correction.</b> Rejecting it means re-opening P22's frame set.
+    </div>
+    <ul>
+      <li><b>Approve</b> &rarr; P23 done; P24 (u2 manifest wire, 2 holes) + P25 (u5 local admission, 2 holes) pull under WIP&nbsp;2, normal in-harness routing expected.</li>
+      <li><b>Direct changes</b> &rarr; card bounces; fix commits extend the range; fresh Gate A over the extended range before this gate reopens.</li>
+    </ul>
+    <p>Standing context: push stays HELD everywhere in the wave (your Stage-3 scrub); no rig runs are scheduled until P35, so no <code>aura-a</code> kills and no Archil-mount activity in this card.</p>
+  </section>
+
+  <section id="seq">
+    <h2>Execution sequence</h2>
+    <ol class="timeline">
+      <li><b>Dispatch 1</b> &mdash; rust-fill (flash): <code>identity.rs</code>, six bodies &rarr; &minus;6 holes, 5/7 u1 frames green.</li>
+      <li><b>Dispatch 2</b> &mdash; rust-fill: <code>config.rs</code>, two bodies &rarr; 6/7 green.</li>
+      <li><b>Dispatch 3</b> &mdash; rust-fill: <code>build_admission</code> &rarr; <b>stalled</b> (empty return; the one body needing cross-module assembly). No blind retry, per the stall rule.</li>
+      <li><b>Re-dispatch</b> &mdash; rust-write (smart lane): both mode arms assembled; one signature/lifetime fix cycle followed (constructor arg orders, test-helper lifetimes).</li>
+      <li><b>Owner mechanical commits</b> &mdash; one <code>Arc</code> coercion token + clippy fixups, logged; this is what family-conflicted the in-harness reviewers.</li>
+      <li><b>Gate S</b> &mdash; green with exit-code verification (after one earlier masked-failure slip, caught and fixed same turn).</li>
+      <li><b>Gate A round 1</b> &mdash; FAIL (the table above).</li>
+      <li><b>Fold</b> &mdash; rust-write worked in-repo; P22 frame corrected to spec; all suites re-verified.</li>
+      <li><b>Gate A round 2</b> &mdash; PASS zero findings. The reviewer also caught unrendered board views from the P22-approval turn; rendered and checked clean the same turn.</li>
+      <li><b>Gate U</b> &mdash; this packet.</li>
+    </ol>
+  </section>
+
+  <section id="src">
+    <h2>Sources</h2>
+    <ul>
+      <li>Card <code>P23</code> executed log &mdash; <code>boards/aura-orchestration-mode/docs/board/cards/p23-fill-identities-config.md</code> (wiki checkout, 2026-08-25/26)</li>
+      <li>Commit range <code>82f820d5..8dd8ce74</code> in <code>~/workspace/aura-session-guard</code> &mdash; 3 commits, 4 files, +632/&minus;45</li>
+      <li>Gate S runs &mdash; <code>cargo test -p session-guard</code> (lib 20 passed; u1 7/7; compilefail 1/1 covering 12 cases), clippy <code>-D warnings -A clippy::todo</code> exit 0, fmt clean (2026-08-26 02:50 UTC)</li>
+      <li>Gate A packets &mdash; <code>aura-orchestration-mode/.review/p23-gateA/</code> (card, diff, DESIGN.md rev 12.4) &middot; codex round-1 cost 119,184 tokens, round-2 128,073 tokens</li>
+      <li>Spec &mdash; <code>crates/session-guard/DESIGN.md</code> rev 12.4, type-to-business-rule map</li>
+    </ul>
+    <div class="callout">This page summarizes the diff; it does not publish the source. The full 825-line diff, the verbatim gate outputs, and the stop-report live in the local packet at <code>.review/p23-gateA/</code> &mdash; read there for line-level review. Board views were regenerated and <code>boardkit check</code> green at packet time.</div>
+  </section>
+
+</main>
+
+<footer>
+  Default theme (pinned light, matching the gate-review artifact convention) &middot; As of 2026-08-26 02:50 UTC &middot; aura board &middot; wave P22&ndash;P35
+</footer>
+
+<script type="application/json" id="artifact-state">
+{"as_of": "2026-08-26 02:50 UTC", "sections": ["hdr", "stats", "fig", "detail", "findings", "decision", "seq", "src"], "design_system": null, "card": "P23", "commits": ["48ab2324", "527a52ee", "8dd8ce74"], "holes": {"before": 36, "after": 27}, "gate_a": {"round1": "FAIL 2 BLOCKING + 1 MINOR", "round2": "PASS zero findings"}, "gate_u": "pending"}
+</script>
+
+</body>
+</html>

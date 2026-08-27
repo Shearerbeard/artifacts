@@ -55,7 +55,7 @@
 <header id="hdr">
   <h1>Park/Reify V1 — review brief &amp; flow map</h1>
   <div class="lede">The one page to rule from to unblock HITL park/reify V1: the decision queue, both flows with their persistence side effects, the /approvals ingress logic, and the Postgres seam.</div>
-  <div class="meta">As of 2026-08-27 00:45 UTC &middot; stack <code>mshearer/271-park-reify-stack</code> @ <code>806760dd</code> on main <code>f5a7af47</code> &middot; board <code>aura</code></div>
+  <div class="meta">As of 2026-08-27 01:10 UTC &middot; stack <code>mshearer/271-park-reify-stack</code> @ <code>806760dd</code> on main <code>f5a7af47</code> &middot; board <code>aura</code></div>
 </header>
 
 <main>
@@ -400,7 +400,7 @@ placeholder; run_store_for_parking unwired).</pre>
       <tr><td>3</td><td><b><code>run_store_for_parking</code> unwired.</b> Redis deployments silently held-await instead of the loud refusal addendum B promised.</td><td>Stage 0 fold or named follow-up (new, from the codex cross-check)</td></tr>
       <tr><td>4</td><td><b>R3-4: identity-header allowlist.</b> Interim fail-closed refusal names any MCP <code>headers_from_request</code> server; the identity/credential classification goes live with P38.</td><td>P37 (carded, backlog)</td></tr>
       <tr><td>5</td><td><b>Backend-native-expiry row</b> can't run this wave (redis has no RunStore, memory/file don't TTL-prune pendings).</td><td>Expected-failure deferral, now tied to PgRunStore (ruling 3)</td></tr>
-      <tr><td>6</td><td><b>Board drift:</b> session-guard cards P22–P35 read backlog while the branch carries all nine fills + live-PG frames.</td><td>Board tidy pass (Gate U-board, after this review)</td></tr>
+      <tr><td>6</td><td><b>Board drift:</b> session-guard cards P22–P35 read backlog while the branch carries all nine fills + live-PG frames.</td><td>Deferred to the session-guard wave's owning session (it was mid-close-out with staged evidence at tidy time); reconciling another session's cards would collide with its own gate record</td></tr>
     </table>
     </div>
   </section>
@@ -414,7 +414,7 @@ placeholder; run_store_for_parking unwired).</pre>
       <li><b>P9 claim + headless reify</b> — the four red frames turn green unedited; your U(semantics) stop covers live park-reify behavior and the claim semantics (release-at-park assumed, ruling 4).</li>
       <li><b>P39 single-agent park + P10 retrieval</b> — tool-boundary park, minimal run record, result by handle.</li>
       <li><b>P38 async-webhook route</b> + P11 integration matrix → milestone acceptance.</li>
-      <li><b>Board tidy pass (Gate U-board)</b> folds this desk into the board: cards created, rulings logged, superseded plan text pruned, session-guard statuses reconciled, <code>boardkit check</code> green — so the next board owner steers from one clean source.</li>
+      <li><b>Board tidy pass (Gate U-board) — DONE 2026-08-26.</b> The desk is folded into the board: P36/P37/P38/P39/P40 carded, rulings logged as ADR amendment items 9–14, superseded plan text bannered, the stale M1 note fixed, views regenerated (46 cards valid, <code>boardkit check</code> green), orientation canary PASS 4/4 (GLM-5.2, cross-family). The next board owner steers from one clean source.</li>
     </ol>
   </section>
 
@@ -437,7 +437,7 @@ placeholder; run_store_for_parking unwired).</pre>
 </footer>
 
 <script type="application/json" id="artifact-state">
-{"as_of": "2026-08-27 00:45 UTC", "sections": ["stats", "decisions", "reduction-pass", "fig-park", "fig-reify", "detail", "ingress", "schemas", "pg-seam", "gaps", "seq", "src"], "design_system": null, "stack_sha": "806760dd", "main_sha": "f5a7af47", "board": "aura", "rulings_today": 5, "red_frames_file": ["dispatch_claim_crash", "headless_reify", "completion", "retrieval_by_handle"], "red_frames_redis": ["park_at_quiescence", "publish_loss_wake_discovery"], "codex_check": {"model": "gpt-5.6-sol", "verdict": "FAIL", "findings": 5, "dispositioned": 5}, "reduction_review": {"commits": ["64a06dfb", "806760dd"], "rounds": [{"round": 1, "verdict": "PASS", "findings": 0}, {"round": 2, "verdict": "PASS", "findings": 1, "minor_fixed_by": "806760dd"}, {"round": 3, "verdict": "PASS", "findings": 0}]}}
+{"as_of": "2026-08-27 01:10 UTC", "sections": ["stats", "decisions", "reduction-pass", "fig-park", "fig-reify", "detail", "ingress", "schemas", "pg-seam", "gaps", "seq", "src"], "design_system": null, "stack_sha": "806760dd", "main_sha": "f5a7af47", "board": "aura", "rulings_today": 6, "red_frames_file": ["dispatch_claim_crash", "headless_reify", "completion", "retrieval_by_handle"], "red_frames_redis": ["park_at_quiescence", "publish_loss_wake_discovery"], "codex_check": {"model": "gpt-5.6-sol", "verdict": "FAIL", "findings": 5, "dispositioned": 5}, "board_tidy": {"cards_created": ["P36","P37","P38","P39","P40"], "board_check": "46 cards valid", "canary": "PASS 4/4 (GLM-5.2)"}, "reduction_review": {"commits": ["64a06dfb", "806760dd"], "rounds": [{"round": 1, "verdict": "PASS", "findings": 0}, {"round": 2, "verdict": "PASS", "findings": 1, "minor_fixed_by": "806760dd"}, {"round": 3, "verdict": "PASS", "findings": 0}]}}
 </script>
 
 </body>

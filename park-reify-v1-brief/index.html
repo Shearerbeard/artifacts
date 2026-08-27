@@ -114,6 +114,21 @@
     <div class="callout gap"><b>Config fingerprint is a placeholder.</b> The park commits <code>ConfigFingerprint::new("")</code> (TODO at <code>orchestrator.rs:3385</code>). P9 refuses reify on fingerprint mismatch — if the real fingerprint function lands before P9, every parked run refuses. Fill it, or pin the check to the placeholder, before P9's rehydration is reviewed.</div>
     <div class="callout gap"><b>The fail-closed refusal helper is unwired.</b> <code>run_store_for_parking</code> exists and is tested, but has no production caller: a redis-configured deployment silently keeps held-await instead of the loud refusal addendum B promised. One wiring fix at <code>AppState</code> construction or gate-arm time; belongs in the Stage 0 fold or a named follow-up.</div>
 
+    <h3>E. Reduction pass over the stack (2026-08-26, pre-approval)</h3>
+    <p>Mike asked whether the diff's complexity is reducible bloat. A dedicated analysis session mapped every production hunk; all findings were re-verified by direct read. <b>Verdict: the diff is tight.</b> The production surface splits: park commit + ownership transfer ~53%, durable decision resolution ~19%, blockage detection + propagation ~10%, dispatch consumption ~3%, wiring/config ~9%. The heavy half is six review rounds of race closures (atomic binding claim, spawned CAS with oneshot outcome, abort_transfer compensation, ambiguous-CAS re-read, drain-time reconciliation) — load-bearing, each pinned by a named test. The versioned wire/FSM surface (RunRecordV1, CheckpointEnvelope, the three-backend <code>resolve_durable</code> over flock/Lua/mutex) is the minimal honest shape; a shared helper would be a fake abstraction over three different atomic primitives.</p>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:34px">#</th><th>Finding</th><th>Classification</th><th>Lines</th></tr>
+      <tr><td>1</td><td><code>NonEmpty::first/len/is_empty</code> — no callers outside the module (verified: only <code>iter</code>/<code>contains</code>/<code>new</code> are used)</td><td>DEAD</td><td>~15</td></tr>
+      <tr><td>2</td><td><code>BlockedAttempt::approval()</code> — only <code>into_approval()</code> is called</td><td>DEAD</td><td>~3</td></tr>
+      <tr><td>3</td><td><code>parked_approval_snapshot</code> fabricates an empty item for a zero-item record; fail-closed (<code>ok_or_else</code>) is more correct</td><td>SIMPLIFIABLE</td><td>~9</td></tr>
+      <tr><td>4</td><td>BlockedSignal side channel — rig's <code>Tool::call</code> erases every non-output to a <code>ToolError</code> string (verified <code>tool_wrapper.rs:550-576</code>); the typed block can only travel on the signal</td><td>KEEP</td><td>—</td></tr>
+      <tr><td>5</td><td>Spawned commit task + oneshot — a client disconnect must not drop the CAS mid-flight or skip <code>abort_transfer</code>; both compensation sites have pinning tests</td><td>REVIEW-DRIVEN</td><td>—</td></tr>
+      <tr><td>6</td><td>Staged surface (<code>DispatchState::Claimed/Executed</code>, <code>ParkedRun</code>, <code>BusEventSink</code>, <code>HeaderClass</code>, five <code>todo!()</code> holes) — all owned by P9/P36/P17, none orphaned</td><td>STAGED</td><td>—</td></tr>
+    </table>
+    </div>
+    <p class="meta">Genuinely removable: ~27 lines on a +13.3k-line stack. Also verified: the stack diffs clean against origin/main <code>f5a7af47</code> — no foreign changes ride the branch. <b>Open for ruling: fold the 3-item trim as one commit with a narrow Gate A, or record this analysis as the completed pass and approve as-is.</b></p>
+
     <h3>Copy rulings</h3>
 <pre>2026-08-26 rulings (this desk):
 1. P38 RATIFIED — async webhook: notify-only outbound POST (signed
@@ -418,7 +433,7 @@ placeholder; run_store_for_parking unwired).</pre>
 </footer>
 
 <script type="application/json" id="artifact-state">
-{"as_of": "2026-08-27 00:05 UTC", "sections": ["stats", "decisions", "fig-park", "fig-reify", "detail", "ingress", "schemas", "pg-seam", "gaps", "seq", "src"], "design_system": null, "stack_sha": "dd6ba150", "main_sha": "f5a7af47", "board": "aura", "rulings_today": 5, "red_frames_file": ["dispatch_claim_crash", "headless_reify", "completion", "retrieval_by_handle"], "red_frames_redis": ["park_at_quiescence", "publish_loss_wake_discovery"], "codex_check": {"model": "gpt-5.6-sol", "verdict": "FAIL", "findings": 5, "dispositioned": 5}}
+{"as_of": "2026-08-27 00:20 UTC", "sections": ["stats", "decisions", "reduction-pass", "fig-park", "fig-reify", "detail", "ingress", "schemas", "pg-seam", "gaps", "seq", "src"], "design_system": null, "stack_sha": "dd6ba150", "main_sha": "f5a7af47", "board": "aura", "rulings_today": 5, "red_frames_file": ["dispatch_claim_crash", "headless_reify", "completion", "retrieval_by_handle"], "red_frames_redis": ["park_at_quiescence", "publish_loss_wake_discovery"], "codex_check": {"model": "gpt-5.6-sol", "verdict": "FAIL", "findings": 5, "dispositioned": 5}}
 </script>
 
 </body>

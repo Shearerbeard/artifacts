@@ -55,7 +55,7 @@
 <header id="hdr">
   <h1>Park/Reify V1 — review brief &amp; flow map</h1>
   <div class="lede">The one page to rule from to unblock HITL park/reify V1: the decision queue, both flows with their persistence side effects, the /approvals ingress logic, and the Postgres seam.</div>
-  <div class="meta">As of 2026-08-26 23:55 UTC &middot; stack <code>mshearer/271-park-reify-stack</code> @ <code>dd6ba150</code> on main <code>f5a7af47</code> &middot; board <code>aura</code></div>
+  <div class="meta">As of 2026-08-27 00:45 UTC &middot; stack <code>mshearer/271-park-reify-stack</code> @ <code>806760dd</code> on main <code>f5a7af47</code> &middot; board <code>aura</code></div>
 </header>
 
 <main>
@@ -127,7 +127,8 @@
       <tr><td>6</td><td>Staged surface (<code>DispatchState::Claimed/Executed</code>, <code>ParkedRun</code>, <code>BusEventSink</code>, <code>HeaderClass</code>, five <code>todo!()</code> holes) — all owned by P9/P36/P17, none orphaned</td><td>STAGED</td><td>—</td></tr>
     </table>
     </div>
-    <p class="meta">Genuinely removable: ~27 lines on a +13.3k-line stack. Also verified: the stack diffs clean against origin/main <code>f5a7af47</code> — no foreign changes ride the branch. <b>Open for ruling: fold the 3-item trim as one commit with a narrow Gate A, or record this analysis as the completed pass and approve as-is.</b></p>
+    <p class="meta">Genuinely removable: ~27 lines on a +13.3k-line stack. Also verified: the stack diffs clean against origin/main <code>f5a7af47</code> — no foreign changes ride the branch.</p>
+    <div class="callout ruling"><b>FOLDED (Mike's ruling, 2026-08-26).</b> The trim landed as <code>64a06dfb</code> (dead accessors dropped; zero-item record fails the park closed) + <code>806760dd</code> (regression test pinning the refusal). Three adversarial codex rounds on the trim, scope-mediated per the ruling: <b>R1</b> correctness — PASS, 0 findings (93k tok); <b>R2</b> breakage hunt (wire/serde, error classification, public surface, comment drift, coverage) — PASS, 1 MINOR (refusal untested), closed by <code>806760dd</code> (150k tok); <b>R3</b> disposition verification — PASS, 0 findings (75k tok). No scope-creep findings arose. Gate S green at <code>806760dd</code> (44 suites + feature-gated targets compile). Stack pushed and remote-verified; P7's review range is now <code>b216f08d..806760dd</code>.</div>
 
     <h3>Copy rulings</h3>
 <pre>2026-08-26 rulings (this desk):
@@ -145,6 +146,9 @@
    CAS; Parked state + wake reasons gate the reify claim. ADR amendment
    item; P9's claim path assumes it.
 5. This artifact is the review desk (brief + flows, one URL).
+6. REDUCTION FOLDED — trim 64a06dfb + test pin 806760dd; 3 codex rounds
+   on the reduction (R1 PASS, R2 PASS 1 MINOR fixed, R3 PASS); stack tip
+   806760dd, P7 range b216f08d..806760dd.
 Standing: P7 U-packet items 1-8 and Stage 1 questions 1-8 ruled separately;
 two new gaps carded from the codex cross-check (config-fingerprint
 placeholder; run_store_for_parking unwired).</pre>
@@ -433,7 +437,7 @@ placeholder; run_store_for_parking unwired).</pre>
 </footer>
 
 <script type="application/json" id="artifact-state">
-{"as_of": "2026-08-27 00:20 UTC", "sections": ["stats", "decisions", "reduction-pass", "fig-park", "fig-reify", "detail", "ingress", "schemas", "pg-seam", "gaps", "seq", "src"], "design_system": null, "stack_sha": "dd6ba150", "main_sha": "f5a7af47", "board": "aura", "rulings_today": 5, "red_frames_file": ["dispatch_claim_crash", "headless_reify", "completion", "retrieval_by_handle"], "red_frames_redis": ["park_at_quiescence", "publish_loss_wake_discovery"], "codex_check": {"model": "gpt-5.6-sol", "verdict": "FAIL", "findings": 5, "dispositioned": 5}}
+{"as_of": "2026-08-27 00:45 UTC", "sections": ["stats", "decisions", "reduction-pass", "fig-park", "fig-reify", "detail", "ingress", "schemas", "pg-seam", "gaps", "seq", "src"], "design_system": null, "stack_sha": "806760dd", "main_sha": "f5a7af47", "board": "aura", "rulings_today": 5, "red_frames_file": ["dispatch_claim_crash", "headless_reify", "completion", "retrieval_by_handle"], "red_frames_redis": ["park_at_quiescence", "publish_loss_wake_discovery"], "codex_check": {"model": "gpt-5.6-sol", "verdict": "FAIL", "findings": 5, "dispositioned": 5}, "reduction_review": {"commits": ["64a06dfb", "806760dd"], "rounds": [{"round": 1, "verdict": "PASS", "findings": 0}, {"round": 2, "verdict": "PASS", "findings": 1, "minor_fixed_by": "806760dd"}, {"round": 3, "verdict": "PASS", "findings": 0}]}}
 </script>
 
 </body>

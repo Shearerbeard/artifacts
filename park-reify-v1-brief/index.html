@@ -55,7 +55,7 @@
 <header id="hdr">
   <h1>Park/Reify V1 — review brief &amp; flow map</h1>
   <div class="lede">The one page to rule from to unblock HITL park/reify V1: the decision queue, both flows with their persistence side effects, the /approvals ingress logic, and the Postgres seam.</div>
-  <div class="meta">As of 2026-08-27 01:10 UTC &middot; stack <code>mshearer/271-park-reify-stack</code> @ <code>806760dd</code> on main <code>f5a7af47</code> &middot; board <code>aura</code></div>
+  <div class="meta">As of 2026-08-27 01:25 UTC &middot; stack <code>mshearer/271-park-reify-stack</code> @ <code>806760dd</code> on main <code>f5a7af47</code> &middot; board <code>aura</code></div>
 </header>
 
 <main>
@@ -79,8 +79,8 @@
     <div class="callout ruling"><b>4. Release-at-park ruled.</b> The park commit releases the session lease after the CAS commits. The <code>Parked</code> state plus its wake reasons — not a held lease — gate the reify claim. This is session-guard's shape (commit-then-release with the park latch set) and it fixes the wrinkle where a decision landing one minute after a park would otherwise wait out the lease (up to <code>park_timeout</code> after run start).</div>
     <div class="callout ruling"><b>5. This page is the review desk.</b> One artifact carries the brief and the flows; the copy-rulings block below is the Stage-0 input for the next board-owner session.</div>
 
-    <h3>B. P7 U(code-review) packet — the standing blocker</h3>
-    <p>Reading order: <code>evidence/2026-08-26-271-stage0/u-packet-README.md</code>, then <code>adr-amendment-draft.md</code>, then <code>docs/board/reviews/P7/</code>. Each item is one function or one field, reversible in a commit:</p>
+    <h3>B. P7 U(code-review) packet — <span class="pill done">APPROVED 2026-08-26</span></h3>
+    <p><b>Mike ruled PASS at this desk</b>, ratifying items 1–8 as presented (and with them the S2A-5 redis decision-TTL reading as implemented). The integration PR (<code>mshearer/271-park-reify-stack</code> → <code>main</code>) is staged and <b>held on Mike's word</b> — the merge is his. On merge: P7 → done, P8 → ready, and the Stage 1 skeleton begins. Reading order for the record: <code>evidence/2026-08-26-271-stage0/u-packet-README.md</code>, then <code>adr-amendment-draft.md</code>, then <code>docs/board/reviews/P7/</code>. Each item is one function or one field, reversible in a commit:</p>
     <div class="tscroll">
     <table>
       <tr><th style="width:34px">#</th><th>Item</th><th>As implemented on the stack</th></tr>
@@ -437,7 +437,7 @@ placeholder; run_store_for_parking unwired).</pre>
 </footer>
 
 <script type="application/json" id="artifact-state">
-{"as_of": "2026-08-27 01:10 UTC", "sections": ["stats", "decisions", "reduction-pass", "fig-park", "fig-reify", "detail", "ingress", "schemas", "pg-seam", "gaps", "seq", "src"], "design_system": null, "stack_sha": "806760dd", "main_sha": "f5a7af47", "board": "aura", "rulings_today": 6, "red_frames_file": ["dispatch_claim_crash", "headless_reify", "completion", "retrieval_by_handle"], "red_frames_redis": ["park_at_quiescence", "publish_loss_wake_discovery"], "codex_check": {"model": "gpt-5.6-sol", "verdict": "FAIL", "findings": 5, "dispositioned": 5}, "board_tidy": {"cards_created": ["P36","P37","P38","P39","P40"], "board_check": "46 cards valid", "canary": "PASS 4/4 (GLM-5.2)"}, "reduction_review": {"commits": ["64a06dfb", "806760dd"], "rounds": [{"round": 1, "verdict": "PASS", "findings": 0}, {"round": 2, "verdict": "PASS", "findings": 1, "minor_fixed_by": "806760dd"}, {"round": 3, "verdict": "PASS", "findings": 0}]}}
+{"as_of": "2026-08-27 01:25 UTC", "sections": ["stats", "decisions", "reduction-pass", "fig-park", "fig-reify", "detail", "ingress", "schemas", "pg-seam", "gaps", "seq", "src"], "design_system": null, "stack_sha": "806760dd", "main_sha": "f5a7af47", "board": "aura", "rulings_today": 6, "red_frames_file": ["dispatch_claim_crash", "headless_reify", "completion", "retrieval_by_handle"], "red_frames_redis": ["park_at_quiescence", "publish_loss_wake_discovery"], "codex_check": {"model": "gpt-5.6-sol", "verdict": "FAIL", "findings": 5, "dispositioned": 5}, "p7_u_gate": "PASSED 2026-08-26 (Mike, at this desk); PR held on his word", "board_tidy": {"cards_created": ["P36","P37","P38","P39","P40"], "board_check": "46 cards valid", "canary": "PASS 4/4 (GLM-5.2)"}, "reduction_review": {"commits": ["64a06dfb", "806760dd"], "rounds": [{"round": 1, "verdict": "PASS", "findings": 0}, {"round": 2, "verdict": "PASS", "findings": 1, "minor_fixed_by": "806760dd"}, {"round": 3, "verdict": "PASS", "findings": 0}]}}
 </script>
 
 </body>

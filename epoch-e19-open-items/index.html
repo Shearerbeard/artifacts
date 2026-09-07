@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="light">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>E19 open items - the decisions outside the diff</title>
+<style>
+  :root { --ink:#1a1a1a; --paper:#ffffff; --accent:#0a7d4a; --accent2:#1d4ed8; --warn:#b45309; --danger:#b91c1c; --muted:#666; --border:#ddd; --surface:#f5f5f5; --radius:8px;
+          --font-display:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-utility:ui-monospace,SFMono-Regular,Menlo,monospace;
+          --weight-display:600; --weight-body:400; --weight-utility:500;
+          --text-s:13px; --text-m:16px; --text-l:20px; --text-xl:25px; --text-xxl:31px;
+          --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-6:24px; --space-8:32px; }
+  * { box-sizing:border-box; }
+  html { color-scheme:light; }
+  body { font:var(--text-m)/1.6 var(--font-body); font-weight:var(--weight-body); color:var(--ink); background:var(--paper); max-width:980px; margin:1.5em auto; padding:0 var(--space-6) var(--space-8); }
+  h1,h2,h3 { font-family:var(--font-display); font-weight:var(--weight-display); line-height:1.25; margin:1.4em 0 .4em; }
+  h1 { font-size:var(--text-xxl); margin-bottom:.1em; }
+  h2 { font-size:var(--text-xl); border-bottom:1px solid var(--border); padding-bottom:.2em; }
+  h3 { font-size:var(--text-l); }
+  a { color:var(--accent2); overflow-wrap:anywhere; }
+  code { background:var(--surface); padding:.15em .35em; border-radius:3px; font-size:.92em; font-family:var(--font-utility); font-weight:var(--weight-utility); overflow-wrap:anywhere; }
+  .tscroll { overflow-x:auto; margin:.8em 0; }
+  .tscroll table { margin:0; }
+  table { border-collapse:collapse; width:100%; font-size:var(--text-s); }
+  th,td { border:1px solid var(--border); padding:.45em .7em; vertical-align:top; text-align:left; overflow-wrap:anywhere; }
+  th { font-weight:600; background:var(--surface); }
+  .meta { color:var(--muted); font-size:var(--text-s); }
+  .lede { font-size:var(--text-l); color:var(--muted); margin:.3em 0 1em; }
+  .kicker { color:var(--muted); font-size:.8rem; letter-spacing:.04em; margin:0 0 .5rem; text-transform:uppercase; }
+  .pill { display:inline-block; font-size:var(--text-s); padding:var(--space-1) var(--space-2); border-radius:10px; background:var(--surface); color:var(--muted); vertical-align:1px; }
+  .pill.done { background:var(--accent); color:#fff; }
+  .pill.now  { background:var(--warn);   color:#fff; }
+  .callout { border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:4px; padding:.7em 1em; margin:1em 0; font-size:.93em; background:color-mix(in srgb, var(--accent) 5%, var(--paper)); }
+  .callout.cost { border-left-color:var(--danger); background:color-mix(in srgb, var(--danger) 5%, var(--paper)); }
+  .item { border:1px solid var(--border); border-radius:var(--radius); padding:var(--space-4) var(--space-6); margin:var(--space-4) 0; }
+  .item h3 { margin-top:0; }
+  .item h3 .tag { font-size:.7em; font-family:var(--font-utility); color:var(--muted); font-weight:500; letter-spacing:.03em; }
+  .rulings { border-top:1px dashed var(--border); margin-top:var(--space-3); padding-top:var(--space-2); }
+  .rulings h4 { margin:.6em 0 .2em; font-size:var(--text-m); }
+  .rulings ul { margin:.2em 0; padding-left:1.2em; }
+  .commit { border-left:3px solid var(--accent2); background:color-mix(in srgb, var(--accent2) 5%, var(--paper)); }
+  footer { border-top:1px solid var(--border); margin-top:2.5em; padding-top:.8em; color:var(--muted); font-size:.85em; }
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <p class="kicker">Epoch &middot; board card E19 &middot; draft PR #16 &middot; Gate U (code-review)</p>
+  <h1>E19 open items: the decisions outside the diff</h1>
+  <div class="lede">Five open decision items from the pre-Gate-U review round. None are in the PR's diff. Each needs a ruling, not a code change.</div>
+  <div class="meta">As of 2026-09-07 &middot; sources gathered 2026-09-07 &middot; PR range <code>094cd1c..5803b97</code></div>
+</header>
+
+<main>
+
+  <section id="framing">
+    <div class="callout cost">
+      <strong>None of these are in the PR's diff.</strong> They are decision items, not missing code. Draft PR #16 (Shearerbeard/Epoch, branch <code>card/e19</code>, 13 commits <code>094cd1c..5803b97</code>) ships the feed. The five items below are the rulings the maintainer makes on top of it &mdash; three about what the shipped code does not yet bound or measure, one about a public API break the changelog never recorded, and one about a review seat that could not complete.
+    </div>
+    <p>The items carry their consolidation ids from the findings ledger (C3, C4, C15, C25) plus the codex-seat deferral, which is not a numbered finding but a process note. Each is framed the same way: what it is, why it matters, evidence with <code>file:line</code>, the options, and what deciding either way commits you to.</p>
+  </section>
+
+  <section id="c3">
+    <div class="item">
+      <h3>C3 &mdash; feed-path lock waits are unbounded <span class="tag">DECIDE</span></h3>
+
+      <p><strong>What it is.</strong> The feed's <code>poll</code> and <code>ack</code> take the group's cursor row <code>FOR UPDATE</code> with no <code>lock_timeout</code> and no <code>statement_timeout</code> set. A wedged holder stalls that group's feed with no bound.</p>
+
+      <p><strong>Why it matters.</strong> The write path already has the discipline the feed path lacks. <code>append</code> sets <code>SET LOCAL lock_timeout</code> before taking the funnel (<code>postgres.rs:344</code>), and expiry surfaces as the retryable <code>AppendError::LockTimeout</code> (<code>streams.rs:380</code>). A poll or ack waiting on a held cursor row waits forever. The two paths are asymmetric, and the asymmetry is silent until a consumer group wedges.</p>
+
+      <p><strong>Evidence.</strong></p>
+      <ul>
+        <li><code>src/streams/postgres/feed.rs:100</code> &mdash; <code>poll</code>'s <code>SELECT ... FOR UPDATE</code> on the cursor row.</li>
+        <li><code>src/streams/postgres/feed.rs:176</code> &mdash; <code>ack</code>'s <code>SELECT ... FOR UPDATE</code> on the same row.</li>
+        <li><code>src/streams/postgres/feed.rs:14-16</code> &mdash; the module doc: "The row is locked for the transaction's life."</li>
+        <li><code>src/streams/postgres.rs:169-181</code> &mdash; <code>PgStreamsError</code> has no retryable variant. Adding the bound later means adding one, which is a public type-surface change.</li>
+        <li><code>src/streams/postgres.rs:344</code> &mdash; the write path's bound, for contrast.</li>
+      </ul>
+
+      <p><strong>Why the type-surface note matters.</strong> The write path classifies a lock expiry as retryable because <code>AppendError</code> has a <code>LockTimeout</code> arm. The feed path returns <code>PgStreamsError</code>, which has no such arm. Bounding the feed wait now is a config line plus a new error arm; bounding it after v1 ships is the same new arm against a published surface, which breaks exhaustive matches downstream.</p>
+
+      <div class="rulings">
+        <h4>Options</h4>
+        <ul>
+          <li><strong>Document</strong> "feed waits unbounded in v1" in the ADR and module docs.</li>
+          <li><strong>Apply the write path's bound-and-classify discipline now</strong>: <code>SET LOCAL lock_timeout</code> on poll and ack, plus a retryable <code>PgStreamsError</code> variant.</li>
+        </ul>
+        <p class="commit"><strong>What deciding either way commits you to.</strong> Documenting commits you to shipping v1 with unbounded feed waits and a later public type-surface change when you bound them. Applying now commits you to extending <code>PgStreamsError</code>'s public surface before v1 and re-reviewing the feed path.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="c4">
+    <div class="item">
+      <h3>C4 &mdash; the wedged funnel holder <span class="tag">DECIDE</span></h3>
+
+      <p><strong>What it is.</strong> <code>lock_timeout</code> bounds each waiter, not the holder. A holder that takes <code>WRITER_LOCK</code> and then goes silent stalls every writer until the server drops the session. The ADR text was already repaired to say this precisely; the code option is a one-line bound beside the existing one.</p>
+
+      <p><strong>Why it matters.</strong> This is a database-wide write outage, not a per-stream stall. Under the single-writer funnel, one wedged writer blocks every append and every batch, and the <code>lock_timeout</code> that protects waiters does nothing about the holder's tenure.</p>
+
+      <p><strong>Evidence.</strong></p>
+      <ul>
+        <li><code>src/streams/postgres.rs:344</code> &mdash; <code>SET LOCAL lock_timeout</code> on the append path; bounds the waiter's attempt.</li>
+        <li><code>src/streams/postgres/batch.rs:209</code> &mdash; the same on the batch path.</li>
+        <li><code>src/streams/postgres.rs:77</code> &mdash; <code>DEFAULT_LOCK_TIMEOUT</code> is 5 seconds.</li>
+        <li><code>docs/adr/0010-allocation-ledger-honest-cursor.md:136-138</code> &mdash; the repaired text: "The bound covers each waiter, not the holder: a holder that goes silent mid-transaction stalls every writer until the server drops its session."</li>
+      </ul>
+
+      <p><strong>The code option.</strong> <code>SET LOCAL idle_in_transaction_session_timeout</code> beside the existing <code>lock_timeout</code> on both write paths. That bounds the holder's tenure &mdash; a silent holder gets its session killed by the server after the idle bound &mdash; rather than only bounding each waiter's attempt.</p>
+
+      <div class="rulings">
+        <h4>Options</h4>
+        <ul>
+          <li><strong>Apply the one-line code bound now</strong>: <code>idle_in_transaction_session_timeout</code> on both write paths.</li>
+          <li><strong>Document</strong> the holder risk as accepted, bounded only by the server's session timeout.</li>
+        </ul>
+        <p class="commit"><strong>What deciding either way commits you to.</strong> Applying commits you to a second GUC on both write paths and a re-review. Documenting commits you to accepting a database-wide write outage as the failure mode of a wedged holder, with no crate-level bound on how long it lasts.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="c15">
+    <div class="item">
+      <h3>C15 &mdash; the shipped funnel's own cost was never measured <span class="tag">DECIDE</span></h3>
+
+      <p><strong>What it is.</strong> The spike priced the allocation ledger against per-stream locks. The single-writer funnel that actually shipped was never benchmarked. Its steady-state p99 under saturated writers is inference, not measurement.</p>
+
+      <p><strong>Why it matters.</strong> The ADR names the trade &mdash; serial throughput &mdash; but the number itself is a structural argument, not a measured p99. The spike's numbers do not transfer: it measured a design that was superseded.</p>
+
+      <p><strong>Evidence.</strong></p>
+      <ul>
+        <li><code>tests/spike_ledger.rs:123</code> &mdash; the unledgered append path takes per-stream advisory locks (<code>pg_advisory_xact_lock(hashtext($1), hashtext($2))</code>).</li>
+        <li><code>tests/spike_ledger.rs:191</code> &mdash; the ledgered append path takes the same per-stream locks.</li>
+        <li><code>tests/spike_ledger.rs:11-16</code> &mdash; the harness header: "the spike adjudicated the ledger against the per-stream-lock write path the funnel has since replaced."</li>
+        <li><code>docs/adr/0010-allocation-ledger-honest-cursor.md:240-246</code> &mdash; "throughput is bounded by one writer's commit latency."</li>
+      </ul>
+
+      <p><strong>The structural argument (GLM's).</strong> At N saturated writers, per-append latency approaches N &times; one-commit service time. The funnel serializes, so each append waits behind the others. The argument is sound under its assumptions; it is not a measurement.</p>
+
+      <div class="rulings">
+        <h4>Options</h4>
+        <ul>
+          <li><strong>Accept the named trade</strong>: the ADR names serial throughput; the exact p99 stays inference.</li>
+          <li><strong>Charter a funnel benchmark</strong>: measure the shipped funnel's steady-state p99 under saturated writers.</li>
+        </ul>
+        <p class="commit"><strong>What deciding either way commits you to.</strong> Accepting commits you to shipping v1 with a named-but-unmeasured throughput ceiling. Chartering commits you to a benchmark task before v1, and possibly re-opening ADR 0010 if the measured number is worse than the inference.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="c25">
+    <div class="item">
+      <h3>C25 &mdash; the dormant changelog <span class="tag">DECIDE</span></h3>
+
+      <p><strong>What it is.</strong> <code>AppendError</code> gained a <code>LockTimeout</code> arm &mdash; a public API break for exhaustive matches, sanctioned by the card. <code>CHANGELOG.md</code> has been dormant through the redesign and never recorded it.</p>
+
+      <p><strong>Why it matters.</strong> The changelog's last real entry is <code>1.0.0-alpha.18</code>, "Prior to Documentation". The <code>Unreleased</code> section has not tracked the redesign, the funnel, or the new error arm. The crate's public history now lives only in git.</p>
+
+      <p><strong>Evidence.</strong></p>
+      <ul>
+        <li><code>src/streams.rs:380</code> &mdash; <code>AppendError::LockTimeout(std::time::Duration)</code>, the new public arm.</li>
+        <li><code>CHANGELOG.md:8</code> &mdash; the <code>[Unreleased]</code> section.</li>
+        <li><code>CHANGELOG.md:72</code> &mdash; the last release entry, <code>[1.0.0-alpha.18] - Prior to Documentation</code>.</li>
+      </ul>
+
+      <div class="rulings">
+        <h4>Options</h4>
+        <ul>
+          <li><strong>Revive the convention</strong>: log the redesign and the <code>LockTimeout</code> break under <code>Unreleased</code>.</li>
+          <li><strong>Let it lapse deliberately</strong>: accept the changelog as stale and the public history as git-only.</li>
+        </ul>
+        <p class="commit"><strong>What deciding either way commits you to.</strong> Reviving commits you to a changelog discipline going forward &mdash; every public-surface change logged. Letting it lapse commits you to a stale changelog and no single place that records public API breaks.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="codex">
+    <div class="item">
+      <h3>The codex-seat deferral <span class="tag">DECIDE</span></h3>
+
+      <p><strong>What it is.</strong> codex FAILed the first fix-review round with one BLOCKING finding: the discriminating funnel test trusted a 300ms sleep to mean "blocked". That finding was verified closed by two different-family reviewers (fable 5.1, GLM 5.3), including empirical <code>pg_locks</code> checks. codex's own updater then deleted its CLI package directory mid-session, and the fallback binary is too old for the pinned model, so its round-3 confirmation seat is deferred.</p>
+
+      <p><strong>Why it matters.</strong> The 2-of-3 confirmation stands, but the third seat never confirmed round 3. The maintainer decides whether 2-of-3 is enough, or whether the codex seat must be re-run.</p>
+
+      <p><strong>Evidence.</strong></p>
+      <ul>
+        <li>Card log, 2026-09-07 entry &mdash; the fix-round trail: round 1 (fable PASS, codex FAIL on the 300ms sleep, glm FAIL on a minor regression), <code>cc96d02</code> closed all four, round 2 (both seats FAIL on cosmetics), <code>5803b97</code> closed all six, round 3 (fable PASS, glm PASS, codex deferred).</li>
+        <li><code>src/streams/postgres.rs:702-729</code> &mdash; the <code>pg_locks</code> probe that replaced the 300ms sleep: it observes an ungranted advisory-lock row for <code>WRITER_LOCK</code>, which is what makes the test discriminating rather than decorative.</li>
+      </ul>
+
+      <p><strong>A note the card flags.</strong> This database's catalog lacks <code>pg_blocking_pid</code> (postgres 16.14). The empirical checks used <code>pg_locks</code>, not <code>pg_blocking_pid</code>, so the absence did not affect the confirmation &mdash; but the card records it as an anomaly worth investigating outside this card.</p>
+
+      <div class="rulings">
+        <h4>Options</h4>
+        <ul>
+          <li><strong>Accept the 2-of-3 confirmation</strong>: fable and GLM, two different families, both verified the BLOCKING finding closed.</li>
+          <li><strong>Reinstall the CLI and re-run the codex seat</strong>: restore the codex toolchain and run its round-3 confirmation.</li>
+        </ul>
+        <p class="commit"><strong>What deciding either way commits you to.</strong> Accepting commits you to treating fable + GLM's confirmation as sufficient for the BLOCKING finding and letting Gate U close. Re-running commits you to a CLI reinstall and another review round before Gate U can close.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="links">
+    <h2>Sources</h2>
+    <ul>
+      <li><strong>Findings ledger</strong> (C3, C4, C15, C25 and the verdicts): <code>/Users/mshearer/dev/epoch-board/docs/board/reviews/saga-feed-wave/e19-review-round-consolidation.md</code></li>
+      <li><strong>Card E19</strong> (the authoritative log, including the codex-seat deferral): <code>/Users/mshearer/dev/epoch-board/docs/board/cards/e19-event-feed-honest-cursor.md</code></li>
+      <li><strong>ADR 0010</strong> (the repaired waiter-vs-holder text, the named serial-throughput trade): <code>/Users/mshearer/dev/epoch-postgres/docs/adr/0010-allocation-ledger-honest-cursor.md</code></li>
+      <li><strong>Code anchors</strong>: <code>src/streams/postgres/feed.rs</code>, <code>src/streams/postgres.rs</code>, <code>src/streams/postgres/batch.rs</code>, <code>src/streams.rs</code>, <code>tests/spike_ledger.rs</code>, <code>CHANGELOG.md</code> in <code>epoch-postgres</code>.</li>
+    </ul>
+    <div class="callout">
+      The board and review packets are <strong>private-repo paths, cited here for the maintainer only</strong>. This page summarizes them so a reader who was not in the room can follow each ruling, but the card log and ADR are authoritative where they disagree.
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  Pinned-light default template style &middot; As of 2026-09-07 &middot; epoch-postgres branch <code>card/e19</code> at <code>5803b97</code> &middot; draft PR #16 &middot; board card E19, private redesign board
+</footer>
+
+<script type="application/json" id="artifact-state">
+{"as_of": "2026-09-07", "sections": ["framing", "c3", "c4", "c15", "c25", "codex", "links"], "design_system": null, "card": "E19", "repo": "/Users/mshearer/dev/epoch-postgres", "branch": "card/e19", "head": "5803b97", "range": "094cd1c..5803b97", "commits": 13, "gate": "U pending", "open_items": ["C3", "C4", "C15", "C25", "codex-seat-deferral"]}
+</script>
+
+</body>
+</html>

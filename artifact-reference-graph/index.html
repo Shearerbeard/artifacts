@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Artifact reference graph - aura orchestration</title>
+<style>
+  :root { --ink:#1a1a1a; --paper:#fdfdfd; --accent:#0a7d4a; --accent2:#1d4ed8; --warn:#b45309; --danger:#b91c1c; --muted:#666; --border:#ddd; --surface:#f5f5f5; --radius:8px;
+          --font-display:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-utility:ui-monospace,SFMono-Regular,Menlo,monospace;
+          --weight-display:600; --weight-body:400; --weight-utility:500;
+          --text-s:13px; --text-m:16px; --text-l:20px; --text-xl:25px; --text-xxl:31px;
+          --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-6:24px; --space-8:32px; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink:#e4e4e4; --paper:#1a1a1a; --accent:#4ade80; --accent2:#60a5fa; --warn:#fbbf24; --danger:#f87171; --muted:#999; --border:#333; --surface:#262626; }
+  }
+  * { box-sizing:border-box; }
+  body { font:var(--text-m)/1.6 var(--font-body); font-weight:var(--weight-body); color:var(--ink); background:var(--paper); max-width:980px; margin:1.5em auto; padding:0 var(--space-6) var(--space-8); }
+  h1,h2,h3 { font-family:var(--font-display); font-weight:var(--weight-display); line-height:1.25; margin:1.4em 0 .4em; }
+  h1 { font-size:var(--text-xxl); margin-bottom:.1em; }
+  h2 { font-size:var(--text-xl); border-bottom:1px solid var(--border); padding-bottom:.2em; }
+  h3 { font-size:var(--text-l); }
+  a { color:var(--accent2); overflow-wrap:anywhere; }
+  code { background:var(--surface); padding:.15em .35em; border-radius:3px; font-size:.92em; font-family:var(--font-utility); font-weight:var(--weight-utility); overflow-wrap:anywhere; }
+  .tscroll { overflow-x:auto; margin:.8em 0; }
+  .tscroll table { margin:0; }
+  table { border-collapse:collapse; width:100%; font-size:var(--text-s); }
+  th,td { border:1px solid var(--border); padding:.45em .7em; vertical-align:top; text-align:left; overflow-wrap:anywhere; }
+  th { font-weight:600; background:var(--surface); }
+  .meta { color:var(--muted); font-size:var(--text-s); }
+  .lede { font-size:var(--text-l); color:var(--muted); margin:.3em 0 1em; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:var(--space-3); margin:var(--space-4) 0; }
+  .stat { border:1px solid var(--border); border-radius:var(--radius); padding:var(--space-3) var(--space-4); }
+  .stat .n { font-size:1.9em; font-weight:var(--weight-display); line-height:1.1; color:var(--accent); }
+  .stat .l { font-size:.8em; font-family:var(--font-utility); text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+  .stat p { margin:.3em 0 0; font-size:.85em; }
+  .figure { border:1px solid var(--border); border-radius:var(--radius); padding:1em; margin:1.2em 0; }
+  .figure .scroll { overflow-x:auto; }
+  .figure svg { height:auto; display:block; }
+  .figure figcaption { color:var(--muted); font-size:var(--text-s); margin-top:.6em; }
+  .pill { display:inline-block; font-size:var(--text-s); padding:var(--space-1) var(--space-2); border-radius:10px; background:var(--surface); color:var(--muted); vertical-align:1px; }
+  .pill.done { background:var(--accent); color:var(--paper); }
+  .pill.now  { background:var(--warn);   color:var(--paper); }
+  .pill.warn { background:var(--danger); color:var(--paper); }
+  .callout { border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:4px; padding:.7em 1em; margin:1em 0; font-size:.93em; background:color-mix(in srgb, var(--accent) 5%, var(--paper)); }
+  ol.timeline { list-style:none; padding-left:0; }
+  ol.timeline li { border-left:2px solid var(--accent); padding:.2em 0 .8em 1em; margin-left:.4em; position:relative; }
+  ol.timeline li::before { content:""; position:absolute; left:-6px; top:.55em; width:10px; height:10px; border-radius:50%; background:var(--accent); }
+  footer { border-top:1px solid var(--border); margin-top:2.5em; padding-top:.8em; color:var(--muted); font-size:.85em; }
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <h1>Artifact reference graph</h1>
+  <div class="lede">A design for the orchestration run store: every artifact becomes an addressable node, every relationship a typed edge, and a future search tool filters nodes then walks edges. No filename parsing.</div>
+  <div class="meta">As of 2026-10-07 19:17 UTC &middot; design, not shipped &middot; aura orchestration mode</div>
+</header>
+
+<main>
+
+  <section id="stats">
+    <div class="stats">
+      <div class="stat"><div class="n">2</div><div class="l">storage layers</div><p>A flat node table (the search surface) plus an edge table (the graph). Artifact blobs stay flat files where they are today.</p></div>
+      <div class="stat"><div class="n">9</div><div class="l">edge kinds</div><p>Typed, directed relations, almost all provenance-backward: an artifact points at what it came from. See the breakdown below.</p></div>
+      <div class="stat"><div class="n">3</div><div class="l">read relations</div><p>Ancestor handoff, linked evidence, forced ancestor. Together they are a worker's read closure.</p></div>
+      <div class="stat"><div class="n">1</div><div class="l">hop of visibility</div><p>A worker reads its closure, one hop, session-bounded. Observed reads are logged as edges but never widen the closure.</p></div>
+      <div class="stat"><div class="n">1</div><div class="l">mandatory pre_summary</div><p>Every node ships a 1-3 sentence summary at write time, so search reads the index first and the blob only on demand.</p></div>
+    </div>
+  </section>
+
+  <section id="fig">
+    <h2>The graph around one worker result</h2>
+    <figure class="figure">
+      <div class="scroll">
+        <svg width="1140" height="690" viewBox="0 0 1140 690" role="img" aria-label="A worker result artifact R2 connected to its structural spine, author, handoff ancestor, forced ancestor, cited evidence, observed read, and a superseded prior iteration.">
+          <defs>
+            <marker id="m-gray"  markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--muted)"/></marker>
+            <marker id="m-green" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--accent)"/></marker>
+            <marker id="m-blue"  markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--accent2)"/></marker>
+            <marker id="m-amber" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--warn)"/></marker>
+            <marker id="m-red"   markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--danger)"/></marker>
+          </defs>
+
+          <!-- structural spine -->
+          <rect x="24" y="60" width="170" height="54" rx="9" fill="var(--surface)" stroke="var(--muted)" stroke-dasharray="4 3"/>
+          <text x="36" y="82" font-family="var(--font-display)" font-size="15" font-weight="600" fill="var(--ink)">RUN</text>
+          <text x="36" y="100" font-family="var(--font-utility)" font-size="12" fill="var(--muted)">run_id</text>
+          <line x1="109" y1="114" x2="109" y2="154" stroke="var(--muted)" stroke-dasharray="3 3"/>
+          <rect x="24" y="160" width="170" height="54" rx="9" fill="var(--surface)" stroke="var(--muted)" stroke-dasharray="4 3"/>
+          <text x="36" y="182" font-family="var(--font-display)" font-size="15" font-weight="600" fill="var(--ink)">PLAN</text>
+          <text x="36" y="200" font-family="var(--font-utility)" font-size="12" fill="var(--muted)">goal - iteration 2</text>
+          <line x1="109" y1="214" x2="109" y2="254" stroke="var(--muted)" stroke-dasharray="3 3"/>
+          <rect x="24" y="260" width="190" height="74" rx="9" fill="var(--surface)" stroke="var(--muted)" stroke-dasharray="4 3"/>
+          <text x="36" y="282" font-family="var(--font-display)" font-size="15" font-weight="600" fill="var(--ink)">STEP 2</text>
+          <text x="36" y="300" font-family="var(--font-utility)" font-size="12" fill="var(--muted)">task_id 2</text>
+          <text x="36" y="316" font-family="var(--font-utility)" font-size="12" fill="var(--muted)">worker: analyst</text>
+
+          <!-- author -->
+          <rect x="470" y="40" width="240" height="66" rx="9" fill="var(--surface)" stroke="var(--border)" stroke-width="1.5"/>
+          <text x="484" y="63" font-family="var(--font-display)" font-size="15" font-weight="600" fill="var(--ink)">AUTHOR</text>
+          <text x="484" y="81" font-family="var(--font-utility)" font-size="12" fill="var(--muted)">worker: analyst</text>
+          <text x="484" y="97" font-family="var(--font-utility)" font-size="12" fill="var(--muted)">coordinator writes notes</text>
+
+          <!-- focal node -->
+          <rect x="450" y="300" width="260" height="96" rx="9" fill="var(--surface)" stroke="var(--accent)" stroke-width="2.5"/>
+          <text x="466" y="325" font-family="var(--font-display)" font-size="15" font-weight="600" fill="var(--ink)">R2 - worker result</text>
+          <text x="466" y="344" font-family="var(--font-utility)" font-size="12" fill="var(--muted)">step 2 output - iter 2</text>
+          <text x="466" y="360" font-family="var(--font-utility)" font-size="12" fill="var(--muted)">opaque ArtifactId</text>
+          <text x="466" y="376" font-family="var(--font-utility)" font-size="12" fill="var(--muted)">pre_summary: mandatory</text>
+
+          <!-- handoff ancestor R -->
+          <rect x="850" y="180" width="220" height="70" rx="9" fill="var(--surface)" stroke="var(--border)" stroke-width="1.5"/>
+          <text x="864" y="205" font-family="var(--font-display)" font-size="15" font-weight="600" fill="var(--ink)">R - result, step 1</text>
+          <text x="864" y="223" font-family="var(--font-utility)" font-size="12" fill="var(--muted)">the direct handoff</text>
+          <text x="864" y="239" font-family="var(--font-utility)" font-size="12" fill="var(--muted)">R2 descends from it</text>
+
+          <!-- superseded prior iteration P -->
+          <rect x="850" y="50" width="220" height="60" rx="9" fill="var(--surface)" stroke="var(--border)" stroke-width="1.5"/>
+          <text x="864" y="73" font-family="var(--font-display)" font-size="15" font-weight="600" fill="var(--ink)">P - iter-1 result</text>
+          <text x="864" y="91" font-family="var(--font-utility)" font-size="12" fill="var(--muted)">replaced by R</text>
+
+          <!-- forced ancestor H -->
+          <rect x="150" y="480" width="230" height="70" rx="9" fill="var(--surface)" stroke="var(--border)" stroke-width="1.5"/>
+          <text x="164" y="505" font-family="var(--font-display)" font-size="15" font-weight="600" fill="var(--ink)">H - result, step 0</text>
+          <text x="164" y="523" font-family="var(--font-utility)" font-size="12" fill="var(--muted)">pinned by coordinator</text>
+          <text x="164" y="539" font-family="var(--font-utility)" font-size="12" fill="var(--muted)">forced into step 2</text>
+
+          <!-- coordinator note A -->
+          <rect x="850" y="420" width="230" height="70" rx="9" fill="var(--surface)" stroke="var(--border)" stroke-width="1.5"/>
+          <text x="864" y="445" font-family="var(--font-display)" font-size="15" font-weight="600" fill="var(--ink)">A - coordinator note</text>
+          <text x="864" y="463" font-family="var(--font-utility)" font-size="12" fill="var(--muted)">write_artifact pointer</text>
+          <text x="864" y="479" font-family="var(--font-utility)" font-size="12" fill="var(--muted)">cited as evidence</text>
+
+          <!-- older artifact X -->
+          <rect x="850" y="550" width="230" height="60" rx="9" fill="var(--surface)" stroke="var(--border)" stroke-width="1.5"/>
+          <text x="864" y="573" font-family="var(--font-display)" font-size="15" font-weight="600" fill="var(--ink)">X - older artifact</text>
+          <text x="864" y="591" font-family="var(--font-utility)" font-size="12" fill="var(--muted)">earlier run - evidence</text>
+
+          <!-- tool output T -->
+          <rect x="470" y="500" width="240" height="70" rx="9" fill="var(--surface)" stroke="var(--border)" stroke-width="1.5"/>
+          <text x="484" y="525" font-family="var(--font-display)" font-size="15" font-weight="600" fill="var(--ink)">T - tool output</text>
+          <text x="484" y="543" font-family="var(--font-utility)" font-size="12" fill="var(--muted)">promoted_from: grep call 3</text>
+          <text x="484" y="559" font-family="var(--font-utility)" font-size="12" fill="var(--muted)">opened while working</text>
+
+          <!-- edges -->
+          <line x1="450" y1="318" x2="222" y2="295" stroke="var(--muted)" stroke-width="2" marker-end="url(#m-gray)"/>
+          <rect x="294" y="278" width="95" height="14" fill="var(--paper)" opacity="0.85"/>
+          <text x="298" y="289" font-family="var(--font-utility)" font-size="12" fill="var(--muted)">produced_in</text>
+
+          <line x1="570" y1="300" x2="585" y2="112" stroke="var(--muted)" stroke-width="2" marker-end="url(#m-gray)"/>
+          <rect x="594" y="199" width="95" height="14" fill="var(--paper)" opacity="0.85"/>
+          <text x="598" y="210" font-family="var(--font-utility)" font-size="12" fill="var(--muted)">authored_by</text>
+
+          <line x1="710" y1="325" x2="842" y2="218" stroke="var(--accent)" stroke-width="2" marker-end="url(#m-green)"/>
+          <rect x="738" y="236" width="110" height="14" fill="var(--paper)" opacity="0.85"/>
+          <text x="742" y="247" font-family="var(--font-utility)" font-size="12" fill="var(--accent)">descends_from</text>
+
+          <line x1="960" y1="180" x2="960" y2="118" stroke="var(--danger)" stroke-width="2" marker-end="url(#m-red)"/>
+          <rect x="968" y="141" width="88" height="14" fill="var(--paper)" opacity="0.85"/>
+          <text x="972" y="152" font-family="var(--font-utility)" font-size="12" fill="var(--danger)">supersedes</text>
+
+          <line x1="470" y1="396" x2="302" y2="474" stroke="var(--accent)" stroke-width="2" marker-end="url(#m-green)"/>
+          <rect x="326" y="421" width="81" height="14" fill="var(--paper)" opacity="0.85"/>
+          <text x="330" y="432" font-family="var(--font-utility)" font-size="12" fill="var(--accent)">forced_by</text>
+
+          <line x1="710" y1="365" x2="842" y2="446" stroke="var(--accent2)" stroke-width="2" marker-end="url(#m-blue)"/>
+          <rect x="738" y="417" width="52" height="14" fill="var(--paper)" opacity="0.85"/>
+          <text x="742" y="428" font-family="var(--font-utility)" font-size="12" fill="var(--accent2)">cites</text>
+
+          <line x1="965" y1="490" x2="965" y2="542" stroke="var(--accent2)" stroke-width="2" marker-end="url(#m-blue)"/>
+          <rect x="973" y="513" width="74" height="14" fill="var(--paper)" opacity="0.85"/>
+          <text x="977" y="524" font-family="var(--font-utility)" font-size="12" fill="var(--accent2)">bundles</text>
+
+          <line x1="565" y1="396" x2="583" y2="492" stroke="var(--warn)" stroke-width="2" marker-end="url(#m-amber)"/>
+          <rect x="596" y="439" width="131" height="14" fill="var(--paper)" opacity="0.85"/>
+          <text x="600" y="450" font-family="var(--font-utility)" font-size="12" fill="var(--warn)">reads (observed)</text>
+
+          <!-- legend -->
+          <line x1="24" y1="655" x2="54" y2="655" stroke="var(--accent)" stroke-width="3"/>
+          <text x="60" y="659" font-family="var(--font-utility)" font-size="12" fill="var(--muted)">handoff lineage</text>
+          <line x1="230" y1="655" x2="260" y2="655" stroke="var(--accent2)" stroke-width="3"/>
+          <text x="266" y="659" font-family="var(--font-utility)" font-size="12" fill="var(--muted)">evidence</text>
+          <line x1="360" y1="655" x2="390" y2="655" stroke="var(--warn)" stroke-width="3"/>
+          <text x="396" y="659" font-family="var(--font-utility)" font-size="12" fill="var(--muted)">observed read</text>
+          <line x1="520" y1="655" x2="550" y2="655" stroke="var(--danger)" stroke-width="3"/>
+          <text x="556" y="659" font-family="var(--font-utility)" font-size="12" fill="var(--muted)">superseded</text>
+          <line x1="680" y1="655" x2="710" y2="655" stroke="var(--muted)" stroke-width="3"/>
+          <text x="716" y="659" font-family="var(--font-utility)" font-size="12" fill="var(--muted)">structural</text>
+        </svg>
+      </div>
+      <figcaption>Every arrow drawn here points backward in provenance: an artifact names what it came from, never what consumes it. R2, one worker's result, carries all three read relations at once. It descends from R, the handoff out of step 1. It cites A, a coordinator note assembled with the write-artifact tool. And it carries H as a coordinator-forced ancestor from step 0, pinned into the step beyond what the chain alone would pass. The worker also opened T while working, recorded as an observed read that never widens anyone's visibility. R supersedes P, the same step's failed first iteration; A bundles X, an older artifact from an earlier run. Eight of the model's nine edge kinds are drawn. The ninth, <code>answered_by</code>, points forward from the run to its final answer and lives in the table below; <code>promoted_from</code> is a field on the T node, not an edge, because a tool call is provenance rather than an artifact.</figcaption>
+    </figure>
+  </section>
+
+  <section id="detail">
+    <h2>The nine edge kinds</h2>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:130px">Edge</th><th style="width:190px">From &rarr; To</th><th>What it means</th><th style="width:90px">Serves</th></tr>
+      <tr><td><code>produced_in</code></td><td>artifact &rarr; run / plan / step</td><td>The structural coordinate: which plan and which step produced this artifact. Denormalized onto the node too, so filters never walk the graph.</td><td>#3</td></tr>
+      <tr><td><code>authored_by</code></td><td>artifact &rarr; coordinator | worker</td><td>Who wrote it. Attribution without parsing filenames.</td><td>#1, #3</td></tr>
+      <tr><td><code>descends_from</code></td><td>artifact &rarr; artifact</td><td>The direct handoff: the previous step's output in the chain. Mirrors the plan DAG frontier.</td><td>#4</td></tr>
+      <tr><td><code>cites</code></td><td>artifact &rarr; artifact</td><td>Evidence consumed, with a marker for who linked it: <code>declared</code> (named in the step by the coordinator) or <code>surfaced</code> (older evidence the ancestor chose to show). Both are readable by the descendant; the marker keeps the audit trail honest.</td><td>#2, #4</td></tr>
+      <tr><td><code>forced_by</code></td><td>artifact &rarr; artifact</td><td>A coordinator-pinned ancestor output injected into the step, beyond the chain. Distinct from <code>descends_from</code> (the natural handoff) and from <code>cites</code> (advisory evidence): forced means the worker must treat it as input.</td><td>#4</td></tr>
+      <tr><td><code>reads</code></td><td>artifact &rarr; artifact</td><td>Observed: an artifact the worker actually opened while working. Provenance and usage signal; does not widen visibility.</td><td>#4, #6</td></tr>
+      <tr><td><code>supersedes</code></td><td>artifact &rarr; artifact</td><td>Retry or replan replacement across iterations, so search can collapse iter-1 behind iter-2 while keeping both.</td><td>#3</td></tr>
+      <tr><td><code>bundles</code></td><td>pointer &rarr; artifacts</td><td>A coordinator write-artifact pointer listing evidence for a step: documentation and pointers become first-class nodes.</td><td>#1, #2</td></tr>
+      <tr><td><code>answered_by</code></td><td>run / plan &rarr; artifact</td><td>The run's final answer artifact. The one edge that points forward, from structure to its conclusion.</td><td>#3</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <section id="schema">
+    <h2>The node schema (the search surface)</h2>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:150px">Field</th><th style="width:250px">Shape</th><th>Why it exists</th></tr>
+      <tr><td><code>id</code></td><td>opaque ArtifactId, minted at write</td><td>A stable handle decoupled from filenames. The plan: <code>{run_id}:{seq}</code>. Addresses stay valid across retries and renames.</td></tr>
+      <tr><td><code>run_id</code>, <code>session_id</code></td><td>ids</td><td>Scope. Cross-run reads stay session-bounded, as they are today.</td></tr>
+      <tr><td><code>plan_id</code>, <code>iteration</code></td><td>ids + counter</td><td>Which plan produced it. A replan mints a new plan_id, so iterations never collide.</td></tr>
+      <tr><td><code>step_id</code></td><td>Option&lt;usize&gt;</td><td>The index into the plan (task_id). None means a coordinator or run-level artifact.</td></tr>
+      <tr><td><code>author</code></td><td>Coordinator | Worker(name)</td><td>Attribution and filtering by who wrote it.</td></tr>
+      <tr><td><code>kind</code></td><td>CoordinatorNote | Pointer | WorkerResult | ToolOutput | EvidenceBundle | Handoff | FinalAnswer</td><td>Coarse filter before any text match.</td></tr>
+      <tr><td><code>goal</code></td><td>Option&lt;String&gt;</td><td>The step goal, the main prompt that produced this artifact. Searchable without reading the blob.</td></tr>
+      <tr><td><code>pre_summary</code></td><td>String, mandatory</td><td>1-3 sentences written at creation time. The search blurb: results render from this, never from truncated file heads.</td></tr>
+      <tr><td><code>tags</code></td><td>Vec&lt;Tag&gt;</td><td>Typed plus free-form tags.</td></tr>
+      <tr><td><code>content_ref</code></td><td>{ path, hash, size, format }</td><td>The flat file behind the node. The filename becomes a storage detail, no longer the identity.</td></tr>
+      <tr><td><code>promoted_from</code></td><td>Option&lt;{ tool_name, call_idx }&gt;</td><td>When the node is a promoted tool output, the exact call it came from. A node field, not an edge: a tool call is provenance, not an artifact.</td></tr>
+      <tr><td><code>confidence</code></td><td>Option&lt;high | medium | low&gt;</td><td>Carried from the worker's structured submit.</td></tr>
+      <tr><td><code>status</code></td><td>Complete | Partial | Failed</td><td>Lets search skip or flag dead ends, and pair them with their superseding replacement.</td></tr>
+      <tr><td><code>created_at</code></td><td>ISO 8601 timestamp</td><td>Ordering, freshness, retention. The run manifest already carries a timestamp; each node carries its own.</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <section id="seq">
+    <h2>Orchestration plan: six changes, in build order</h2>
+    <ol class="timeline">
+      <li><strong>write_artifact tool</strong> (new, coordinator). Args: <code>goal</code>, <code>pre_summary</code>, <code>tags</code>, <code>content</code>, <code>kind</code>, <code>links[]</code>. Writes a node plus blob, emits <code>bundles</code>/<code>cites</code> edges, returns an ArtifactId handle. Covers both coordinator uses: documenting part of a conversation, and building pointer artifacts to pass into steps.</li>
+      <li><strong>Steps gain goal and evidence.</strong> <code>StepInput::LeafTask</code> (<code>types.rs:84</code>) grows <code>goal</code>, <code>evidence</code>, <code>force</code>; <code>flatten_steps</code> (<code>types.rs:97</code>) carries them onto <code>Task</code> (<code>types.rs:316</code>); the create_plan schema follows.</li>
+      <li><strong>Worker output becomes an indexed node.</strong> At submit_result, write the node with <code>produced_in</code> {run, plan, step}, <code>pre_summary</code> set from the worker's summary, and <code>descends_from</code>/<code>cites</code>/<code>forced_by</code> drawn from the step's inputs. The size-conditional promotion in <code>maybe_create_artifact</code> (<code>orchestrator.rs:3463</code>) becomes one unconditional node-write path.</li>
+      <li><strong>Workers read by relation, not filename.</strong> <code>read_artifact</code> (<code>read_artifact.rs:139</code>) takes an ArtifactId and resolves the one-hop closure: ancestor handoff, declared evidence, forced ancestors, session-bounded. A companion <code>list_readable_artifacts</code> shows the closure with pre_summaries before any read.</li>
+      <li><strong>Pre-summaries feed search.</strong> Every node's <code>pre_summary</code>, <code>goal</code>, and <code>tags</code> go to the vector store surface (<code>vector_store.rs:321</code>) with the ArtifactId as document id and the coordinates as metadata. That surface is a logging placeholder today; wiring it is part of this step, not prior art. Lexical filter first; vector ranking second, optional.</li>
+      <li><strong>The graph is a persisted, queryable index.</strong> A per-run <code>index.json</code> (nodes plus edges) rewritten on every write, atomically via temp file and rename so a crash never leaves a torn index, with a <code>get_artifact_graph</code> lookup (by run, or by artifact with a hop bound). The existing <code>RunManifest</code> (<code>persistence.rs:107</code>) becomes a projection of the node store instead of a parallel structure.</li>
+    </ol>
+  </section>
+
+  <section id="src">
+    <h2>Sources</h2>
+    <ul>
+      <li>Code anchors, aura-orchestration-mode branch <code>nightly</code> @ <code>a4dec712</code>, verified 2026-10-07: <code>types.rs:84</code>, <code>types.rs:184</code>, <code>types.rs:316</code>; <code>persistence.rs:107</code>, <code>:169</code>, <code>:205</code>, <code>:599</code>, <code>:630</code>, <code>:684</code>; <code>read_artifact.rs:114</code>, <code>:139</code>; <code>submit_result.rs:35</code>, <code>:58</code>; <code>orchestrator.rs:3463</code>; <code>vector_store.rs:321</code>, <code>:342</code>, <code>:506</code>, <code>:614</code>. All under <code>crates/aura/src/orchestration/</code> except <code>vector_store.rs</code>.</li>
+      <li>Design decisions from the authoring session, 2026-10-07: opaque ArtifactId with the filename demoted to <code>content_ref</code>; one-hop read closure (ancestor plus declared evidence plus forced); declared and observed edges both recorded.</li>
+      <li>Today's flat addressing that this design replaces: <code>read_artifact { filename, run_id? }</code>, with artifacts named <code>task-{id}-{worker}-iter-{n}-result.txt</code> by convention.</li>
+    </ul>
+    <div class="callout">This is a design, not shipped code: nothing here exists behind a flag yet. Open at design time: the ArtifactId minting format, a retention policy for observed <code>reads</code> edges (they grow with every worker read), and whether <code>RunManifest</code> keeps its own file or becomes a pure projection. One scope line: A2A task artifacts, the web-server's existing artifact type, are a different concept and are untouched by this graph.</div>
+  </section>
+
+  <section id="review">
+    <h2>Review ledger</h2>
+    <div class="meta">Adversarial review per the board's standing rule: the reviewer's model family differs from the author's. Author: an opencode session on GLM 5.3. Reviewer: the frontier-reviewer subagent on kimi-k3 (Amazon Bedrock), 2026-10-07. Code anchors verified at <code>a4dec712</code> in round 1.</div>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:60px">Round</th><th style="width:80px">Severity</th><th>Finding</th><th>Disposition</th></tr>
+      <tr><td>1</td><td>BLOCKING</td><td><code>promoted_from</code> edge targeted "tool call", a type the model does not define</td><td>Demoted to a node field <code>{ tool_name, call_idx }</code>; edge kinds 10 to 9</td></tr>
+      <tr><td>1</td><td>MINOR</td><td><code>cites</code> mixed coordinator-declared and ancestor-surfaced links with no marker</td><td><code>cites</code> carries a declared | surfaced marker; both remain readable by the descendant</td></tr>
+      <tr><td>1</td><td>MINOR</td><td>Figcaption claimed every arrow points backward; <code>answered_by</code> points forward</td><td>Caption now scopes the claim to the arrows drawn and names <code>answered_by</code></td></tr>
+      <tr><td>1</td><td>MINOR</td><td>No <code>created_at</code> on the node; no torn-write story for <code>index.json</code></td><td><code>created_at</code> added to the schema; index writes atomic via temp file and rename</td></tr>
+      <tr><td>1</td><td>MINOR</td><td>Figure drew 8 of 10 edge kinds against a "10 kinds" headline</td><td>Recounted to 9 kinds with 8 drawn, stated in the caption; <code>promoted_from</code> renders as node text</td></tr>
+      <tr><td>1</td><td>note</td><td>"Search infrastructure exists" overstated a logging placeholder at <code>vector_store.rs:321</code></td><td>Step 5 names the placeholder and puts the wiring inside the step</td></tr>
+      <tr><td>2</td><td>&mdash;</td><td>Disposition verification, narrow scope</td><td>All six dispositions verified; no new defects introduced</td></tr>
+    </table>
+    </div>
+    <div class="meta">Round 1 verdict: FAIL (finding 1). Round 2 verdict: PASS.</div>
+  </section>
+
+</main>
+
+<footer>
+  Default theme (web-artifact template) &middot; As of 2026-10-07 19:17 UTC &middot; <a href="https://shearerbeard.github.io/artifacts/">artifact index</a>
+</footer>
+
+<script type="application/json" id="artifact-state">
+{"as_of": "2026-10-07 19:17 UTC", "sections": ["hdr", "stats", "fig", "detail", "schema", "seq", "src", "review"], "design_system": null, "repo": {"branch": "nightly", "head": "a4dec712"}, "decisions": {"addressing": "opaque ArtifactId + index; filename becomes content_ref", "read_closure": "one hop: descends_from + step cites + forced_by, session-bounded", "edges": "declared + observed reads", "promoted_from": "node field, not an edge (review round 1)", "cites_marker": "declared | surfaced (review round 1)"}, "edge_kinds": 9, "review": {"author_model": "opencode GLM 5.3", "reviewer_model": "frontier-reviewer kimi-k3 (amazon-bedrock)", "round_1": "FAIL - 1 blocking + 4 minor + 1 note, dispositions applied", "round_2": "PASS - dispositions verified, no new defects", "date": "2026-10-07"}, "status": "design - reviewed, round 2 PASS"}
+</script>
+
+</body>
+</html>

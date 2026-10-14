@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Workflow demo - where we stand</title>
+<style>
+  :root { --ink:#1a1a1a; --paper:#fdfdfd; --accent:#0a7d4a; --accent2:#1d4ed8; --warn:#b45309; --danger:#b91c1c; --muted:#666; --border:#ddd; --surface:#f5f5f5; --radius:8px;
+          --font-display:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-utility:ui-monospace,SFMono-Regular,Menlo,monospace;
+          --weight-display:600; --weight-body:400; --weight-utility:500;
+          --text-s:13px; --text-m:16px; --text-l:20px; --text-xl:25px; --text-xxl:31px;
+          --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-6:24px; --space-8:32px; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink:#e4e4e4; --paper:#1a1a1a; --accent:#4ade80; --accent2:#60a5fa; --warn:#fbbf24; --danger:#f87171; --muted:#999; --border:#333; --surface:#262626; }
+  }
+  * { box-sizing:border-box; }
+  body { font:var(--text-m)/1.6 var(--font-body); font-weight:var(--weight-body); color:var(--ink); background:var(--paper); max-width:980px; margin:1.5em auto; padding:0 var(--space-6) var(--space-8); }
+  h1,h2,h3 { font-family:var(--font-display); font-weight:var(--weight-display); line-height:1.25; margin:1.4em 0 .4em; }
+  h1 { font-size:var(--text-xxl); margin-bottom:.1em; }
+  h2 { font-size:var(--text-xl); border-bottom:1px solid var(--border); padding-bottom:.2em; }
+  h3 { font-size:var(--text-l); }
+  a { color:var(--accent2); overflow-wrap:anywhere; }
+  code { background:var(--surface); padding:.15em .35em; border-radius:3px; font-size:.92em; font-family:var(--font-utility); font-weight:var(--weight-utility); overflow-wrap:anywhere; }
+  .tscroll { overflow-x:auto; margin:.8em 0; }
+  .tscroll table { margin:0; }
+  table { border-collapse:collapse; width:100%; font-size:var(--text-s); }
+  th,td { border:1px solid var(--border); padding:.45em .7em; vertical-align:top; text-align:left; overflow-wrap:anywhere; }
+  th { font-weight:600; background:var(--surface); }
+  .meta { color:var(--muted); font-size:var(--text-s); }
+  .lede { font-size:var(--text-l); color:var(--muted); margin:.3em 0 1em; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:var(--space-3); margin:var(--space-4) 0; }
+  .stat { border:1px solid var(--border); border-radius:var(--radius); padding:var(--space-3) var(--space-4); }
+  .stat .n { font-size:1.9em; font-weight:var(--weight-display); line-height:1.1; color:var(--accent); }
+  .stat .l { font-size:.8em; font-family:var(--font-utility); text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+  .stat p { margin:.3em 0 0; font-size:.85em; }
+  .figure { border:1px solid var(--border); border-radius:var(--radius); padding:1em; margin:1.2em 0; }
+  .figure .scroll { overflow-x:auto; }
+  .figure svg { height:auto; display:block; }
+  .figure figcaption { color:var(--muted); font-size:var(--text-s); margin-top:.6em; }
+  .pill { display:inline-block; font-size:var(--text-s); padding:var(--space-1) var(--space-2); border-radius:10px; background:var(--surface); color:var(--muted); vertical-align:1px; }
+  .pill.done { background:var(--accent); color:var(--paper); }
+  .pill.now  { background:var(--warn);   color:var(--paper); }
+  .pill.warn { background:var(--danger); color:var(--paper); }
+  .callout { border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:4px; padding:.7em 1em; margin:1em 0; font-size:.93em; background:color-mix(in srgb, var(--accent) 5%, var(--paper)); }
+  ol.timeline { list-style:none; padding-left:0; }
+  ol.timeline li { border-left:2px solid var(--accent); padding:.2em 0 .8em 1em; margin-left:.4em; position:relative; }
+  ol.timeline li::before { content:""; position:absolute; left:-6px; top:.55em; width:10px; height:10px; border-radius:50%; background:var(--accent); }
+  footer { border-top:1px solid var(--border); margin-top:2.5em; padding-top:.8em; color:var(--muted); font-size:.85em; }
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <h1>Workflow demo - where we stand</h1>
+  <div class="lede">One page: what the workflow prototype proved live tonight, what the demo harness does, what still doesn't work, and what's left before the demo.</div>
+  <div class="meta">As of 2026-10-14 05:50 UTC &middot; agent-driver-prototype, integration/workflow @ 3b51402</div>
+</header>
+
+<main>
+
+  <section id="stats">
+    <div class="stats">
+      <div class="stat"><div class="n">2</div><div class="l">legs proven live</div><p>The heal (approve &rarr; apply &rarr; incident resolved) and the unwind (failure &rarr; reverse rollbacks).</p></div>
+      <div class="stat"><div class="n">7</div><div class="l">live runs tonight</div><p>Six were rehearsal iterations; every failure was demo tooling or prompt content, not the chain.</p></div>
+      <div class="stat"><div class="n">0</div><div class="l">chain defects</div><p>Nothing in propose &rarr; approve &rarr; apply broke. Approval, deny, timeout, unwind all behaved.</p></div>
+      <div class="stat"><div class="n">2</div><div class="l">known gaps carded</div><p>W14 approval-wire shape mismatch; W15 stale tool description. Neither blocks the demo.</p></div>
+    </div>
+  </section>
+
+  <section id="fig">
+    <h2>The demo-day flow, and what each part is worth</h2>
+    <figure class="figure">
+      <div class="scroll">
+      <svg width="940" height="430" viewBox="0 0 940 430" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Flow: incident world, worker investigation, coordinator proposal, human approval, executor apply, then either healing or unwind">
+        <defs>
+          <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/>
+          </marker>
+        </defs>
+        <style>
+          .b { fill:var(--surface); stroke:var(--border); stroke-width:1.5; rx:10; }
+          .t { font:600 14px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; fill:var(--ink); }
+          .s { font:500 11.5px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; fill:var(--muted); }
+          .e { stroke:var(--muted); stroke-width:1.6; fill:none; marker-end:url(#arr); }
+          .lab { font:600 11px ui-monospace,Menlo,monospace; fill:var(--muted); }
+        </style>
+        <!-- row 1 -->
+        <rect class="b" x="20" y="28" width="200" height="72" rx="10"/>
+        <text class="t" x="120" y="56" text-anchor="middle">1 &middot; Incident world</text>
+        <text class="s" x="120" y="74" text-anchor="middle">mock service: payments app</text>
+        <text class="s" x="120" y="88" text-anchor="middle">db connection pool exhausted</text>
+
+        <rect class="b" x="252" y="28" width="200" height="72" rx="10"/>
+        <text class="t" x="352" y="56" text-anchor="middle">2 &middot; Workers investigate</text>
+        <text class="s" x="352" y="74" text-anchor="middle">read-only log tools; find the</text>
+        <text class="s" x="352" y="88" text-anchor="middle">window, service, error signature</text>
+
+        <rect class="b" x="484" y="28" width="200" height="72" rx="10"/>
+        <text class="t" x="584" y="56" text-anchor="middle">3 &middot; Coordinator proposes</text>
+        <text class="s" x="584" y="74" text-anchor="middle">a workflow: steps, exports,</text>
+        <text class="s" x="584" y="88" text-anchor="middle">declared rollbacks; validated</text>
+
+        <rect class="b" x="716" y="28" width="204" height="72" rx="10" style="stroke:var(--accent2); stroke-width:2.5"/>
+        <text class="t" x="818" y="56" text-anchor="middle">4 &middot; YOU decide</text>
+        <text class="s" x="818" y="74" text-anchor="middle">approve &middot; deny &middot; 5-min hold</text>
+        <text class="s" x="818" y="88" text-anchor="middle">polls every 2 seconds</text>
+
+        <line class="e" x1="220" y1="64" x2="248" y2="64"/>
+        <line class="e" x1="452" y1="64" x2="480" y2="64"/>
+        <line class="e" x1="684" y1="64" x2="712" y2="64"/>
+
+        <!-- down to executor -->
+        <path class="e" d="M 818 100 L 818 130 L 584 130 L 584 158"/>
+        <text class="lab" x="700" y="124">approved</text>
+
+        <rect class="b" x="484" y="160" width="200" height="72" rx="10"/>
+        <text class="t" x="584" y="188" text-anchor="middle">5 &middot; Executor applies</text>
+        <text class="s" x="584" y="206" text-anchor="middle">one step at a time, exactly</text>
+        <text class="s" x="584" y="220" text-anchor="middle">as approved - model out of loop</text>
+
+        <!-- branch: unwind (left, amber) -->
+        <path class="e" style="stroke:var(--warn)" d="M 484 196 L 340 196 L 340 268"/>
+        <text class="lab" x="352" y="190" style="fill:var(--warn)">a step fails</text>
+
+        <rect class="b" x="20" y="270" width="300" height="106" rx="10" style="stroke:var(--warn); stroke-width:2"/>
+        <text class="t" x="170" y="296" text-anchor="middle">6a &middot; Unwind</text>
+        <text class="s" x="170" y="314" text-anchor="middle">canary step fails at the world's</text>
+        <text class="s" x="170" y="328" text-anchor="middle">unknown-app gate; declared rollbacks</text>
+        <text class="s" x="170" y="342" text-anchor="middle">run in reverse; scale restored 6&rarr;3;</text>
+        <text class="s" x="170" y="356" text-anchor="middle">nothing left behind (residual empty)</text>
+        <text class="lab" x="170" y="372" text-anchor="middle" style="fill:var(--warn)">PROVEN LIVE - run 2e, 6 minutes</text>
+
+        <!-- branch: heal (right, green) -->
+        <path class="e" style="stroke:var(--accent)" d="M 684 196 L 800 196 L 800 268"/>
+        <text class="lab" x="700" y="190" style="fill:var(--accent)">all steps applied</text>
+
+        <rect class="b" x="620" y="270" width="300" height="106" rx="10" style="stroke:var(--accent); stroke-width:2"/>
+        <text class="t" x="770" y="296" text-anchor="middle">6b &middot; Heal</text>
+        <text class="s" x="770" y="314" text-anchor="middle">scale payments 3&rarr;6 (the scenario's</text>
+        <text class="s" x="770" y="328" text-anchor="middle">ground truth); error clusters stop at</text>
+        <text class="s" x="770" y="342" text-anchor="middle">that instant; verify step re-reads</text>
+        <text class="s" x="770" y="356" text-anchor="middle">the world: replicas 6, image unchanged</text>
+        <text class="lab" x="770" y="372" text-anchor="middle" style="fill:var(--accent)">PROVEN LIVE - run 1b, 9 minutes</text>
+      </svg>
+      </div>
+      <figcaption>Every colored node ran live tonight against the real stack. The human step (4) is the only place a person touches the run: one decision, then the executor owns everything after it.</figcaption>
+    </figure>
+  </section>
+
+  <section id="detail">
+    <h2>What the harness does (the five pieces on the demo machine)</h2>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:170px">Piece</th><th>What it is, in one breath</th><th style="width:120px">Status</th></tr>
+      <tr><td><b>Mock world</b><br><code>mock-mcp-service :9992</code></td><td>A stand-in observability + ops service. It serves a fake ecommerce cluster with a planted incident (12 scenarios); log tools let agents investigate, three ops tools (<code>ops_get_cluster_state</code>, <code>ops_scale_app</code>, <code>ops_rollback_deploy</code>) mutate it. A correct fix makes the incident's logs heal at that instant.</td><td><span class="pill done">live</span></td></tr>
+      <tr><td><b>The shim</b><br><code>server :8964</code></td><td>The prototype itself. An OpenAI-compatible chat endpoint in front of the coordinator loop: one model conversation with four tools (plan, execute, inspect, respond) plus <code>propose_workflow</code>. Everything streams as <code>aura.*</code> SSE events.</td><td><span class="pill done">live</span></td></tr>
+      <tr><td><b>Approval receiver</b><br><code>w6-demo approve :9397</code></td><td>Stands in for the governance service on loopback. Receives the proposal, shows it pending, answers status polls, records your approve/deny. Built tonight because the real mirror 404s our poll shape (gap W14 below).</td><td><span class="pill done">live</span></td></tr>
+      <tr><td><b>Driver CLI</b><br><code>w6-demo run / render</code></td><td><code>run</code> sends the prompt from a terminal and streams the meaningful events live while teeing everything to a capture file. <code>render</code> turns any capture into a readable transcript afterward - the show-the-team artifact.</td><td><span class="pill done">live</span></td></tr>
+      <tr><td><b>Model lane</b><br><code>zai, glm-5.3</code></td><td>The coordinator and workers run on the coding-plan subscription. A run costs 6-16 minutes and roughly 300-800k tokens.</td><td><span class="pill done">live</span></td></tr>
+    </table>
+    </div>
+  </section>
+
+  <section id="seq">
+    <h2>How we got here</h2>
+    <ol class="timeline">
+      <li><b>Sep 29</b> - the plan: port aura's workflow idea into the prototype. Four build cards (types, the proposal tool, the deterministic executor, the approval wire), one world-side card (ops tools + healing).</li>
+      <li><b>Oct 5-7</b> - all five built and reviewed; 15 offline tests pin the executor and approval legs; two live propose-only runs prove the model can drive the surface (accepted with a quality watch-note).</li>
+      <li><b>Oct 13</b> - demo-prep plan written, frontier-reviewed over three rounds (PASS), Stage-0 rulings from Mike; assembly + canary green same night.</li>
+      <li><b>Oct 14, tonight</b> - seven live runs. The heal lands (run 1b: 3/3 steps applied, incident resolved). The unwind lands (run 2e: canary fails, both completed steps rolled back in reverse, nothing residual). Deny and hold-timeout legs exercised along the way. ~3.4M subscription tokens total.</li>
+    </ol>
+  </section>
+
+  <section id="works">
+    <h2>What works and what doesn't</h2>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:220px">Thing</th><th>State</th><th style="width:110px">Verdict</th></tr>
+      <tr><td>Investigate &rarr; propose &rarr; approve &rarr; apply &rarr; heal</td><td>Proven live end to end (run 1b). The proposal arrives as a readable digest; the apply is deterministic; healing fires on the ground-truth fix.</td><td><span class="pill done">works</span></td></tr>
+      <tr><td>Failure &rarr; reverse rollbacks &rarr; unwind record</td><td>Proven live (run 2e). Residual set empty, no rollback failures, the run record says exactly what happened.</td><td><span class="pill done">works</span></td></tr>
+      <tr><td>Approve / deny / hold-timeout</td><td>All three decided paths proven live. A denial comes back as an observation the model replans against; a timeout ends the hold cleanly at 5 minutes.</td><td><span class="pill done">works</span></td></tr>
+      <tr><td>Seeing the work</td><td><code>w6-demo run</code> streams events live in the terminal; <code>w6-demo render</code> turns any capture into a transcript (digest, decision row, step statuses, usage) for people who weren't there.</td><td><span class="pill done">works</span></td></tr>
+      <tr><td>External approval receivers</td><td>The governance mirror - and per its own probe script, the real governance service - answer a differently-shaped status URL than our ratified wire, so their polls 404. Tonight's demo uses the loopback receiver instead. Carded as <b>W14</b> for a ruling: change our wire, or ship a conforming receiver.</td><td><span class="pill warn">gap W14</span></td></tr>
+      <tr><td>The tool's self-description</td><td><code>propose_workflow</code> still describes itself as "nothing executes" - but with approval configured it runs the whole chain on your approve. The model stumbles on this briefly mid-run (it recovers). Carded as <b>W15</b>; a one-string fix after the demo.</td><td><span class="pill warn">gap W15</span></td></tr>
+      <tr><td>Observability tools inside workflows</td><td>The histogram tool's schema can't pass the workflow validator (a known, accepted engine limitation), so verify steps use the ops state read instead. Workaround is honest and in the prompt; the real fix is a card for later.</td><td><span class="pill now">worked around</span></td></tr>
+      <tr><td>First-proposal accuracy</td><td>The model guesses response shapes wrong on early attempts (top-level <code>$.image</code> vs the real <code>$.deployment.image</code>) and needs 3-4 tries on step shape. Fixed by pinning facts in the prompt; a schema-wording card could absorb it later.</td><td><span class="pill now">prompt carries it</span></td></tr>
+      <tr><td>Tonight's rehearsal tooling</td><td>Three bugs in my approval-watch script burned four extra runs (a blind-approved probe, a goal-path mismatch that denied the real drill, a truncated decision id). All fixed; all named in the evidence. The chain itself never failed.</td><td><span class="pill now">fixed, documented</span></td></tr>
+    </table>
+    </div>
+  </section>
+
+  <section id="next">
+    <h2>What's left before the demo</h2>
+    <ol>
+      <li><b>The handout</b> (about half an hour): exact run commands with the canary as step zero, the two reference prompts, expected observations in order, failure signatures, revert steps. Then a quick drift check over it.</li>
+      <li><b>A dry run with Mike driving</b> (his ruling): one heal run where you type the command, watch the stream, and click the approve - plus a look at the render transcript, so the controls feel familiar before an audience.</li>
+      <li><b>Housekeeping, on your word</b>: four board commits sit unpushed (push approval is yours by convention). The W5 pull-request decision (the world-side branch) still sits with you - post-demo is fine.</li>
+      <li><b>After the demo</b>: W14 and W15 cards, the W5 PR, and closing W6's Gate T once you've watched both runs.</li>
+    </ol>
+  </section>
+
+  <section id="src">
+    <h2>Sources</h2>
+    <ul>
+      <li>Board card W6 and its evidence file <code>docs/board/evidence/2026-10-14-w6-rehearsal.md</code> (both runs, verbatim records) - verified 2026-10-14.</li>
+      <li>Cards W14 (approval status-shape mismatch) and W15 (tool description drift) - minted 2026-10-14.</li>
+      <li>Run captures <code>run1b.sse</code>, <code>run2e.sse</code> and the approval wire log in the integration worktree's <code>.review/w6/</code> (working material; the evidence file is the durable record).</li>
+      <li>Stage-1 proposal-quality evidence <code>docs/board/evidence/2026-10-07-w2-stage1-smoke.md</code> - verified 2026-10-07.</li>
+    </ul>
+    <div class="callout">What this page does not show: the live terminal itself. The stream, the approve click, and the render transcript are the demo - this page is the map, not the territory. Numbers for token spend come from the runs' usage events; two early runs' usage fell past the capture tail and are marked approximate in the evidence file.</div>
+  </section>
+
+</main>
+
+<footer>
+  Default theme (no design system yet - first artifact of this series)
+  &middot; As of 2026-10-14 05:50 UTC
+  &middot; <a href="https://github.com/Shearerbeard/agent-driver-prototype">Shearerbeard/agent-driver-prototype</a>
+</footer>
+
+<script type="application/json" id="artifact-state">
+{"as_of": "2026-10-14 05:50 UTC", "sections": ["hdr", "stats", "fig", "detail", "seq", "works", "next", "src"], "design_system": null, "legs_proven": ["heal", "unwind"], "live_runs": 7, "tokens_approx": 3400000, "cards_open": ["W14", "W15"], "commit": "3b51402"}
+</script>
+
+</body>
+</html>

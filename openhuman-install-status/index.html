@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OpenHuman install — done &amp; tested</title>
+<style>
+  :root { --ink:#1a1a1a; --paper:#fdfdfd; --accent:#0a7d4a; --accent2:#1d4ed8; --warn:#b45309; --danger:#b91c1c; --muted:#666; --border:#ddd; --surface:#f5f5f5; --radius:8px;
+          --font-display:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-utility:ui-monospace,SFMono-Regular,Menlo,monospace;
+          --weight-display:600; --weight-body:400; --weight-utility:500;
+          --text-s:13px; --text-m:16px; --text-l:20px; --text-xl:25px; --text-xxl:31px;
+          --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-6:24px; --space-8:32px; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink:#e4e4e4; --paper:#1a1a1a; --accent:#4ade80; --accent2:#60a5fa; --warn:#fbbf24; --danger:#f87171; --muted:#999; --border:#333; --surface:#262626; }
+  }
+  * { box-sizing:border-box; }
+  body { font:var(--text-m)/1.6 var(--font-body); font-weight:var(--weight-body); color:var(--ink); background:var(--paper); max-width:980px; margin:1.5em auto; padding:0 var(--space-6) var(--space-8); }
+  h1,h2,h3 { font-family:var(--font-display); font-weight:var(--weight-display); line-height:1.25; margin:1.4em 0 .4em; }
+  h1 { font-size:var(--text-xxl); margin-bottom:.1em; }
+  h2 { font-size:var(--text-xl); border-bottom:1px solid var(--border); padding-bottom:.2em; }
+  h3 { font-size:var(--text-l); }
+  a { color:var(--accent2); overflow-wrap:anywhere; }
+  code { background:var(--surface); padding:.15em .35em; border-radius:3px; font-size:.92em; font-family:var(--font-utility); font-weight:var(--weight-utility); overflow-wrap:anywhere; }
+  .tscroll { overflow-x:auto; margin:.8em 0; }
+  .tscroll table { margin:0; }
+  table { border-collapse:collapse; width:100%; font-size:var(--text-s); }
+  th,td { border:1px solid var(--border); padding:.45em .7em; vertical-align:top; text-align:left; overflow-wrap:anywhere; }
+  th { font-weight:600; background:var(--surface); }
+  .meta { color:var(--muted); font-size:var(--text-s); }
+  .lede { font-size:var(--text-l); color:var(--muted); margin:.3em 0 1em; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:var(--space-3); margin:var(--space-4) 0; }
+  .stat { border:1px solid var(--border); border-radius:var(--radius); padding:var(--space-3) var(--space-4); }
+  .stat .n { font-size:1.9em; font-weight:var(--weight-display); line-height:1.1; color:var(--accent); }
+  .stat .l { font-size:.8em; font-family:var(--font-utility); text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+  .stat p { margin:.3em 0 0; font-size:.85em; }
+  .figure { border:1px solid var(--border); border-radius:var(--radius); padding:1em; margin:1.2em 0; }
+  .figure .scroll { overflow-x:auto; }
+  .figure svg { height:auto; display:block; }
+  .figure figcaption { color:var(--muted); font-size:var(--text-s); margin-top:.6em; }
+  .pill { display:inline-block; font-size:var(--text-s); padding:var(--space-1) var(--space-2); border-radius:10px; background:var(--surface); color:var(--muted); vertical-align:1px; }
+  .pill.done { background:var(--accent); color:var(--paper); }
+  .pill.now  { background:var(--warn);   color:var(--paper); }
+  .pill.warn { background:var(--danger); color:var(--paper); }
+  .callout { border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:4px; padding:.7em 1em; margin:1em 0; font-size:.93em; background:color-mix(in srgb, var(--accent) 5%, var(--paper)); }
+  .callout.warn { border-left-color:var(--warn); background:color-mix(in srgb, var(--warn) 6%, var(--paper)); }
+  ol.timeline { list-style:none; padding-left:0; }
+  ol.timeline li { border-left:2px solid var(--accent); padding:.2em 0 .8em 1em; margin-left:.4em; position:relative; }
+  ol.timeline li::before { content:""; position:absolute; left:-6px; top:.55em; width:10px; height:10px; border-radius:50%; background:var(--accent); }
+  footer { border-top:1px solid var(--border); margin-top:2.5em; padding-top:.8em; color:var(--muted); font-size:.85em; }
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <h1>OpenHuman install — done &amp; tested</h1>
+  <div class="lede">One job: show what&rsquo;s built, what each security probe actually proved, and the one check that still needs your hands.</div>
+  <div class="meta">As of 2026-10-15 20:01 UTC &middot; workstation (Nobara&nbsp;44) &middot; core running &amp; healthy</div>
+</header>
+
+<main>
+
+  <section id="stats">
+    <div class="stats">
+      <div class="stat"><div class="n">10&thinsp;/&thinsp;11</div><div class="l">checks green</div><p>Ten verification checks passed with evidence on disk. The eleventh is yours (below).</p></div>
+      <div class="stat"><div class="n">0</div><div class="l">env leaks</div><p>Shell children saw no keys, tokens, or master key — only the 9-name allowlist.</p></div>
+      <div class="stat"><div class="n">2</div><div class="l">models live</div><p>glm-5.3-flash (default) and glm-5.3 both answering via the zai coding plan.</p></div>
+      <div class="stat"><div class="n">3</div><div class="l">build bugs fixed</div><p>Upstream Dockerfile was stale vs its own tree; patched outside your checkout.</p></div>
+    </div>
+  </section>
+
+  <section id="fig">
+    <h2>The boundary, as built</h2>
+    <figure class="figure">
+      <div class="scroll">
+        <svg width="880" height="470" viewBox="0 0 880 470" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Containment architecture: desktop client talks over loopback RPC to the containerized core; the container is the boundary; shell children get a cleared environment; models route through zai.">
+          <defs>
+            <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+            </marker>
+          </defs>
+          <g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" fill="var(--ink)">
+            <!-- client -->
+            <rect x="10" y="30" width="200" height="74" rx="8" fill="var(--surface)" stroke="var(--border)"/>
+            <text x="110" y="58" text-anchor="middle" font-size="14" font-weight="600">Desktop app</text>
+            <text x="110" y="78" text-anchor="middle" font-size="11" fill="var(--muted)">client only · no host core</text>
+            <!-- RPC arrow -->
+            <line x1="210" y1="67" x2="320" y2="67" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
+            <text x="265" y="52" text-anchor="middle" font-size="10.5" fill="var(--muted)">RPC 127.0.0.1:7788 + bearer</text>
+            <!-- container boundary -->
+            <rect x="325" y="14" width="540" height="250" rx="10" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+            <text x="345" y="36" font-size="13" font-weight="700" fill="var(--accent)">openhuman-core container — the boundary</text>
+            <text x="345" y="52" font-size="10.5" fill="var(--muted)">uid 1000 · cap-drop ALL · read-only rootfs · loopback-only · no docker socket</text>
+            <!-- core box -->
+            <rect x="345" y="62" width="180" height="58" rx="8" fill="var(--surface)" stroke="var(--border)"/>
+            <text x="435" y="86" text-anchor="middle" font-size="13" font-weight="600">core process</text>
+            <text x="435" y="104" text-anchor="middle" font-size="10.5" fill="var(--muted)">autonomy on · supervised</text>
+            <!-- shell children -->
+            <rect x="345" y="150" width="180" height="92" rx="8" fill="var(--surface)" stroke="var(--border)"/>
+            <text x="435" y="172" text-anchor="middle" font-size="13" font-weight="600">shell children</text>
+            <text x="435" y="189" text-anchor="middle" font-size="10.5" fill="var(--muted)">env cleared to 9-name allowlist</text>
+            <text x="435" y="204" text-anchor="middle" font-size="10.5" fill="var(--muted)">TMP→scratch · git knobs off</text>
+            <text x="435" y="219" text-anchor="middle" font-size="10.5" fill="var(--muted)">no keys ever inherited</text>
+            <line x1="435" y1="120" x2="435" y2="148" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
+            <!-- model route -->
+            <rect x="585" y="62" width="130" height="58" rx="8" fill="var(--surface)" stroke="var(--border)"/>
+            <text x="650" y="86" text-anchor="middle" font-size="13" font-weight="600">local-openai</text>
+            <text x="650" y="104" text-anchor="middle" font-size="10.5" fill="var(--muted)">runtime</text>
+            <line x1="525" y1="91" x2="583" y2="91" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
+            <!-- zai (outside container) -->
+            <rect x="585" y="150" width="256" height="58" rx="8" fill="none" stroke="var(--accent2)" stroke-width="1.8"/>
+            <text x="713" y="174" text-anchor="middle" font-size="13" font-weight="600" fill="var(--accent2)">zai coding endpoint</text>
+            <text x="713" y="192" text-anchor="middle" font-size="10.5" fill="var(--muted)">glm-5.3 · glm-5.3-flash</text>
+            <line x1="650" y1="120" x2="695" y2="148" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
+            <!-- mounts note -->
+            <text x="345" y="258" font-size="10.5" fill="var(--muted)">mounts: /workspace rw · /corpus/retro-dev-docs ro · state rw — host home invisible</text>
+            <!-- pending -->
+            <rect x="325" y="300" width="540" height="150" rx="10" fill="none" stroke="var(--warn)" stroke-width="1.8" stroke-dasharray="7 5"/>
+            <text x="345" y="324" font-size="13" font-weight="700" fill="var(--warn)">pending — needs you</text>
+            <rect x="345" y="338" width="160" height="70" rx="8" fill="var(--surface)" stroke="var(--border)"/>
+            <text x="425" y="362" text-anchor="middle" font-size="12.5" font-weight="600">Approval card test</text>
+            <text x="425" y="379" text-anchor="middle" font-size="10.5" fill="var(--muted)">connect the AppImage</text>
+            <text x="425" y="393" text-anchor="middle" font-size="10.5" fill="var(--muted)">write-task must park</text>
+            <rect x="525" y="338" width="150" height="70" rx="8" fill="var(--surface)" stroke="var(--border)"/>
+            <text x="600" y="362" text-anchor="middle" font-size="12.5" font-weight="600">Stage 3 · PAT</text>
+            <text x="600" y="379" text-anchor="middle" font-size="10.5" fill="var(--muted)">repo allowlist</text>
+            <text x="600" y="393" text-anchor="middle" font-size="10.5" fill="var(--muted)">branch protection 🛑</text>
+            <rect x="695" y="338" width="146" height="70" rx="8" fill="var(--surface)" stroke="var(--border)"/>
+            <text x="768" y="362" text-anchor="middle" font-size="12.5" font-weight="600">Stage 4 · memory</text>
+            <text x="768" y="379" text-anchor="middle" font-size="10.5" fill="var(--muted)">CortexDB verify</text>
+            <text x="768" y="393" text-anchor="middle" font-size="10.5" fill="var(--muted)">then wire</text>
+            <line x1="595" y1="264" x2="470" y2="336" stroke="var(--warn)" stroke-width="1.2" stroke-dasharray="4 4" marker-end="url(#arr)"/>
+          </g>
+        </svg>
+      </div>
+      <figcaption>Everything inside the green box is confined: the core, its tools, MCP subprocesses, and every shell child. The desktop app is just a remote control over loopback. Dashed amber = the parts that still need your hands.</figcaption>
+    </figure>
+  </section>
+
+  <section id="detail">
+    <h2>What was tested, and the evidence</h2>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:170px">Check</th><th style="width:70px">Result</th><th>Evidence</th></tr>
+      <tr><td>Image = audited source</td><td><span class="pill done">PASS</span></td><td>Built from your checkout @ <code>03c784fc2e</code>, digest <code>a6f3ef4a1ede</code>. Three upstream build bugs patched in an external Dockerfile — your tree is byte-pristine.</td></tr>
+      <tr><td>Container hardening</td><td><span class="pill done">PASS</span></td><td><code>docker inspect</code>: uid 1000, <code>cap_drop ALL</code>, no-new-privileges, read-only rootfs, published on 127.0.0.1 only, exactly 3 mounts, no docker socket.</td></tr>
+      <tr><td>Env allowlist</td><td><span class="pill done">PASS</span></td><td><code>probe-env.txt</code>: shell child saw only <code>PATH</code>, <code>HOME</code>, scratch <code>TMPDIR/TEMP/TMP</code>, <code>PYTHON*</code> — plus live git-neutralization via <code>GIT_CONFIG_PARAMETERS</code>. No zai key, core token, or master key.</td></tr>
+      <tr><td>Host invisible</td><td><span class="pill done">PASS</span></td><td><code>probe-boundary.txt</code>: <code>ls /home</code> shows only the container user; <code>cat /etc/shadow</code> → permission denied.</td></tr>
+      <tr><td>Read-only enforcement</td><td><span class="pill done">PASS</span></td><td>Writes to <code>/corpus/retro-dev-docs</code> and <code>/etc</code> → &ldquo;Read-only file system&rdquo;. <code>/workspace</code> writes succeed.</td></tr>
+      <tr><td>Workspace retarget</td><td><span class="pill done">PASS</span></td><td><code>pwd</code> = <code>/workspace</code> in every shell turn (the round-3 review&rsquo;s catch, fixed and proven).</td></tr>
+      <tr><td>Config persistence</td><td><span class="pill done">PASS</span></td><td>Autonomy, model routes, and key survived two container restarts on the state bind.</td></tr>
+      <tr><td>glm-5.3-flash</td><td><span class="pill done">PASS</span></td><td>Multiple live agent turns incl. real shell tool use; turn logs attribute to it; no managed tier, no sign-in.</td></tr>
+      <tr><td>glm-5.3 (big)</td><td><span class="pill done">PASS</span></td><td>Direct call answered correctly through the same endpoint.</td></tr>
+      <tr><td>Telemetry inert</td><td><span class="pill done">PASS</span></td><td>No baked Sentry DSN in the binary; analytics env-off; AppImage sha256 matches GitHub&rsquo;s published digest.</td></tr>
+      <tr><td>Approval card parks on chat</td><td><span class="pill now">YOURS</span></td><td>Needs the GUI: connect the AppImage, ask for a file write in the <b>main chat</b>, expect the approval card. This is the one gate a headless run can&rsquo;t prove.</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <section id="seq">
+    <h2>How today went</h2>
+    <ol class="timeline">
+      <li><b>18:39–18:45 UTC — three build failures, all upstream.</b> The pinned commit&rsquo;s Dockerfile was 5 days newer than its last release and out of sync with its own workspace. Patched outside the tree: missing crate manifest+src, missing <code>examples/</code>+<code>tests/</code>, and root <code>tests/</code> was dockerignored.</li>
+      <li><b>18:47 — first boot, healthy.</b> Secrets generated to a 0600 env-file; container up under the hardened spec.</li>
+      <li><b>18:49 — model routing live.</b> zai key wired from the opencode store through the session-gate-exempt <code>local-openai</code> path; first turn answered.</li>
+      <li><b>18:53 — shell refused to run. By design.</b> Module admission failed on a uid mismatch, and the shell tool failed <i>closed</i> (&ldquo;command analysis unavailable&rdquo;) rather than running unsandboxed. Exactly the posture the audit predicted.</li>
+      <li><b>18:59 — fixed and proven.</b> Runtime uid aligned; modules loaded; env + boundary probes passed; both models verified.</li>
+      <li><b>20:01 — this page.</b> Awaiting your GUI test, then Stage&nbsp;3.</li>
+    </ol>
+  </section>
+
+  <section id="src">
+    <h2>Accepted deviations &amp; what&rsquo;s next</h2>
+    <ul>
+      <li><b>zai key sits in <code>config.toml</code></b> (0600, state dir) — the local-AI surface has no encrypted store. Same risk class as the future PAT: revocable, no repo access. Documented, accepted for V1.</li>
+      <li><b>Sentry is compiled in but inert</b> — no endpoint baked, env never enables it, analytics off.</li>
+      <li><b>Summarization/vision</b> fall back to a session-gated managed tier — unused in V1; will error loudly if ever invoked.</li>
+      <li><b>Never</b> run consequential turns from the Settings → agent-chat panel (bypasses the approval gate by design).</li>
+    </ul>
+    <div class="callout warn"><b>What this page does not show:</b> your GUI test result, anything Stage&nbsp;3+ (PAT, branch protection, PARA vault, CortexDB, the ops-repo docs), and the raw probe files — those live at <code>~/ai-agents/probe-env.txt</code> and <code>probe-boundary.txt</code> on the workstation. Evidence here is summarized from those files and <code>docker inspect</code> captures taken 2026-10-15.</div>
+  </section>
+
+</main>
+
+<footer>
+  Default theme &middot; As of 2026-10-15 20:01 UTC &middot; Plan: <code>~/.opencode/plan/openhuman-install.md</code> (REV4)
+</footer>
+
+<script type="application/json" id="artifact-state">
+{"as_of": "2026-10-15 20:01 UTC", "sections": ["hdr", "stats", "fig", "detail", "seq", "src"], "design_system": null, "slug": "openhuman-install-status", "checks_passed": 10, "checks_total": 11, "pending_user": ["approval-card-gui-test", "stage3-pat", "stage4-cortexdb"], "image_digest": "a6f3ef4a1ede", "source_commit": "03c784fc2e"}
+</script>
+
+</body>
+</html>

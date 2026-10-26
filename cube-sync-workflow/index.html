@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>fedora-cube sync — execution walkthrough</title>
+<style>
+  :root { --ink:#1a1a1a; --paper:#fdfdfd; --accent:#0a7d4a; --accent2:#1d4ed8; --warn:#b45309; --danger:#b91c1c; --muted:#666; --border:#ddd; --surface:#f5f5f5; --radius:8px;
+          --font-display:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-utility:ui-monospace,SFMono-Regular,Menlo,monospace;
+          --weight-display:600; --weight-body:400; --weight-utility:500;
+          --text-s:13px; --text-m:16px; --text-l:20px; --text-xl:25px; --text-xxl:31px;
+          --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-6:24px; --space-8:32px; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink:#e4e4e4; --paper:#1a1a1a; --accent:#4ade80; --accent2:#60a5fa; --warn:#fbbf24; --danger:#f87171; --muted:#999; --border:#333; --surface:#262626; }
+  }
+  * { box-sizing:border-box; }
+  body { font:var(--text-m)/1.6 var(--font-body); font-weight:var(--weight-body); color:var(--ink); background:var(--paper); max-width:980px; margin:1.5em auto; padding:0 var(--space-6) var(--space-8); }
+  h1,h2,h3 { font-family:var(--font-display); font-weight:var(--weight-display); line-height:1.25; margin:1.4em 0 .4em; }
+  h1 { font-size:var(--text-xxl); margin-bottom:.1em; }
+  h2 { font-size:var(--text-xl); border-bottom:1px solid var(--border); padding-bottom:.2em; }
+  h3 { font-size:var(--text-l); }
+  a { color:var(--accent2); overflow-wrap:anywhere; }
+  code { background:var(--surface); padding:.15em .35em; border-radius:3px; font-size:.92em; font-family:var(--font-utility); font-weight:var(--weight-utility); overflow-wrap:anywhere; }
+  .tscroll { overflow-x:auto; margin:.8em 0; }
+  .tscroll table { margin:0; }
+  table { border-collapse:collapse; width:100%; font-size:var(--text-s); }
+  th,td { border:1px solid var(--border); padding:.45em .7em; vertical-align:top; text-align:left; overflow-wrap:anywhere; }
+  th { font-weight:600; background:var(--surface); }
+  .meta { color:var(--muted); font-size:var(--text-s); }
+  .lede { font-size:var(--text-l); color:var(--muted); margin:.3em 0 1em; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:var(--space-3); margin:var(--space-4) 0; }
+  .stat { border:1px solid var(--border); border-radius:var(--radius); padding:var(--space-3) var(--space-4); }
+  .stat .n { font-size:1.9em; font-weight:var(--weight-display); line-height:1.1; color:var(--accent); }
+  .stat .l { font-size:.8em; font-family:var(--font-utility); text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+  .stat p { margin:.3em 0 0; font-size:.85em; }
+  .figure { border:1px solid var(--border); border-radius:var(--radius); padding:1em; margin:1.2em 0; }
+  .figure .scroll { overflow-x:auto; }
+  .figure svg { height:auto; display:block; }
+  .figure figcaption { color:var(--muted); font-size:var(--text-s); margin-top:.6em; }
+  .pill { display:inline-block; font-size:var(--text-s); padding:var(--space-1) var(--space-2); border-radius:10px; background:var(--surface); color:var(--muted); vertical-align:1px; }
+  .pill.done { background:var(--accent); color:var(--paper); }
+  .pill.now  { background:var(--warn);   color:var(--paper); }
+  .pill.warn { background:var(--danger); color:var(--paper); }
+  .callout { border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:4px; padding:.7em 1em; margin:1em 0; font-size:.93em; background:color-mix(in srgb, var(--accent) 5%, var(--paper)); }
+  ol.timeline { list-style:none; padding-left:0; }
+  ol.timeline li { border-left:2px solid var(--accent); padding:.2em 0 .8em 1em; margin-left:.4em; position:relative; }
+  ol.timeline li::before { content:""; position:absolute; left:-6px; top:.55em; width:10px; height:10px; border-radius:50%; background:var(--accent); }
+  footer { border-top:1px solid var(--border); margin-top:2.5em; padding-top:.8em; color:var(--muted); font-size:.85em; }
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <h1>fedora-cube sync — execution walkthrough</h1>
+  <div class="lede">How the two new sync flows work — Zen browser data and the dev-wiki repos — and the gated path from preflight to done. Built for review before execution.</div>
+  <div class="meta">As of 2026-10-26 13:04 UTC &middot; status: <span class="pill now">pre-execution review</span></div>
+</header>
+
+<main>
+
+  <section id="stats">
+    <div class="stats">
+      <div class="stat"><div class="n">2</div><div class="l">new containers</div><p>syncstorage (browser data) + syncthing (wiki files). Nothing else lands on the cube this phase.</p></div>
+      <div class="stat"><div class="n">0</div><div class="l">new LAN ports</div><p>Everything rides the Tailnet: tailscale serve for HTTPS, the tailscale IP for the sync listener. Firewall untouched.</p></div>
+      <div class="stat"><div class="n">1</div><div class="l">wiki sync engine</div><p>Syncthing everywhere — dev repos now; PARA vault + Pixel later on the same stack, zero new containers.</p></div>
+      <div class="stat"><div class="n">4</div><div class="l">syncthing devices</div><p>notanton (authoring), T14, MacBook, fedora-cube (receive-only standby) — full mesh over the tailnet.</p></div>
+      <div class="stat"><div class="n">5</div><div class="l">vetting rounds</div><p>3 frontier-reviewer passes + 1 codex second-model pass + the one-engine owner decision. All findings folded in.</p></div>
+    </div>
+  </section>
+
+  <section id="fig">
+    <h2>The two sync flows</h2>
+    <figure class="figure">
+      <div class="scroll">
+        <svg width="900" viewBox="0 0 900 1080" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Two-lane sync architecture flowchart: Zen browser data via tailnet HTTPS to syncstorage-rs and Postgres; wiki files via a Syncthing mesh with a receive-only cube standby; a dashed later-phase box for PARA and the Pixel.">
+          <style>
+            .lane { fill: var(--surface); stroke: var(--border); stroke-width: 1.5; }
+            .box { fill: var(--paper); stroke: var(--border); stroke-width: 1.5; }
+            .boxA { stroke: var(--accent); }
+            .boxB { stroke: var(--accent2); }
+            .boxX { stroke: var(--warn); stroke-dasharray: 6 4; fill: var(--surface); }
+            .db  { fill: var(--surface); stroke: var(--accent); stroke-width: 1.5; }
+            .t  { font: 600 15px var(--font-display); fill: var(--ink); }
+            .tl { font: 600 13px var(--font-display); fill: var(--muted); letter-spacing:.08em; }
+            .b  { font: 600 13.5px var(--font-body); fill: var(--ink); }
+            .s  { font: 400 11.5px var(--font-body); fill: var(--muted); }
+            .e  { font: 500 11px var(--font-utility); fill: var(--muted); }
+            .arr  { stroke: var(--accent); stroke-width: 1.8; fill: none; marker-end: url(#ma); }
+            .arrB { stroke: var(--accent2); stroke-width: 1.8; fill: none; marker-end: url(#mb); marker-start: url(#mb2); }
+            .arrD { stroke: var(--muted); stroke-width: 1.4; stroke-dasharray: 5 4; fill: none; marker-end: url(#md); }
+          </style>
+          <defs>
+            <marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/></marker>
+            <marker id="mb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--accent2)"/></marker>
+            <marker id="mb2" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M10,0 L0,5 L10,10 z" fill="var(--accent2)"/></marker>
+            <marker id="md" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/></marker>
+          </defs>
+
+          <!-- ═══ LANE A: Zen browser data ═══ -->
+          <rect class="lane" x="10" y="10" width="880" height="330" rx="10"/>
+          <text class="tl" x="30" y="36">TRACK A — ZEN BROWSER DATA (THIS PHASE) · TAILNET HTTPS</text>
+
+          <rect class="box boxA" x="30" y="60" width="180" height="110" rx="8"/>
+          <text class="t" x="120" y="88" text-anchor="middle">Zen × 3</text>
+          <text class="b" x="120" y="112" text-anchor="middle">notanton · MacBook · T14</text>
+          <text class="s" x="120" y="132" text-anchor="middle">pref set per device:</text>
+          <text class="s" x="120" y="148" text-anchor="middle">identity.sync.tokenserver.uri</text>
+
+          <rect class="box boxA" x="260" y="60" width="200" height="110" rx="8"/>
+          <text class="t" x="360" y="88" text-anchor="middle">tailscale serve</text>
+          <text class="b" x="360" y="112" text-anchor="middle">HTTPS 443 · tailnet-only</text>
+          <text class="s" x="360" y="132" text-anchor="middle">fedora-cube (tailnet name)</text>
+          <text class="s" x="360" y="148" text-anchor="middle">/1.0/sync/1.5</text>
+
+          <rect class="box boxA" x="510" y="60" width="200" height="110" rx="8"/>
+          <text class="t" x="610" y="88" text-anchor="middle">syncstorage-rs</text>
+          <text class="b" x="610" y="112" text-anchor="middle">one container</text>
+          <text class="s" x="610" y="132" text-anchor="middle">storage + tokenserver · Glean off</text>
+          <text class="s" x="610" y="148" text-anchor="middle">host publish 127.0.0.1:8000</text>
+
+          <path class="db" d="M760 78 a14 14 0 0 1 14 -14 h82 a14 14 0 0 1 14 14 v34 h-110 z M760 112 h110 v34 a14 14 0 0 1 -14 14 h-82 a14 14 0 0 1 -14 -14 z"/>
+          <text class="t" x="815" y="94" text-anchor="middle">Postgres</text>
+          <text class="s" x="815" y="130" text-anchor="middle">shared-infra</text>
+          <text class="s" x="815" y="146" text-anchor="middle">pg_dumpall</text>
+
+          <path class="arr" d="M210 115 h48"/>
+          <path class="arr" d="M460 115 h48"/>
+          <path class="arr" d="M710 115 h48"/>
+
+          <rect class="boxX" x="260" y="225" width="290" height="86" rx="8"/>
+          <text class="t" x="405" y="253" text-anchor="middle">Mozilla Accounts (production)</text>
+          <text class="s" x="405" y="275" text-anchor="middle">OAuth handshake + account key bundle only —</text>
+          <text class="s" x="405" y="291" text-anchor="middle">sync data never lands there (E2EE)</text>
+          <path class="arrD" d="M610 172 v40 q0 20 -20 20 h-40"/>
+          <text class="e" x="625" y="222">auth only, data stays home</text>
+
+          <text class="s" x="30" y="318">Verification: heartbeat 200 → unauth tokenserver 401 → about:sync shows the fedora-cube node → bookmark round-trips → Postgres row counts grow.</text>
+
+          <!-- ═══ LANE B: wiki files ═══ -->
+          <rect class="lane" x="10" y="360" width="880" height="560" rx="10"/>
+          <text class="tl" x="30" y="386">TRACK B — WIKI FILES (THIS PHASE) · TAILNET MESH · ONE ENGINE: SYNCTHING</text>
+
+          <rect class="box boxB" x="30" y="410" width="230" height="128" rx="8"/>
+          <text class="t" x="145" y="438" text-anchor="middle">notanton</text>
+          <text class="b" x="145" y="462" text-anchor="middle">git authoring node</text>
+          <text class="s" x="145" y="482" text-anchor="middle">agents read + write the live tree</text>
+          <text class="s" x="145" y="498" text-anchor="middle">.git in .stignore — never published</text>
+          <text class="s" x="145" y="514" text-anchor="middle">commits stay deliberate acts</text>
+
+          <rect class="box boxB" x="30" y="580" width="230" height="96" rx="8"/>
+          <text class="t" x="145" y="608" text-anchor="middle">T14 (CachyOS)</text>
+          <text class="b" x="145" y="632" text-anchor="middle">send-receive</text>
+          <text class="s" x="145" y="652" text-anchor="middle">agent host · Obsidian optional</text>
+
+          <rect class="box boxB" x="30" y="700" width="230" height="96" rx="8"/>
+          <text class="t" x="145" y="728" text-anchor="middle">MacBook Pro 16</text>
+          <text class="b" x="145" y="752" text-anchor="middle">send-receive</text>
+          <text class="s" x="145" y="772" text-anchor="middle">editable mirror</text>
+
+          <rect class="box boxB" x="590" y="560" width="270" height="146" rx="8"/>
+          <text class="t" x="725" y="588" text-anchor="middle">fedora-cube</text>
+          <text class="b" x="725" y="612" text-anchor="middle">receive-only standby</text>
+          <text class="s" x="725" y="632" text-anchor="middle">store-and-redistribute · + staggered</text>
+          <text class="s" x="725" y="648" text-anchor="middle">versioning (.stversions)</text>
+          <text class="s" x="725" y="668" text-anchor="middle">/srv/syncthing/&lt;repos&gt; — greppable tree</text>
+          <text class="s" x="725" y="684" text-anchor="middle">never originates writes</text>
+
+          <!-- mesh edges: full mesh among the four (corridor crossings avoided; vertical chain on the left, everyone to the cube) -->
+          <path class="arrB" d="M260 474 h330 v86"/>
+          <path class="arrB" d="M260 628 h330 v-38"/>
+          <path class="arrB" d="M260 748 h330 v-40"/>
+          <path class="arrB" d="M145 538 v42"/>
+          <path class="arrB" d="M145 676 v24"/>
+          <text class="e" x="360" y="466">tailnet mesh — static MagicDNS addresses · discovery/relays OFF</text>
+
+          <!-- git history layer -->
+          <path class="db" d="M330 784 a14 14 0 0 1 14 -14 h192 a14 14 0 0 1 14 14 v34 h-220 z M330 818 h220 v34 a14 14 0 0 1 -14 14 h-192 a14 14 0 0 1 -14 -14 z" style="stroke: var(--accent2)"/>
+          <text class="t" x="440" y="800" text-anchor="middle">GitHub private remotes</text>
+          <text class="s" x="440" y="848" text-anchor="middle">history layer — not liveness</text>
+          <path class="arrB" d="M30 520 q-12 0 -12 12 v283 q0 12 12 12 h300" style="marker-start: none"/>
+          <text class="e" x="60" y="808">deliberate commits only</text>
+
+          <text class="s" x="30" y="900">Flip-validation (all Obsidian closed): agent writes on notanton → cube + T14 in seconds; T14 edit → notanton with zero Obsidian involvement; .git never arrives anywhere else.</text>
+
+          <!-- ═══ LATER PHASE ═══ -->
+          <rect class="boxX" x="10" y="950" width="880" height="110" rx="10"/>
+          <text class="t" x="450" y="982" text-anchor="middle">LATER PHASE — PARA vault + Pixel 8 Pro join the same Syncthing stack</text>
+          <text class="s" x="450" y="1006" text-anchor="middle">Pixel via Syncthing-Fork + obsidian-syncthing-manager (in-app conflict view) · PARA's .stignore excludes docked kit symlinks</text>
+          <text class="s" x="450" y="1024" text-anchor="middle">Zero new containers — folders on the existing stack · ADR-0008 superseded (revivable) · accepted costs: fork churn, phone battery, whole-file conflicts</text>
+          <path class="arrD" d="M860 660 h15 v290"/>
+          <text class="e" x="868" y="938" text-anchor="end">same stack, later</text>
+        </svg>
+      </div>
+      <figcaption>Track A (green): Zen instances point at the cube's tokenserver over tailnet HTTPS; one syncstorage-rs container stores the E2E-encrypted data in the shared Postgres — auth stays with Mozilla, data stays home. Track B (blue): a four-device Syncthing mesh over the tailnet — every peer ↔ every peer; notanton is the only git-authoring node, the cube a receive-only standby, GitHub the history layer reached only by deliberate commits. The dashed box is the committed later phase — PARA and the phone ride the same engine, no new services.</figcaption>
+    </figure>
+  </section>
+
+  <section id="detail">
+    <h2>Breakdown — what each piece is</h2>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:170px">Piece</th><th>What it is / key facts</th><th style="width:150px">Watch for</th></tr>
+      <tr><td><b>Zen × 3</b></td><td>Zen on notanton, MacBook, T14. One about:config pref per device redirects sync; sign out/in with the existing Mozilla account.</td><td>Node still "mozilla" in about:sync = pref set after sign-in (wrong order).</td></tr>
+      <tr><td><b>tailscale serve :443</b></td><td>Terminates inside tailscaled — no host socket, no firewalld change, real TLS for the ts.net name.</td><td>TLS errors = tailnet HTTPS certs not enabled.</td></tr>
+      <tr><td><b>syncstorage-rs</b></td><td>One container, both roles (storage + tokenserver). Pinned to the latest <i>soaked</i> upstream release (tag verified at Stage 0). Glean telemetry off by env.</td><td>401s in the sync log = tokenserver/FxA env misconfig.</td></tr>
+      <tr><td><b>shared Postgres</b></td><td>syncstorage DB in the existing shared-infra Postgres on the infra network — rides the existing pg_dumpall backup automatically.</td><td>None — backup coverage is automatic.</td></tr>
+      <tr><td><b>Mozilla Accounts</b></td><td>Auth + the account key bundle stay with production Mozilla (E2EE key derivation is theirs by design). The encrypted blobs never go there.</td><td>Residual: old data at Mozilla stays until deleted from the account.</td></tr>
+      <tr><td><b>notanton</b></td><td>Authoring node: agents read/write the live tree; git history is the deliberate-commit layer; <code>.git</code> sits in its <code>.stignore</code> so it is never <i>published</i> (it stays local).</td><td>Branch switches propagate mid-state — do them as a deliberate handoff.</td></tr>
+      <tr><td><b>T14 + MacBook</b></td><td>Send-receive peers, native daemons (pacman / brew), full trees without Obsidian running.</td><td>Stalled sync = check the Tailscale app first.</td></tr>
+      <tr><td><b>fedora-cube</b></td><td>Receive-only standby: stores and redistributes, versioning on, never writes. Content is redundant by design (4 copies + git remotes), so it stays out of the backup rsync.</td><td>.git arriving here = .stignore missing on the sender — stop and reapply.</td></tr>
+      <tr><td><b>GitHub remotes</b></td><td>History + disaster recovery, not liveness. Worktrees are outside the live-mirror promise — they move by git only.</td><td>Never an acceptance criterion on their own.</td></tr>
+      <tr><td><b>Later: PARA + Pixel</b></td><td>Same stack, new folders. Syncthing-Fork on the Pixel, obsidian-syncthing-manager for in-app conflict views. PARA's .stignore excludes docked kit symlinks so kit content never doubles.</td><td>Fork churn (single maintainer, 2026) — ADR-0008 is the revivable fallback.</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <section id="seq">
+    <h2>The gated path — Stage 0 through rollup</h2>
+    <ol class="timeline">
+      <li><b>Stage 0 — Preflight</b> <span class="pill">owner-run · read-only</span><br/>On the cube: tailscale version/serve status + the cube's 100.x IP; HTTPS cert check; psql; docker manifest inspect on both images (this decides the pins); firewalld zone check for tailscale0. On the workstation: gh auth, client syncthing versions (all four endpoints must be v2.x).</li>
+      <li><b>Stage 1 — Build browser-sync</b> <span class="pill">agent · 🛑 user gate</span><br/>New private services/browser-sync submodule + shared-infra DB script + ADR-0011. Gates S → A → U: compose config + shellcheck + Vale, a fresh-subagent review where every SYNC_* env var must be cited to upstream docs at the pinned tag, then commit proposals.</li>
+      <li><b>Stage 2 — Deploy browser sync + Zen</b> <span class="pill">owner-run · 🛑 user gate + user test</span><br/>DB init, secrets, compose up, serve on 443, heartbeat checks — then the per-device pref + sign-in. Success: about:sync shows the cube node; a bookmark round-trips; Postgres rows grow.</li>
+      <li><b>Stage 3 — Build syncthing</b> <span class="pill">agent · 🛑 user gate</span><br/>New private services/syncthing submodule (official image layout, .stignore template, README, verify.sh) + ADR-0012 (one-engine decision, git contract, docking rule) + ADR-0008 supersession. Same S → A → U gates.</li>
+      <li><b>Stage 4 — Deploy syncthing + onboard clients</b> <span class="pill">owner-run · 🛑 user gate + user test</span><br/>Cube up (GUI password before serve exposure), discovery/relays off, MagicDNS addresses, two receive-only+versioned folders. Clients: native daemons, .stignore on every device <i>before</i> sharing, mesh pairing. The flip-validation test proves the whole design.</li>
+      <li><b>Stage 5 — Rollup</b> <span class="pill">agent · 🛑 final review</span><br/>server-overview, TODO, CHANGELOG, session log, ADR statuses → accepted. Docs-bustest + Vale clean.</li>
+    </ol>
+  </section>
+
+  <section id="src">
+    <h2>Sources</h2>
+    <ul>
+      <li>Execution plan <code>~/.opencode/plan/zen-browser-sync-and-wiki-livesync.md</code> (final, 2026-10-26) — the full staged plan with its five-round review record.</li>
+      <li>ADR-0008 (accepted 2026-09-06, superseded by this decision) — the prior LiveSync+CouchDB design, preserved as the revivable fallback; ADR-0011 (Zen) and ADR-0012 (one-engine wiki) to be written at Stage 1/3.</li>
+      <li>Upstream facts, verified during planning: syncstorage-rs releases (0.24.0, 2026-10-22; soaked pin = 0.23.3 era); Zen + self-hosted sync confirmed (zen-browser/desktop#9135, 2025-06); vrtmrz/livesync-bridge verified and rejected for structural reasons (2026-10-25); Syncthing Android official app discontinued 2024-10, fork changed maintainers 2026; tailscale serve multi-port HTTPS (docs validated 2026-01).</li>
+      <li>Vetting: frontier-reviewer rounds 1–3b (APPROVE-WITH-CHANGES → PASS ×2), codex gpt-6.1-sol round 4 (PASS on the one-style question, 8 findings applied), owner round-5 commitment to one engine.</li>
+    </ul>
+    <div class="callout">What this page deliberately does not show: secrets or env values (server-only), the exact image pins (they are Stage-0 outputs — manifest-inspect decides them), and the PARA/Pixel deployment itself (committed in direction, deferred in execution). Nothing here is deployed yet — every stage runs behind a 🛑 gate where you approve or stop.</div>
+  </section>
+
+</main>
+
+<footer>
+  Default theme &middot; As of 2026-10-26 13:04 UTC &middot; companion to the execution plan at <code>~/.opencode/plan/zen-browser-sync-and-wiki-livesync.md</code> &middot; <a href="https://shearerbeard.github.io/artifacts/">shearerbeard.github.io/artifacts</a>
+</footer>
+
+<script type="application/json" id="artifact-state">
+{"as_of": "2026-10-26 13:04 UTC", "sections": ["hdr", "stats", "fig", "detail", "seq", "src"], "design_system": null, "slug": "cube-sync-workflow", "plan": "~/.opencode/plan/zen-browser-sync-and-wiki-livesync.md", "status": "pre-execution", "stages": {"0": "pending", "1": "pending", "2": "pending", "3": "pending", "4": "pending", "5": "pending"}, "review_rounds": {"frontier_1_2": "PASS (zen track)", "frontier_3_3b": "PASS (split amendment)", "codex_4": "PASS (one-style question)", "owner_5": "one-engine commitment"}, "new_containers": 2, "new_lan_ports": 0}
+</script>
+
+</body>
+</html>

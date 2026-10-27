@@ -52,8 +52,8 @@
 
 <header id="hdr">
   <h1>fedora-cube sync — execution walkthrough</h1>
-  <div class="lede">How the two new sync flows work — Zen browser data and the dev-wiki repos — and the gated path from preflight to done. Built for review before execution.</div>
-  <div class="meta">As of 2026-10-26 13:04 UTC &middot; status: <span class="pill now">pre-execution review</span></div>
+  <div class="lede">How the two new sync flows work — Zen browser data and the dev-wiki repos — and the gated path from preflight to done. Browser sync rolls out first; nothing is deployed yet.</div>
+  <div class="meta">As of 2026-10-27 05:47 UTC &middot; status: <span class="pill now">Track A greenlit &middot; Stage 0 done</span></div>
 </header>
 
 <main>
@@ -62,6 +62,7 @@
     <div class="stats">
       <div class="stat"><div class="n">2</div><div class="l">new containers</div><p>syncstorage (browser data) + syncthing (wiki files). Nothing else lands on the cube this phase.</p></div>
       <div class="stat"><div class="n">0</div><div class="l">new LAN ports</div><p>Everything rides the Tailnet: tailscale serve for HTTPS, the tailscale IP for the sync listener. Firewall untouched.</p></div>
+      <div class="stat"><div class="n">0.23.3</div><div class="l">syncstorage pin</div><p>Soaked upstream line (out since 2026-06-18); 0.24.0 (2026-10-22, 4 days) is the documented later upgrade path.</p></div>
       <div class="stat"><div class="n">1</div><div class="l">wiki sync engine</div><p>Syncthing everywhere — dev repos now; PARA vault + Pixel later on the same stack, zero new containers.</p></div>
       <div class="stat"><div class="n">4</div><div class="l">syncthing devices</div><p>notanton (authoring), T14, MacBook, fedora-cube (receive-only standby) — full mesh over the tailnet.</p></div>
       <div class="stat"><div class="n">5</div><div class="l">vetting rounds</div><p>3 frontier-reviewer passes + 1 codex second-model pass + the one-engine owner decision. All findings folded in.</p></div>
@@ -121,7 +122,7 @@
           <path class="db" d="M760 78 a14 14 0 0 1 14 -14 h82 a14 14 0 0 1 14 14 v34 h-110 z M760 112 h110 v34 a14 14 0 0 1 -14 14 h-82 a14 14 0 0 1 -14 -14 z"/>
           <text class="t" x="815" y="94" text-anchor="middle">Postgres</text>
           <text class="s" x="815" y="130" text-anchor="middle">shared-infra</text>
-          <text class="s" x="815" y="146" text-anchor="middle">pg_dumpall</text>
+          <text class="s" x="815" y="146" text-anchor="middle">backup: verify</text>
 
           <path class="arr" d="M210 115 h48"/>
           <path class="arr" d="M460 115 h48"/>
@@ -191,7 +192,7 @@
           <text class="e" x="868" y="938" text-anchor="end">same stack, later</text>
         </svg>
       </div>
-      <figcaption>Track A (green): Zen instances point at the cube's tokenserver over tailnet HTTPS; one syncstorage-rs container stores the E2E-encrypted data in the shared Postgres — auth stays with Mozilla, data stays home. Track B (blue): a four-device Syncthing mesh over the tailnet — every peer ↔ every peer; notanton is the only git-authoring node, the cube a receive-only standby, GitHub the history layer reached only by deliberate commits. The dashed box is the committed later phase — PARA and the phone ride the same engine, no new services.</figcaption>
+      <figcaption>Track A (green): Zen instances point at the cube's tokenserver over tailnet HTTPS; one syncstorage-rs container stores the E2E-encrypted data in the shared Postgres — auth stays with Mozilla, data stays home. Track B (blue): a four-device Syncthing mesh over the tailnet — every peer ↔ every peer; notanton is the only git-authoring node, the cube a receive-only standby, GitHub the history layer reached only by deliberate commits. The dashed box is the committed later phase — PARA and the phone ride the same engine, no new services. Zen V1 onboarding: notanton first, then T14 — the Mac stays a fallback decision.</figcaption>
     </figure>
   </section>
 
@@ -200,10 +201,10 @@
     <div class="tscroll">
     <table>
       <tr><th style="width:170px">Piece</th><th>What it is / key facts</th><th style="width:150px">Watch for</th></tr>
-      <tr><td><b>Zen × 3</b></td><td>Zen on notanton, MacBook, T14. One about:config pref per device redirects sync; sign out/in with the existing Mozilla account.</td><td>Node still "mozilla" in about:sync = pref set after sign-in (wrong order).</td></tr>
+      <tr><td><b>Zen × 3</b></td><td>Zen on notanton, T14, MacBook (all verified 1.23.4b). V1 onboarding: notanton first, then T14; the Mac stays a fallback decision. One about:config pref per device redirects sync; sign out/in with the existing Mozilla account.</td><td>Node still "mozilla" in about:sync = pref set after sign-in (wrong order).</td></tr>
       <tr><td><b>tailscale serve :443</b></td><td>Terminates inside tailscaled — no host socket, no firewalld change, real TLS for the ts.net name.</td><td>TLS errors = tailnet HTTPS certs not enabled.</td></tr>
-      <tr><td><b>syncstorage-rs</b></td><td>One container, both roles (storage + tokenserver). Pinned to the latest <i>soaked</i> upstream release (tag verified at Stage 0). Glean telemetry off by env.</td><td>401s in the sync log = tokenserver/FxA env misconfig.</td></tr>
-      <tr><td><b>shared Postgres</b></td><td>syncstorage DB in the existing shared-infra Postgres on the infra network — rides the existing pg_dumpall backup automatically.</td><td>None — backup coverage is automatic.</td></tr>
+      <tr><td><b>syncstorage-rs</b></td><td>One container, both roles (storage + tokenserver). Pinned <b>0.23.3</b> — the soaked line (out since 2026-06-18; 0.24.0 of 2026-10-22 is the later upgrade path, not the deploy pin). Glean telemetry off by env. <code>allow_new_users</code> exists only from 0.24.0 — at this pin the tailnet source-only grant is the new-user boundary.</td><td>401s in the sync log = tokenserver/FxA env misconfig.</td></tr>
+      <tr><td><b>shared Postgres</b></td><td>syncstorage DB in the existing shared-infra Postgres (17.10, infra network; no syncstorage DB exists yet — the init script runs at deploy). Backup coverage <b>unverified</b> — shared-infra's compose has no backup service; the backup row gets written from the real mechanism at Stage 5.</td><td>Do not assume "automatic pg_dumpall" — verify before trusting it.</td></tr>
       <tr><td><b>Mozilla Accounts</b></td><td>Auth + the account key bundle stay with production Mozilla (E2EE key derivation is theirs by design). The encrypted blobs never go there.</td><td>Residual: old data at Mozilla stays until deleted from the account.</td></tr>
       <tr><td><b>notanton</b></td><td>Authoring node: agents read/write the live tree; git history is the deliberate-commit layer; <code>.git</code> sits in its <code>.stignore</code> so it is never <i>published</i> (it stays local).</td><td>Branch switches propagate mid-state — do them as a deliberate handoff.</td></tr>
       <tr><td><b>T14 + MacBook</b></td><td>Send-receive peers, native daemons (pacman / brew), full trees without Obsidian running.</td><td>Stalled sync = check the Tailscale app first.</td></tr>
@@ -217,11 +218,11 @@
   <section id="seq">
     <h2>The gated path — Stage 0 through rollup</h2>
     <ol class="timeline">
-      <li><b>Stage 0 — Preflight</b> <span class="pill">owner-run · read-only</span><br/>On the cube: tailscale version/serve status + the cube's 100.x IP; HTTPS cert check; psql; docker manifest inspect on both images (this decides the pins); firewalld zone check for tailscale0. On the workstation: gh auth, client syncthing versions (all four endpoints must be v2.x).</li>
-      <li><b>Stage 1 — Build browser-sync</b> <span class="pill">agent · 🛑 user gate</span><br/>New private services/browser-sync submodule + shared-infra DB script + ADR-0011. Gates S → A → U: compose config + shellcheck + Vale, a fresh-subagent review where every SYNC_* env var must be cited to upstream docs at the pinned tag, then commit proposals.</li>
-      <li><b>Stage 2 — Deploy browser sync + Zen</b> <span class="pill">owner-run · 🛑 user gate + user test</span><br/>DB init, secrets, compose up, serve on 443, heartbeat checks — then the per-device pref + sign-in. Success: about:sync shows the cube node; a bookmark round-trips; Postgres rows grow.</li>
+      <li><b>Stage 0 — Preflight</b> <span class="pill done">done · evidence recorded</span><br/>Owner-authorized read-only matrix (2026-10-27 UTC), recorded in the plan: cube 443/8000/8384/22000 free, no serve config; Postgres 17.10 up (no syncstorage DB yet); both image manifests verified; Zen 1.23.4b on all three machines; tailnet source-only grant live (Erin excluded); syncthing pin (2.1.6 vs 2.1.7) lands at Stage 3's gate. One B-track item stays open: the Mac's wiki.toml + unpushed-commit paste (Mac temporarily unreachable) — it does not gate Track A.</li>
+      <li><b>Stage 1 — Build browser-sync</b> <span class="pill now">next · agent · 🛑 user gate</span><br/>New private services/browser-sync submodule + shared-infra DB script + ADR-0011, pinned 0.23.3. Gates S → A → U: compose config + shellcheck + Vale, a fresh-subagent review where every SYNC_* env var must be cited to upstream docs at the pinned tag (citing allow_new_users as an env var at 0.23.3 FAILS), then commit proposals to the owner.</li>
+      <li><b>Stage 2 — Deploy browser sync + Zen</b> <span class="pill">owner-run · 🛑 user gate + user test</span><br/>Owner ladder, one action at a time: (1) pull + submodule update → (2) DB password into shared-infra .env → (3) initdb script via docker exec (initdb.d only runs on first boot; this DB already booted) → (4) SYNC_MASTER_SECRET → (5) compose up with the env-file chain → (6) serve --https=443 — the first real cert provision → (7) workstation verify: heartbeat 200 + unauth 401 → (8) Zen pref + sign-out/in on notanton; about:sync must show the cube node; test bookmark → (9) T14 the same → bookmark arrives, rows grow. Success: two devices round-trip; Postgres rows grow.</li>
       <li><b>Stage 3 — Build syncthing</b> <span class="pill">agent · 🛑 user gate</span><br/>New private services/syncthing submodule (official image layout, .stignore template, README, verify.sh) + ADR-0012 (one-engine decision, git contract, docking rule) + ADR-0008 supersession. Same S → A → U gates.</li>
-      <li><b>Stage 4 — Deploy syncthing + onboard clients</b> <span class="pill">owner-run · 🛑 user gate + user test</span><br/>Cube up (GUI password before serve exposure), discovery/relays off, MagicDNS addresses, two receive-only+versioned folders. Clients: native daemons, .stignore on every device <i>before</i> sharing, mesh pairing. The flip-validation test proves the whole design.</li>
+      <li><b>Stage 4 — Deploy syncthing + onboard clients</b> <span class="pill">owner-run · 🛑 user gate + user test</span><br/>Cube up (GUI password before serve exposure), discovery/relays off, MagicDNS addresses, two receive-only+versioned folders. Clients: native daemons, .stignore on every device <i>before</i> sharing, mesh pairing. Open before this stage: the owner decides aura's writer topology (stays on the Mac or moves to notanton) once the deferred Mac paste lands. The flip-validation test proves the whole design.</li>
       <li><b>Stage 5 — Rollup</b> <span class="pill">agent · 🛑 final review</span><br/>server-overview, TODO, CHANGELOG, session log, ADR statuses → accepted. Docs-bustest + Vale clean.</li>
     </ol>
   </section>
@@ -229,22 +230,23 @@
   <section id="src">
     <h2>Sources</h2>
     <ul>
-      <li>Execution plan <code>~/.opencode/plan/zen-browser-sync-and-wiki-livesync.md</code> (final, 2026-10-26) — the full staged plan with its five-round review record.</li>
+      <li>Execution plan <code>~/.opencode/plan/zen-browser-sync-and-wiki-livesync.md</code> (final 2026-10-26; amended 2026-10-27 with the pin evidence, allow_new_users scoping, and the backup-row honesty item) — the full staged plan with its five-round review record; the single source this page renders.</li>
       <li>ADR-0008 (accepted 2026-09-06, superseded by this decision) — the prior LiveSync+CouchDB design, preserved as the revivable fallback; ADR-0011 (Zen) and ADR-0012 (one-engine wiki) to be written at Stage 1/3.</li>
-      <li>Upstream facts, verified during planning: syncstorage-rs releases (0.24.0, 2026-10-22; soaked pin = 0.23.3 era); Zen + self-hosted sync confirmed (zen-browser/desktop#9135, 2025-06); vrtmrz/livesync-bridge verified and rejected for structural reasons (2026-10-25); Syncthing Android official app discontinued 2024-10, fork changed maintainers 2026; tailscale serve multi-port HTTPS (docs validated 2026-01).</li>
+      <li>Upstream facts, verified during planning: syncstorage-rs releases page checked 2026-10-26 — 0.23.3 out since 2026-06-18 (the soaked pin), 0.24.0 released 2026-10-22 and marked Latest (the documented later upgrade); Zen + self-hosted sync confirmed (zen-browser/desktop#9135, 2025-06); vrtmrz/livesync-bridge verified and rejected for structural reasons (2026-10-25); Syncthing Android official app discontinued 2024-10, fork changed maintainers 2026; tailscale serve multi-port HTTPS (docs validated 2026-01).</li>
+      <li>Stage 0 evidence: owner-authorized read-only matrix across the cube, notanton, T14, and the Mac (2026-10-27 UTC) — every check and its limitation recorded in the plan; the one open item (the Mac paste) is B-track only.</li>
       <li>Vetting: frontier-reviewer rounds 1–3b (APPROVE-WITH-CHANGES → PASS ×2), codex gpt-6.1-sol round 4 (PASS on the one-style question, 8 findings applied), owner round-5 commitment to one engine.</li>
     </ul>
-    <div class="callout">What this page deliberately does not show: secrets or env values (server-only), the exact image pins (they are Stage-0 outputs — manifest-inspect decides them), and the PARA/Pixel deployment itself (committed in direction, deferred in execution). Nothing here is deployed yet — every stage runs behind a 🛑 gate where you approve or stop.</div>
+    <div class="callout">What this page deliberately does not show: secrets or env values (server-only), the syncthing image pin (lands at Stage 3's gate — browser-sync's is pinned 0.23.3 in the plan), and the PARA/Pixel deployment itself (committed in direction, deferred in execution). Nothing here is deployed yet — every stage runs behind a 🛑 gate where you approve or stop.</div>
   </section>
 
 </main>
 
 <footer>
-  Default theme &middot; As of 2026-10-26 13:04 UTC &middot; companion to the execution plan at <code>~/.opencode/plan/zen-browser-sync-and-wiki-livesync.md</code> &middot; <a href="https://shearerbeard.github.io/artifacts/">shearerbeard.github.io/artifacts</a>
+  Default theme &middot; As of 2026-10-27 05:47 UTC &middot; companion to the execution plan at <code>~/.opencode/plan/zen-browser-sync-and-wiki-livesync.md</code> &middot; <a href="https://shearerbeard.github.io/artifacts/">shearerbeard.github.io/artifacts</a>
 </footer>
 
 <script type="application/json" id="artifact-state">
-{"as_of": "2026-10-26 13:04 UTC", "sections": ["hdr", "stats", "fig", "detail", "seq", "src"], "design_system": null, "slug": "cube-sync-workflow", "plan": "~/.opencode/plan/zen-browser-sync-and-wiki-livesync.md", "status": "pre-execution", "stages": {"0": "pending", "1": "pending", "2": "pending", "3": "pending", "4": "pending", "5": "pending"}, "review_rounds": {"frontier_1_2": "PASS (zen track)", "frontier_3_3b": "PASS (split amendment)", "codex_4": "PASS (one-style question)", "owner_5": "one-engine commitment"}, "new_containers": 2, "new_lan_ports": 0}
+{"as_of": "2026-10-27 05:47 UTC", "sections": ["hdr", "stats", "fig", "detail", "seq", "src"], "design_system": null, "slug": "cube-sync-workflow", "plan": "~/.opencode/plan/zen-browser-sync-and-wiki-livesync.md", "status": "stage-0-complete; browser-sync rollout greenlit", "stages": {"0": "done", "1": "next", "2": "pending", "3": "pending", "4": "pending", "5": "pending"}, "pins": {"syncstorage": "0.23.3 (soaked; 0.24.0 upgrade path)", "syncthing": "gate at Stage 3 (2.1.6 vs 2.1.7)"}, "open_b_track": ["Mac wiki.toml + unpushed-commit paste (deferred, Mac unreachable)", "aura writer topology owner decision"], "review_rounds": {"frontier_1_2": "PASS (zen track)", "frontier_3_3b": "PASS (split amendment)", "codex_4": "PASS (one-style question)", "owner_5": "one-engine commitment"}, "new_containers": 2, "new_lan_ports": 0}
 </script>
 
 </body>

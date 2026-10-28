@@ -91,7 +91,7 @@
   <div class="eyebrow">JEV &middot; edge gate &middot; observe-only &middot; wave b</div>
   <h1>The JEV edge gate</h1>
   <div class="lede">An external explainer of the demo ahead: an observe-only verifier that scores every completed task edge in an agent DAG against the tool evidence the worker actually captured, and files one verdict artifact per edge.</div>
-  <div class="meta">As of 2026-10-28 00:33 UTC &middot; written before the verifier runs; every measured number is from the offline research spike</div>
+  <div class="meta">As of 2026-10-28 00:49 UTC &middot; written before the verifier runs; every measured number is from the offline research spike</div>
 </header>
 
 <main>
@@ -275,11 +275,11 @@
   <section id="seq">
     <h2>From plan to demo</h2>
     <ol class="timeline">
-      <li><strong>2026-09-30</strong> - Plan v3.1 adjudicated; the jev lane minted on the research board, running from the rubric research spike to the eventual gating policy, five cards in between.</li>
+      <li><strong>2026-09-30</strong> - Plan v3.1 adjudicated; the jev lane minted on the research board, running from the rubric research spike to the eventual gating policy.</li>
       <li><strong>2026-10-02</strong> - Plan v3.2 amendment; jev-driver 0.1.0 published to crates.io - the sealed scorer's client, and the verifier's merge dependency.</li>
       <li><strong>2026-10-10</strong> - Research conclusions: the corpus repaired and re-keyed (147 edges, 11 failure classes, 1,617 variants, 572 held-out); the gate separates every failure class at 98-100% on same-scenario pairs; grounding's pre-registered no-go fires; the two-tier doctrine and the three-way truncation split are stated. Whole-card live spend under $2.</li>
-      <li><strong>2026-10-26</strong> - The prototype RCA harness lands: its config merged to main with the suite green (375 tests), so the 12-scenario mock suite can run against the prototype shim.</li>
-      <li><strong>2026-10-27</strong> - The wave-b plan is ruled and folded into the verifier card: the verdict rule as validated, the two-tier assembly, observe-only with two insertion points named for the eventual policy, the scorer pinned to a concrete model version. This page first-publishes.</li>
+      <li><strong>2026-10-26</strong> - The prototype RCA harness card closes at its user review gate, its config ready for main and the 12-scenario mock suite in reach.</li>
+      <li><strong>2026-10-27</strong> - The wave-b plan is ruled and folded into the verifier card: the verdict rule as validated, the two-tier assembly, observe-only with two insertion points named for the eventual policy, the scorer pinned to a concrete model version. The harness config merges to main (suite green at 375). This page first-publishes.</li>
       <li><strong>Next, in order</strong> - Identity header forwarding; then the 36-run verifier-off baseline (12 scenarios &times; 3 iterations) the thresholds are re-checked against; then the verifier built and re-checked on &ge;20 labelled edges; then verifier-on against that baseline; then any gating policy - from measured numbers, not before.</li>
     </ol>
   </section>
@@ -309,12 +309,12 @@
 
 <footer>
   Styled with <span class="stamp pass">verdict-ledger v1</span> (tokens minted 2026-10-27)
-  &middot; As of 2026-10-28 00:33 UTC
+  &middot; As of 2026-10-28 00:49 UTC
   &middot; <a href="https://crates.io/crates/jev-driver">jev-driver on crates.io</a>
 </footer>
 
 <script type="application/json" id="artifact-state">
-{"as_of": "2026-10-28 00:33 UTC", "sections": ["hdr", "stats", "fig", "detail", "seq", "src"], "design_system": {"name": "verdict-ledger", "version": 1}, "domain": {"pin": "jev-1.13.0", "verdict_rule": "3c", "tiers": ["cheap", "rich"], "wave": "b", "thresholds": "provisional until re-check on 20+ labelled baseline edges", "pipeline_state": "pre-build: this page renders the plan; no verifier code has run"}}
+{"as_of": "2026-10-28 00:49 UTC", "sections": ["hdr", "stats", "fig", "detail", "seq", "src"], "design_system": {"name": "verdict-ledger", "version": 1}, "domain": {"pin": "jev-1.13.0", "verdict_rule": "3c", "tiers": ["cheap", "rich"], "wave": "b", "thresholds": "provisional until re-check on 20+ labelled baseline edges", "pipeline_state": "pre-build: this page renders the plan; no verifier code has run"}}
 </script>
 
 </body>

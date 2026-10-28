@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The JEV edge gate</title>
+<style>
+  /* GENERATED from tokens.json (verdict-ledger v1) - edit the JSON, not this file. */
+  :root {
+    --ink: #20262e; --paper: #f7f8f9; --accent: #0d7a68; --accent2: #3d5a80; --muted: #59636e; --warn: #a15c07; --danger: #b3261e; --border: #c9d1d9; --surface: #eceff3;
+    --radius: 2px;
+    --font-display: "Avenir Next", "Segoe UI Variable Display", "Segoe UI", -apple-system, "Helvetica Neue", Arial, sans-serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --font-utility: ui-monospace, "Cascadia Code", "JetBrains Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
+    --weight-display: 700; --weight-body: 400; --weight-utility: 500;
+    --text-s: 13px; --text-m: 16px; --text-l: 20px; --text-xl: 25px; --text-xxl: 31px;
+    --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+    --space-6: 24px; --space-8: 32px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #dce3ea; --paper: #141a21; --accent: #3fc3ad; --accent2: #92b3d9; --muted: #9da8b4; --warn: #e2a75f; --danger: #f08e85; --border: #3a4450; --surface: #1c242e;
+    }
+  }
+  * { box-sizing:border-box; }
+  body { font:var(--text-m)/1.6 var(--font-body); font-weight:var(--weight-body); color:var(--ink); background:var(--paper); max-width:980px; margin:1.5em auto; padding:0 var(--space-6) var(--space-8); }
+  h1,h2,h3 { font-family:var(--font-display); font-weight:var(--weight-display); line-height:1.25; margin:1.4em 0 .4em; }
+  h1 { font-size:var(--text-xxl); margin-bottom:.1em; }
+  /* the signature, part 1: engraved scale rule under every section head -
+     a baseline with minor ticks every 12px and a major tick every 72px */
+  h2 { font-size:var(--text-xl); border-bottom:1px solid var(--border); padding-bottom:.3em; position:relative; margin:1.8em 0 .7em; }
+  h2::after { content:""; position:absolute; left:0; right:0; bottom:-6px; height:6px;
+    background:
+      repeating-linear-gradient(90deg, var(--accent) 0 1px, transparent 1px 72px),
+      repeating-linear-gradient(90deg, var(--border) 0 1px, transparent 1px 12px); }
+  h3 { font-size:var(--text-l); }
+  a { color:var(--accent2); overflow-wrap:anywhere; }
+  code { background:var(--surface); padding:.15em .35em; border-radius:3px; font-size:.92em; font-family:var(--font-utility); font-weight:var(--weight-utility); overflow-wrap:anywhere; }
+  .tscroll { overflow-x:auto; margin:.8em 0; }
+  .tscroll table { margin:0; }
+  table { border-collapse:collapse; width:100%; font-size:var(--text-s); }
+  th,td { border:1px solid var(--border); padding:.45em .7em; vertical-align:top; text-align:left; overflow-wrap:anywhere; }
+  th { font-weight:600; background:var(--surface); }
+  .meta { color:var(--muted); font-size:var(--text-s); }
+  .lede { font-size:var(--text-l); color:var(--muted); margin:.3em 0 1em; }
+  .eyebrow { font-family:var(--font-utility); font-weight:var(--weight-utility); font-size:.78em; letter-spacing:.16em; text-transform:uppercase; color:var(--accent); margin:0 0 .35em; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:var(--space-3); margin:var(--space-4) 0; }
+  .stat { border:1px solid var(--border); border-radius:var(--radius); padding:var(--space-3) var(--space-4); }
+  /* the signature, part 2: numerals and verdicts are stamped in the mono face */
+  .stat .n { font-family:var(--font-utility); font-size:1.9em; font-weight:var(--weight-display); line-height:1.1; color:var(--accent); }
+  .stat .l { font-size:.8em; font-family:var(--font-utility); text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+  .stat p { margin:.3em 0 0; font-size:.85em; }
+  .figure { border:1px solid var(--border); border-radius:var(--radius); padding:1em; margin:1.2em 0; }
+  .figure .scroll { overflow-x:auto; }
+  .figure svg { height:auto; display:block; }
+  .figure figcaption { color:var(--muted); font-size:var(--text-s); margin-top:.6em; }
+  .pill { display:inline-block; font-size:var(--text-s); padding:var(--space-1) var(--space-2); border-radius:10px; background:var(--surface); color:var(--muted); vertical-align:1px; }
+  .pill.done { background:var(--accent); color:var(--paper); }
+  .pill.now  { background:var(--warn);   color:var(--paper); }
+  .pill.ins  { background:var(--surface); color:var(--muted); border:1px solid var(--border); }
+  .stamp { font-family:var(--font-utility); font-weight:var(--weight-utility); font-size:.92em; letter-spacing:.03em; white-space:nowrap; }
+  .stamp.pass { color:var(--accent); }
+  .stamp.flag { color:var(--warn); }
+  .stamp.ins  { color:var(--muted); }
+  .stamp.loss { color:var(--danger); }
+  .callout { border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:4px; padding:.7em 1em; margin:1em 0; font-size:.93em; background:color-mix(in srgb, var(--accent) 5%, var(--paper)); }
+  ol.timeline { list-style:none; padding-left:0; }
+  ol.timeline li { border-left:2px solid var(--accent); padding:.2em 0 .8em 1em; margin-left:.4em; position:relative; }
+  ol.timeline li::before { content:""; position:absolute; left:-6px; top:.55em; width:10px; height:10px; border-radius:50%; background:var(--accent); }
+  footer { border-top:1px solid var(--border); margin-top:2.5em; padding-top:.8em; color:var(--muted); font-size:.85em; }
+  /* figure-node text styles (svg classes) */
+  .nlabel { font:600 12px var(--font-utility); fill:var(--ink); letter-spacing:.02em; }
+  .nsub   { font:400 10.5px var(--font-body); fill:var(--muted); }
+  .nmono  { font:500 10px var(--font-utility); fill:var(--muted); }
+  .alabel { font:500 10px var(--font-utility); fill:var(--muted); letter-spacing:.02em; }
+  .t1 .nlabel { fill:var(--accent2); }
+  .t2 .nlabel { fill:var(--accent); }
+  .box { fill:var(--paper); stroke:var(--border); stroke-width:1; }
+  .box.t1 { stroke:var(--accent2); }
+  .box.t2 { stroke:var(--accent); }
+  .box.art { fill:var(--surface); }
+  .box.loss { stroke:var(--danger); }
+  .flow { stroke:var(--muted); stroke-width:1.25; fill:none; }
+  .flow.pass { stroke:var(--accent); }
+  .flow.warn { stroke:var(--warn); }
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <div class="eyebrow">JEV &middot; edge gate &middot; observe-only &middot; wave b</div>
+  <h1>The JEV edge gate</h1>
+  <div class="lede">An external explainer of the demo ahead: an observe-only verifier that scores every completed task edge in an agent DAG against the tool evidence the worker actually captured, and files one verdict artifact per edge.</div>
+  <div class="meta">As of 2026-10-28 00:33 UTC &middot; written before the verifier runs; every measured number is from the offline research spike</div>
+</header>
+
+<main>
+
+  <section id="stats">
+    <div class="stats">
+      <div class="stat"><div class="n">98-100%</div><div class="l">Separation, same scenario</div><p>On held-out pairs, honest edges score above their corrupted twins in every failure class, on both assembly arms (1,617 variants, 572 held-out).</p></div>
+      <div class="stat"><div class="n">8.5%</div><div class="l">False accusations, rich arm</div><p>Honest edges wrongly flagged at reject grade by the claim-indexed tier. The cheap arm's rate is 25.5%. The costliest error, so it leads here.</p></div>
+      <div class="stat"><div class="n">0.30&nbsp;/&nbsp;0.50</div><div class="l">Presence / composite cutoffs</div><p>Too little evidence shown to judge: INSUFFICIENT_EVIDENCE. Below the composite, a dimension cutoff, or lost evidence: FLAG{dims}.</p></div>
+      <div class="stat"><div class="n">24,000</div><div class="l">Chars of state per edge</div><p>The evidence-packet budget. Tier 1 judges a 6,000-char head excerpt of the full capture; the cut is labeled and classed budgeting, never loss.</p></div>
+      <div class="stat"><div class="n">&ge;&nbsp;20</div><div class="l">Labelled edges, re-check</div><p>Real prototype edges the provisional thresholds must be re-checked against (from the verifier-off baseline) before any gating use.</p></div>
+    </div>
+  </section>
+
+  <section id="fig">
+    <h2>The flow: one edge, end to end</h2>
+    <p>What the verifier does between a worker attesting its result and the artifact landing on disk:</p>
+    <figure class="figure">
+      <div class="scroll">
+        <svg width="900" viewBox="0 0 900 415" role="img" aria-label="The per-edge verification flow: capture, pre-check, cheap screen, optional rich re-score, verdict artifact; and the three truncation classes.">
+          <defs>
+            <marker id="ah" markerWidth="7" markerHeight="7" markerUnits="userSpaceOnUse" orient="auto">
+              <path style="fill:var(--muted)" d="M0,0 L6,3 L0,6 z"/>
+            </marker>
+            <marker id="ah-a" markerWidth="7" markerHeight="7" markerUnits="userSpaceOnUse" orient="auto">
+              <path style="fill:var(--accent)" d="M0,0 L6,3 L0,6 z"/>
+            </marker>
+            <marker id="ah-w" markerWidth="7" markerHeight="7" markerUnits="userSpaceOnUse" orient="auto">
+              <path style="fill:var(--warn)" d="M0,0 L6,3 L0,6 z"/>
+            </marker>
+          </defs>
+
+          <!-- band 1: the always-path -->
+          <rect class="box" x="20"  y="28" width="140" height="80" rx="2"/>
+          <text class="nlabel" x="30" y="49">EDGE SUBMITTED</text>
+          <text class="nsub" x="30" y="64">task result attested</text>
+          <text class="nsub" x="30" y="76">via submit_result;</text>
+          <text class="nsub" x="30" y="88">attestation, never</text>
+          <text class="nsub" x="30" y="100">evidence</text>
+
+          <rect class="box" x="180" y="28" width="140" height="80" rx="2"/>
+          <text class="nlabel" x="190" y="49">FULL CAPTURE</text>
+          <text class="nsub" x="190" y="64">complete tool I/O per</text>
+          <text class="nsub" x="190" y="76">task recorded; nothing</text>
+          <text class="nsub" x="190" y="88">cut at capture,</text>
+          <text class="nsub" x="190" y="100">selection at scoring</text>
+
+          <rect class="box" x="340" y="28" width="150" height="80" rx="2"/>
+          <text class="nlabel" x="350" y="49">PRE-CHECK</text>
+          <text class="nsub" x="350" y="64">deterministic: claims vs</text>
+          <text class="nsub" x="350" y="76">the full capture +</text>
+          <text class="nsub" x="350" y="88">context_provided;</text>
+          <text class="nsub" x="350" y="100">echo rule enforced</text>
+
+          <rect class="box t1" x="510" y="28" width="150" height="80" rx="2"/>
+          <text class="nlabel" x="520" y="49">TIER 1 - CHEAP</text>
+          <text class="nsub" x="520" y="64">6,000-char head excerpt</text>
+          <text class="nsub" x="520" y="76">of the capture; the cut</text>
+          <text class="nmono" x="520" y="88">labeled [truncated]</text>
+
+          <rect class="box" x="680" y="28" width="200" height="80" rx="2"/>
+          <text class="nlabel" x="690" y="49">CHEAP VERDICT</text>
+          <text class="nsub" x="690" y="64">the sealed scorer (pinned</text>
+          <text class="nsub" x="690" y="76">model jev-1.13.0) judges the</text>
+          <text class="nsub" x="690" y="88">cheap packet; the same rubric</text>
+          <text class="nsub" x="690" y="100">serves both tiers</text>
+
+          <line class="flow" x1="160" y1="68" x2="177" y2="68" marker-end="url(#ah)"/>
+          <line class="flow" x1="320" y1="68" x2="337" y2="68" marker-end="url(#ah)"/>
+          <line class="flow" x1="490" y1="68" x2="507" y2="68" marker-end="url(#ah)"/>
+          <line class="flow" x1="660" y1="68" x2="677" y2="68" marker-end="url(#ah)"/>
+
+          <!-- branch arrows out of the cheap verdict -->
+          <line class="flow pass" x1="780" y1="108" x2="780" y2="176" marker-end="url(#ah-a)"/>
+          <text class="alabel" x="775" y="124" text-anchor="end" style="fill:var(--accent)">PASS - cheap-only stands</text>
+
+          <path class="flow warn" d="M720,108 L720,148 L330,148 L330,176" marker-end="url(#ah-w)"/>
+          <text class="alabel" x="430" y="140" text-anchor="middle" style="fill:var(--warn)">cheap non-PASS - FLAG or INSUFFICIENT_EVIDENCE</text>
+
+          <!-- band 2: the conditional path -->
+          <rect class="box t2" x="180" y="180" width="300" height="88" rx="2"/>
+          <text class="nlabel" x="190" y="201">TIER 2 - RICH RE-SCORE</text>
+          <text class="nsub" x="190" y="216">triggered only by a cheap non-PASS. Claim hits</text>
+          <text class="nsub" x="190" y="228">clustered at gap &le;1,500; each region &le;4,000</text>
+          <text class="nsub" x="190" y="240">chars with a floor of 500; regions trimmed</text>
+          <text class="nsub" x="190" y="252">to fit the 24k budget. Starved: regions degrade</text>
+          <text class="nsub" x="190" y="264">to found_in markers - presence stays computable</text>
+
+          <rect class="box t2" x="500" y="180" width="150" height="88" rx="2"/>
+          <text class="nlabel" x="510" y="201">RICH VERDICT</text>
+          <text class="nsub" x="510" y="216">supersedes the cheap</text>
+          <text class="nsub" x="510" y="228">verdict where triggered;</text>
+          <text class="nsub" x="510" y="240">the payload carries</text>
+          <text class="nsub" x="510" y="252">both tiers</text>
+
+          <rect class="box art" x="680" y="180" width="200" height="88" rx="2"/>
+          <text class="nlabel" x="690" y="201">VERDICT ARTIFACT</text>
+          <text class="nmono" x="690" y="216">edge-&lt;plan&gt;-exec-&lt;seq&gt;-</text>
+          <text class="nmono" x="690" y="228">task-&lt;id&gt;-attempt-&lt;n&gt;-</text>
+          <text class="nmono" x="690" y="240">verdict.json</text>
+          <text class="nsub" x="690" y="256">tier recorded on every verdict;</text>
+          <text class="nsub" x="690" y="268">60s failsafe, whole pipeline</text>
+
+          <line class="flow" x1="480" y1="224" x2="497" y2="224" marker-end="url(#ah)"/>
+          <line class="flow" x1="650" y1="224" x2="677" y2="224" marker-end="url(#ah)"/>
+
+          <!-- band 3: truncation doctrine strip -->
+          <text class="nlabel" x="20" y="312" style="fill:var(--ink)">TRUNCATION, THREE WAYS - ONLY LOSS FLAGS</text>
+          <rect class="box" x="20" y="324" width="280" height="76" rx="2"/>
+          <text class="nlabel" x="30" y="345" style="fill:var(--ink)">PROVENANCE</text>
+          <text class="nsub" x="30" y="360">the cut happened upstream of the</text>
+          <text class="nsub" x="30" y="372">verifier (capture-side)</text>
+          <text class="nsub" x="30" y="388">recorded, never flagged</text>
+
+          <rect class="box" x="320" y="324" width="280" height="76" rx="2"/>
+          <text class="nlabel" x="330" y="345" style="fill:var(--ink)">BUDGETING</text>
+          <text class="nsub" x="330" y="360">our bounded excerpt, still covering</text>
+          <text class="nsub" x="330" y="372">its claims; the cut visibly labeled</text>
+          <text class="nsub" x="330" y="388">recorded, never flagged</text>
+
+          <rect class="box loss" x="620" y="324" width="260" height="76" rx="2"/>
+          <text class="nlabel" x="630" y="345" style="fill:var(--danger)">LOSS</text>
+          <text class="nsub" x="630" y="360">a supported claim outside the shown</text>
+          <text class="nsub" x="630" y="372">text, or cut worker output</text>
+          <text class="stamp loss" x="630" y="388">FLAG{truncation}</text>
+        </svg>
+      </div>
+      <figcaption>Cheap screens every edge. Only a cheap non-PASS buys the rich re-score, whose verdict supersedes; the payload carries both tiers, and every verdict records which tier produced it, cheap-only verdicts included. The 60-second failsafe covers the whole per-edge pipeline: extraction, pre-check, assembly, scorer call or calls, re-score, and the artifact write.</figcaption>
+    </figure>
+  </section>
+
+  <section id="detail">
+    <h2>Breakdown</h2>
+
+    <h3>The verdict rule, in decision order</h3>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:50px">Order</th><th>Condition</th><th style="width:220px">Verdict</th></tr>
+      <tr><td>1</td><td>evidence_presence &lt; 0.30</td><td><span class="stamp ins">INSUFFICIENT_EVIDENCE</span> - too little evidence shown to judge at all</td></tr>
+      <tr><td>2</td><td>composite &lt; 0.50, or any dimension below its 0.30 cutoff, or an information-loss truncation flag</td><td><span class="stamp flag">FLAG{dims}</span> - names the failed dimensions</td></tr>
+      <tr><td>3</td><td>otherwise</td><td><span class="stamp pass">PASS</span></td></tr>
+    </table>
+    </div>
+    <p>Presence is the workhorse dimension: starvation alone separates the distractor, lossy-handoff, and fabricated classes nearly perfectly, so INSUFFICIENT_EVIDENCE is signal, not noise. Grounding was demoted to audit telemetry by its own pre-registered no-go rule: on clean-vs-fabricated pairs it drew ahead on 3 of 47 (rich arm) while presence did on 41 of 47, an 80.9-point gap. Per-claim grounding stats stay in the payload as the drift signal.</p>
+
+    <h3>Tiering: the decision record</h3>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:190px">Option</th><th>Shape</th><th style="width:320px">Ruling</th></tr>
+      <tr><td><strong>A - two-tier</strong> <span class="pill done">chosen</span></td><td>Cheap head-truncation screen on every submitted edge; a cheap non-PASS triggers a rich claim-indexed re-score; the rich verdict supersedes where triggered; the payload carries both tiers.</td><td>Ports. The tier used is a required column in the verifier-on analysis, on every verdict, cheap-only included.</td></tr>
+      <tr><td>B - rich only</td><td>Every edge gets the claim-indexed assembly; no screen.</td><td>Rejected: ships a two-tier claim the seam never exercises, and quietly turns the treatment arm of the verifier-on comparison into rich-only.</td></tr>
+      <tr><td>C - both, always</td><td>Every edge judged both ways; paired verdicts.</td><td>Rejected: doubles the machinery for paired data the comparison method does not consume. The pair is reproducible offline through the rescore path.</td></tr>
+    </table>
+    </div>
+
+    <h3>Truncation, three ways</h3>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:120px">Class</th><th>Meaning</th><th style="width:200px">Scored how</th></tr>
+      <tr><td>provenance</td><td>the cut happened upstream of the verifier, capture-side</td><td>recorded, never flagged</td></tr>
+      <tr><td>budgeting</td><td>our bounded excerpt still covering its claims; the cut is visibly labeled</td><td>recorded, never flagged</td></tr>
+      <tr><td>loss</td><td>a supported claim outside the shown text, or cut worker output</td><td><span class="stamp loss">FLAG{truncation}</span></td></tr>
+    </table>
+    </div>
+    <p>The distinction is earned, not aesthetic. When the research spike conflated the three, FLAG{truncation} degenerated into a size detector that fired on 19 of 20 honest edges. And a claim that loses its window in a starved rich budget keeps its found_in marker with a null window, so presence stays computable from markers alone.</p>
+
+    <h3>What the two assemblies measured (research spike, held-out)</h3>
+    <div class="tscroll">
+    <table>
+      <tr><th>Measure</th><th style="width:220px">Rich: claim-indexed</th><th style="width:220px">Cheap: head truncation</th></tr>
+      <tr><td>same-scenario win rate</td><td>97.9-100% (46-47 of 47)</td><td>100% (47 of 47), every class</td></tr>
+      <tr><td>pooled AUROC, cross-scenario</td><td>0.93-1.00</td><td>0.81-1.00</td></tr>
+      <tr><td>honest edges falsely accused, reject grade</td><td>8.5% (4 of 47)</td><td>25.5% (12 of 47)</td></tr>
+      <tr><td>mean input tokens per edge</td><td>6,154</td><td>4,289 (31% fewer)</td></tr>
+      <tr><td>p50 / p95 judgment latency</td><td>165 / 415 ms</td><td>155 / 464 ms</td></tr>
+    </table>
+    </div>
+    <p>Within a scenario, the dumb honest cut ranks honest above corrupted just as well as the smart assembly. At the reject threshold the arms part ways where it hurts: false-accusation rate, and which claims failed. The split follows the numbers: cheap screens, rich decides.</p>
+  </section>
+
+  <section id="seq">
+    <h2>From plan to demo</h2>
+    <ol class="timeline">
+      <li><strong>2026-09-30</strong> - Plan v3.1 adjudicated; the jev lane minted on the research board, running from the rubric research spike to the eventual gating policy, five cards in between.</li>
+      <li><strong>2026-10-02</strong> - Plan v3.2 amendment; jev-driver 0.1.0 published to crates.io - the sealed scorer's client, and the verifier's merge dependency.</li>
+      <li><strong>2026-10-10</strong> - Research conclusions: the corpus repaired and re-keyed (147 edges, 11 failure classes, 1,617 variants, 572 held-out); the gate separates every failure class at 98-100% on same-scenario pairs; grounding's pre-registered no-go fires; the two-tier doctrine and the three-way truncation split are stated. Whole-card live spend under $2.</li>
+      <li><strong>2026-10-26</strong> - The prototype RCA harness lands: its config merged to main with the suite green (375 tests), so the 12-scenario mock suite can run against the prototype shim.</li>
+      <li><strong>2026-10-27</strong> - The wave-b plan is ruled and folded into the verifier card: the verdict rule as validated, the two-tier assembly, observe-only with two insertion points named for the eventual policy, the scorer pinned to a concrete model version. This page first-publishes.</li>
+      <li><strong>Next, in order</strong> - Identity header forwarding; then the 36-run verifier-off baseline (12 scenarios &times; 3 iterations) the thresholds are re-checked against; then the verifier built and re-checked on &ge;20 labelled edges; then verifier-on against that baseline; then any gating policy - from measured numbers, not before.</li>
+    </ol>
+  </section>
+
+  <section id="src">
+    <h2>Caveats and sources</h2>
+    <div class="callout"><strong>What this page does not show: anything live.</strong> Every number comes from the offline corpus spike; no verdict has yet run on a real orchestration edge. The thresholds stay provisional until the re-check on labelled baseline edges. Version 1 is observe-only - no verdict crosses the wire, and worker scheduling is untouched while the verifier runs. No gating policy exists yet; that is by design.</div>
+    <h3>Limits inherited from the research spike, stated at adoption</h3>
+    <ul>
+      <li>Adversarial-injection sensitivity is 57.7% at the shipped threshold - a threshold choice, not a separation failure (pooled AUROC on that class is 0.93 rich / 0.81 cheap).</li>
+      <li>Honest edges draw false accusations at 8.5% (rich) and 25.5% (cheap) at reject grade.</li>
+      <li>No independent blinded judge has audited the gate's agreement yet.</li>
+      <li>Claim extraction resolves about 66% of clean-edge claims not_found (worker-derived values, prose mentions), so audit telemetry inherits that floor.</li>
+      <li>Operational detail - token quotas, session estimates - is deliberately elided; the board is the source of truth.</li>
+    </ul>
+    <h3>Sources</h3>
+    <ul>
+      <li>Research-spike conclusions note, 2026-10-10 (board home, private) - every measured number on this page.</li>
+      <li>Wave-b plan note, 2026-10-27 (board home, private) - the rulings and the A/B/C tier decision record.</li>
+      <li>Verifier card as amended, 2026-10-27 (board home, private) - the build spec this page renders.</li>
+      <li>jev-driver 0.1.0 on crates.io (public) - the sealed scorer's client.</li>
+      <li>ai-experiments mock-mcp: 12 scenarios, including the smoke's db-pool-exhaustion (private).</li>
+    </ul>
+  </section>
+
+</main>
+
+<footer>
+  Styled with <span class="stamp pass">verdict-ledger v1</span> (tokens minted 2026-10-27)
+  &middot; As of 2026-10-28 00:33 UTC
+  &middot; <a href="https://crates.io/crates/jev-driver">jev-driver on crates.io</a>
+</footer>
+
+<script type="application/json" id="artifact-state">
+{"as_of": "2026-10-28 00:33 UTC", "sections": ["hdr", "stats", "fig", "detail", "seq", "src"], "design_system": {"name": "verdict-ledger", "version": 1}, "domain": {"pin": "jev-1.13.0", "verdict_rule": "3c", "tiers": ["cheap", "rich"], "wave": "b", "thresholds": "provisional until re-check on 20+ labelled baseline edges", "pipeline_state": "pre-build: this page renders the plan; no verifier code has run"}}
+</script>
+
+</body>
+</html>

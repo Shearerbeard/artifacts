@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>aura × Epoch — journal-substrate integration</title>
+<style>
+  /* verdict-ledger v1 tokens.css (design-system store) */
+  :root {
+    --ink: #20262e; --paper: #f7f8f9; --accent: #0d7a68; --accent2: #3d5a80; --muted: #59636e; --warn: #a15c07; --danger: #b3261e; --border: #c9d1d9; --surface: #eceff3;
+    --radius: 2px;
+    --font-display: "Avenir Next", "Segoe UI Variable Display", "Segoe UI", -apple-system, "Helvetica Neue", Arial, sans-serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --font-utility: ui-monospace, "Cascadia Code", "JetBrains Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
+    --weight-display: 700; --weight-body: 400; --weight-utility: 500;
+    --text-s: 13px; --text-m: 16px; --text-l: 20px; --text-xl: 25px; --text-xxl: 31px;
+    --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-6: 24px; --space-8: 32px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #dce3ea; --paper: #141a21; --accent: #3fc3ad; --accent2: #92b3d9; --muted: #9da8b4; --warn: #e2a75f; --danger: #f08e85; --border: #3a4450; --surface: #1c242e;
+    }
+  }
+  * { box-sizing:border-box; }
+  body { font:var(--text-m)/1.6 var(--font-body); font-weight:var(--weight-body); color:var(--ink); background:var(--paper); max-width:980px; margin:1.5em auto; padding:0 var(--space-6) var(--space-8); }
+  h1,h2,h3 { font-family:var(--font-display); font-weight:var(--weight-display); line-height:1.25; margin:1.4em 0 .4em; }
+  h1 { font-size:var(--text-xxl); margin-bottom:.1em; }
+  h2 { font-size:var(--text-xl); }
+  h3 { font-size:var(--text-l); }
+  a { color:var(--accent2); overflow-wrap:anywhere; }
+  code { background:var(--surface); padding:.15em .35em; border-radius:3px; font-size:.92em; font-family:var(--font-utility); font-weight:var(--weight-utility); overflow-wrap:anywhere; }
+  /* engraved scale rule: the verdict-ledger signature divider */
+  .scale-rule { display:block; height:18px; margin:1.6em 0 .1em; color:var(--muted); }
+  .scale-rule line, .scale-rule path { stroke:currentColor; }
+  .tscroll { overflow-x:auto; margin:.8em 0; }
+  .tscroll table { margin:0; }
+  table { border-collapse:collapse; width:100%; font-size:var(--text-s); }
+  th,td { border:1px solid var(--border); padding:.45em .7em; vertical-align:top; text-align:left; overflow-wrap:anywhere; }
+  th { font-weight:600; background:var(--surface); font-family:var(--font-utility); font-weight:var(--weight-utility); }
+  td.k { font-family:var(--font-utility); font-weight:var(--weight-utility); white-space:nowrap; }
+  .meta { color:var(--muted); font-size:var(--text-s); }
+  .lede { font-size:var(--text-l); color:var(--muted); margin:.3em 0 1em; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:var(--space-3); margin:var(--space-4) 0; }
+  .stat { border:1px solid var(--border); border-radius:var(--radius); padding:var(--space-3) var(--space-4); }
+  .stat .n { font-size:1.9em; font-weight:var(--weight-display); line-height:1.1; color:var(--accent); font-family:var(--font-utility); }
+  .stat .l { font-size:.8em; font-family:var(--font-utility); font-weight:var(--weight-utility); text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+  .stat p { margin:.3em 0 0; font-size:.85em; }
+  .figure { border:1px solid var(--border); border-radius:var(--radius); padding:1em; margin:1.2em 0; }
+  .figure .scroll { overflow-x:auto; }
+  .figure svg { height:auto; display:block; }
+  .figure figcaption { color:var(--muted); font-size:var(--text-s); margin-top:.6em; }
+  .pill { display:inline-block; font-size:var(--text-s); padding:var(--space-1) var(--space-2); border-radius:10px; background:var(--surface); color:var(--muted); vertical-align:1px; font-family:var(--font-utility); }
+  .pill.fixed { background:var(--accent); color:var(--paper); }
+  .pill.risk  { background:var(--warn);   color:var(--paper); }
+  .pill.coord { background:var(--danger); color:var(--paper); }
+  .callout { border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:var(--radius); padding:.7em 1em; margin:1em 0; font-size:.93em; background:color-mix(in srgb, var(--accent) 5%, var(--paper)); }
+  ol.timeline { list-style:none; padding-left:0; }
+  ol.timeline li { border-left:2px solid var(--accent); padding:.2em 0 .8em 1em; margin-left:.4em; position:relative; }
+  ol.timeline li::before { content:""; position:absolute; left:-6px; top:.55em; width:10px; height:10px; border-radius:50%; background:var(--accent); }
+  ol.timeline li .ph { font-family:var(--font-utility); font-weight:var(--weight-utility); }
+  footer { border-top:1px solid var(--border); margin-top:2.5em; padding-top:.8em; color:var(--muted); font-size:.85em; }
+  .eyebrow { font-family:var(--font-utility); font-weight:var(--weight-utility); text-transform:uppercase; letter-spacing:.08em; font-size:var(--text-s); color:var(--muted); }
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <div class="eyebrow">aura runtime · epoch event store · journal substrate</div>
+  <h1>aura × Epoch — journal-substrate integration</h1>
+  <div class="lede">Back the aura agents runtime (GH-780 / PR #826) with an event-sourced journal: Epoch-over-SQLite replaces the in-memory journal and run stores, behind the <code>JournalStore</code> / <code>RunStore</code> traits #826 already cut.</div>
+  <div class="meta">As of 2026-10-30 04:34 UTC &middot; scope: <strong>journal substrate only</strong> &middot; plan v4 (3 codex adversarial rounds applied)</div>
+</header>
+
+<main>
+
+  <!-- KEY NUMBERS -->
+  <section id="stats">
+    <div class="stats">
+      <div class="stat"><div class="n">2</div><div class="l">traits to back</div><p><code>JournalStore</code> (per-session event log) + <code>RunStore</code> (per-run facts). The whole seam #826 exposed.</p></div>
+      <div class="stat"><div class="n">5</div><div class="l">justin's gaps</div><p>Vetted against source; each resolved in grilling. See the disposition table.</p></div>
+      <div class="stat"><div class="n">1</div><div class="l">terminal write</div><p>Atomic journal + facts via <code>finish_run</code> → one <code>BEGIN IMMEDIATE</code> over both tables.</p></div>
+      <div class="stat"><div class="n">3</div><div class="l">codex rounds</div><p>gpt-6.1-sol, adversarial. 6B+2M → 3B+1M → 1B+2M; all closed in plan v4.</p></div>
+      <div class="stat"><div class="n">0</div><div class="l">prune</div><p>Event store is append-only, never pruned. Prune caches &amp; in-memory presence only.</p></div>
+    </div>
+  </section>
+
+  <svg class="scale-rule" viewBox="0 0 980 18" preserveAspectRatio="none" aria-hidden="true">
+    <line x1="0" y1="16" x2="980" y2="16" stroke-width="1"/>
+    <g stroke-width="1">
+      <line x1="0" y1="6" x2="0" y2="16"/><line x1="98" y1="11" x2="98" y2="16"/><line x1="196" y1="6" x2="196" y2="16"/><line x1="294" y1="11" x2="294" y2="16"/><line x1="392" y1="6" x2="392" y2="16"/><line x1="490" y1="11" x2="490" y2="16"/><line x1="588" y1="6" x2="588" y2="16"/><line x1="686" y1="11" x2="686" y2="16"/><line x1="784" y1="6" x2="784" y2="16"/><line x1="882" y1="11" x2="882" y2="16"/><line x1="979" y1="6" x2="979" y2="16"/>
+    </g>
+  </svg>
+
+  <!-- THE FIGURE -->
+  <section id="fig">
+    <h2>The integration surface</h2>
+    <figure class="figure">
+      <div class="scroll">
+        <svg width="900" viewBox="0 0 900 470" role="img" aria-label="aura runtime writes through JournalStore and RunStore traits, backed by Epoch over SQLite; the terminal run write is one atomic transaction">
+          <defs>
+            <marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+          </defs>
+          <!-- aura runtime -->
+          <rect x="20" y="30" width="240" height="150" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <text x="140" y="52" text-anchor="middle" font-family="var(--font-utility)" font-weight="700" font-size="14" fill="var(--ink)">AgentRuntime</text>
+          <text x="140" y="70" text-anchor="middle" font-size="11" fill="var(--muted)">owns sessions + their run</text>
+          <line x1="32" y1="80" x2="248" y2="80" stroke="var(--border)"/>
+          <text x="34" y="98" font-size="11.5" fill="var(--ink)">run task appends agent events</text>
+          <text x="34" y="116" font-size="11.5" fill="var(--ink)">runtime appends lifecycle</text>
+          <text x="34" y="134" font-size="11.5" fill="var(--ink)">SessionJournal (per-session mutex,</text>
+          <text x="34" y="150" font-size="11.5" fill="var(--ink)">watermark, fence, broadcast)</text>
+          <text x="34" y="170" font-size="11.5" fill="var(--accent)" font-family="var(--font-utility)">finish_run(&amp;dyn RunStore,…)</text>
+
+          <!-- the seam (traits) -->
+          <rect x="330" y="30" width="230" height="150" rx="2" fill="var(--surface)" stroke="currentColor" stroke-width="1.5"/>
+          <text x="445" y="52" text-anchor="middle" font-family="var(--font-utility)" font-weight="700" font-size="14" fill="var(--ink)">the seam (#826)</text>
+          <line x1="342" y1="62" x2="548" y2="62" stroke="var(--border)"/>
+          <text x="344" y="86" font-size="12" fill="var(--ink)" font-family="var(--font-utility)">JournalStore</text>
+          <text x="344" y="102" font-size="10.5" fill="var(--muted)">append · read(from,to,limit) · latest</text>
+          <text x="344" y="132" font-size="12" fill="var(--ink)" font-family="var(--font-utility)">RunStore</text>
+          <text x="344" y="148" font-size="10.5" fill="var(--muted)">put · get · list · finish(term,facts)</text>
+          <text x="344" y="170" font-size="10.5" fill="var(--warn)">finish contract amended (see note)</text>
+
+          <!-- Epoch -->
+          <rect x="630" y="30" width="250" height="150" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <text x="755" y="52" text-anchor="middle" font-family="var(--font-utility)" font-weight="700" font-size="14" fill="var(--ink)">Epoch (epoch-journal)</text>
+          <text x="755" y="70" text-anchor="middle" font-size="11" fill="var(--muted)">stream_type="aura_session"</text>
+          <line x1="642" y1="80" x2="868" y2="80" stroke="var(--border)"/>
+          <text x="644" y="98" font-size="11.5" fill="var(--ink)">per-stream OCC (BEGIN IMMEDIATE)</text>
+          <text x="644" y="116" font-size="11.5" fill="var(--ink)">store mints dense seq</text>
+          <text x="644" y="134" font-size="11.5" fill="var(--ink)">store bytes, decode at boundary</text>
+          <text x="644" y="152" font-size="11.5" fill="var(--ink)">e20 surface ported to SQLite</text>
+          <text x="644" y="170" font-size="11.5" fill="var(--accent)" font-family="var(--font-utility)">append_and_finish composite</text>
+
+          <!-- arrows: normal + terminal -->
+          <line x1="260" y1="80" x2="330" y2="80" stroke="currentColor" stroke-width="1.5" marker-end="url(#arw)"/>
+          <line x1="560" y1="80" x2="630" y2="80" stroke="currentColor" stroke-width="1.5" marker-end="url(#arw)"/>
+          <text x="295" y="72" text-anchor="middle" font-size="10" fill="var(--muted)">append</text>
+
+          <!-- SQLite file -->
+          <rect x="630" y="230" width="250" height="70" rx="2" fill="var(--surface)" stroke="currentColor" stroke-width="1.5"/>
+          <text x="755" y="256" text-anchor="middle" font-family="var(--font-utility)" font-weight="700" font-size="13" fill="var(--ink)">SQLite file (WAL)</text>
+          <text x="755" y="276" text-anchor="middle" font-size="11" fill="var(--muted)">events table + run_facts table</text>
+          <text x="755" y="292" text-anchor="middle" font-size="10.5" fill="var(--muted)">single-instance; busy_timeout 5s</text>
+          <line x1="755" y1="180" x2="755" y2="230" stroke="currentColor" stroke-width="1.5" marker-end="url(#arw)"/>
+
+          <!-- terminal atomic bracket-tick motif -->
+          <path d="M330,150 L560,150 L560,210 L755,210 L755,228" fill="none" stroke="var(--accent)" stroke-width="1.8" marker-end="url(#arw)"/>
+          <path d="M545,150 h30 M560,150 v14" fill="none" stroke="var(--accent)" stroke-width="1.8"/>
+          <text x="452" y="142" text-anchor="middle" font-size="10.5" fill="var(--accent)" font-family="var(--font-utility)">terminal: ONE tx (journal row + facts row)</text>
+
+          <!-- legend -->
+          <rect x="20" y="330" width="860" height="118" rx="2" fill="none" stroke="var(--border)"/>
+          <text x="34" y="352" font-family="var(--font-utility)" font-weight="700" font-size="12" fill="var(--ink)">how to read it</text>
+          <text x="34" y="374" font-size="11.5" fill="var(--ink)">• Normal path: run task / runtime append events through SessionJournal → JournalStore → Epoch stream.</text>
+          <text x="34" y="394" font-size="11.5" fill="var(--accent)">• Terminal path: finish_run stamps the terminal seq under the journal mutex, calls RunStore::finish ONCE</text>
+          <text x="34" y="410" font-size="11.5" fill="var(--accent)">  → one BEGIN IMMEDIATE writes the journal row AND the facts row atomically (no crash window).</text>
+          <text x="34" y="430" font-size="11.5" fill="var(--muted)">• The store mints the sequence number; a Conflict fences the writer (OnceLock → session reopen).</text>
+        </svg>
+      </div>
+      <figcaption><strong>One figure, one job:</strong> the runtime never talks to SQLite directly — it writes through the two traits #826 cut, and Epoch-over-SQLite backs them. The terminal run write is the only atomic cross-table operation, and it goes through the journal's own invariant-preserving <code>finish_run</code>, not a side channel.</figcaption>
+    </figure>
+  </section>
+
+  <!-- JUSTIN'S GAPS -->
+  <section id="gaps">
+    <h2>Justin's five gaps — disposition</h2>
+    <p class="meta">Surfaced on Slack; vetted line-by-line against the Epoch and aura source. All five real; each resolved in grilling.</p>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:34px">#</th><th>Gap (verified)</th><th>Disposition</th></tr>
+      <tr><td class="k">J1</td><td><code>thread::sleep</code> in <code>LoadDecideAppend</code> retry (<code>strategies/mod.rs:144</code>) blocks a tokio worker.</td><td><span class="pill fixed">fix in Epoch</span> → <code>tokio::sleep</code>. Priority fix; Tier A doesn't use LDA, but it's Epoch's own TODO.</td></tr>
+      <tr><td class="k">J2</td><td>Conflict on start-run ≠ retry blindly — LDA retries conflicts up to 20×, wrong for session fencing.</td><td><span class="pill fixed">not at LDA seam</span> Conflict belongs to a read-model + SQL session fence queried before commands (future workstream). No blind-retry wrapper around session appends.</td></tr>
+      <tr><td class="k">J3</td><td>No per-event sequence from <code>load</code> (only the final version).</td><td><span class="pill fixed">sidestepped</span> Not bound to Justin's interface; e20's <code>RecordedEvent&lt;E&gt;</code> envelope is the shape — per-event seq comes back in the recorded envelope.</td></tr>
+      <tr><td class="k">J4</td><td>No ranged/limited reads (<code>load</code> is an unbounded Vec).</td><td><span class="pill fixed">split</span> Reification (Tier B): full-Vec load is Epoch-native, no bound needed. Attach-replay (Tier A contract): <code>read(from,to,limit)</code> IS the contract → add a bounded per-stream read to Epoch.</td></tr>
+      <tr><td class="k">J5</td><td>Prune counter must survive, or never prune.</td><td><span class="pill fixed">never prune</span> Event store is append-only &amp; unbounded; prune caches/in-memory only. Dissolves J5 and GH-780's speculative "durable store by TTL" (explicit contract change — see pitfalls).</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <!-- CODE REMOVAL PRIORITIES -->
+  <section id="removal">
+    <h2>Code-removal priorities (do these first — they shrink the swap)</h2>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:34px">#</th><th>Removal / simplification</th><th>Why it eases the transition</th></tr>
+      <tr><td class="k">R1</td><td>Do <strong>not</strong> wire the in-memory journal/run stores any further.</td><td>Neither is wired to the runtime yet. Build the SQLite impl as the <em>first</em> wired durable impl — no in-memory→durable migration to unwind.</td></tr>
+      <tr><td class="k">R2</td><td>Delete <code>SessionJournal::drain</code> (<code>journal.rs:202</code>).</td><td>Dead code at PR head (the run task appends itself); docs still misdescribe it. Kill the wrong abstraction before the durable impl has to support it.</td></tr>
+      <tr><td class="k">R3</td><td><span class="pill coord">descoped</span> Keep <code>JournalEntry::Undecodable</code> / <code>JournalItem::Unknown</code>.</td><td>Codex R2-3: removing them breaks replay pagination across undecodable rows. Only the <em>handling</em> is confined to the storage boundary — not a deletion.</td></tr>
+      <tr><td class="k">R4</td><td>Collapse the Redis path (<code>session-store-redis</code> + <code>redis.rs</code> journal/run accessors).</td><td>Redis is being removed from the product (dead legacy store). Delete rather than port — avoids a dead conversion.</td></tr>
+      <tr><td class="k">R5</td><td>Demote <code>InMemoryJournalStore</code>/<code>InMemoryRunStore</code> → test-only, <em>in order</em>.</td><td>Only <em>after</em> the SQLite impl + the <code>RuntimeStores</code> bridge rewire the production constructors (<code>RuntimeStores::in_memory()</code>, file-backend accessors). Then delete the "bounds itself" eviction logic a durable store makes irrelevant.</td></tr>
+      <tr><td class="k">R6</td><td>No raw-SQL-over-Epoch-schema in aura.</td><td>All store logic (append, bounded read, tolerant read, the append_and_finish composite) lives in Epoch — the conversion stays one-sided.</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <!-- PITFALLS -->
+  <section id="pitfalls">
+    <h2>Pitfalls</h2>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:34px">#</th><th>Pitfall</th><th>Mitigation / status</th></tr>
+      <tr><td class="k">P1</td><td>A journal append failure <strong>cancels the run</strong> (<code>task.rs:386</code>) → a SQLite hiccup is user-visible.</td><td>migrate() installs busy_timeout(5s)+WAL; single-writer discipline; retry <code>SQLITE_BUSY</code> in the adapter — never surface BUSY as <code>Conflict</code> (Conflict fences the session permanently).</td></tr>
+      <tr><td class="k">P2</td><td>A <code>Conflict</code> fences the journal forever (<code>OnceLock</code>) → runtime reopens.</td><td>Impossible under one process + one file + the journal mutex. Two processes on one file is the multi-instance case SQLite explicitly does not serve → <span class="pill risk">SQLite = single-instance only</span> HA waits for Postgres + the fence.</td></tr>
+      <tr><td class="k">P3</td><td><code>RunStore::put</code> failures are only logged → facts can silently diverge from the journal.</td><td>Add metrics/observability; decide acceptability for V1.</td></tr>
+      <tr><td class="k">P4</td><td><code>seq</code> duplication: payload seq vs row sequence.</td><td>Agree <em>by construction</em> (§1a): stamp <code>expected.next()</code> before serializing; OCC enforces it. Never trust a client seq.</td></tr>
+      <tr><td class="k">P5</td><td><code>epoch-journal</code> is pre-1.0 (0.1.1) → API churn on the critical path.</td><td>Pin a git dep or vendor; the e20 merge will move the API further.</td></tr>
+      <tr><td class="k">P6</td><td>One tokio-rusqlite actor = write-throughput ceiling across all sessions.</td><td>Fine for single-instance; measure before assuming it scales.</td></tr>
+      <tr><td class="k">P7</td><td>Epoch has no upcasting / event_version → a field rename makes old rows unloadable.</td><td>aura's <code>Unknown</code> fallbacks mitigate reader-side; do not rename persisted fields casually.</td></tr>
+      <tr><td class="k">P8</td><td>Durability makes version-rollback visible (new binary writes variants an old binary can't parse).</td><td>Envelope-level handled by <code>Unknown</code>; payload-<code>kind</code>-level is a hard error → an aura-schema policy decision (§3), not a store feature.</td></tr>
+      <tr><td class="k">P9</td><td>No bridge from <code>SessionStore</code> to <code>RuntimeStores</code> exists (<code>in_memory()</code> is the only constructor).</td><td>Wiring must be written: hand-build <code>RuntimeStores{runs,journals,skills}</code> from the new SQLite SessionStore.</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <svg class="scale-rule" viewBox="0 0 980 18" preserveAspectRatio="none" aria-hidden="true">
+    <line x1="0" y1="16" x2="980" y2="16" stroke-width="1"/>
+    <g stroke-width="1">
+      <line x1="0" y1="6" x2="0" y2="16"/><line x1="98" y1="11" x2="98" y2="16"/><line x1="196" y1="6" x2="196" y2="16"/><line x1="294" y1="11" x2="294" y2="16"/><line x1="392" y1="6" x2="392" y2="16"/><line x1="490" y1="11" x2="490" y2="16"/><line x1="588" y1="6" x2="588" y2="16"/><line x1="686" y1="11" x2="686" y2="16"/><line x1="784" y1="6" x2="784" y2="16"/><line x1="882" y1="11" x2="882" y2="16"/><line x1="979" y1="6" x2="979" y2="16"/>
+    </g>
+  </svg>
+
+  <!-- TIMELINE -->
+  <section id="seq">
+    <h2>Phased task list</h2>
+    <ol class="timeline">
+      <li><span class="ph">Phase 0 — Epoch foundation (first):</span> review + merge <code>card/e20</code> (or feedback); fix J1 (<code>thread::sleep</code>→<code>tokio::sleep</code>); write the e20-style backend-agnostic conformance suite, run vs Postgres.</li>
+      <li><span class="ph">Phase 1 — Epoch SQLite port:</span> port the e20 surface (EventStreams/RecordedEvent/ExpectedVersion) graded by the shared suite; add the bounded <code>(from,to,limit)</code> read (J4b) + the <code>append_and_finish</code> composite (§1b) + the capacity guard (§J5) — all Epoch-owned; store bytes + lazy decode, retaining the Undecodable carrier (§3).</li>
+      <li><span class="ph">Phase 2 — aura substrate impl:</span> EpochJournalStore + SqliteRunStore (or one composite EpochSessionStore) over the port, busy-retry without Conflict-mapping; add <code>SessionJournal::finish_run</code> (§1b), reroute <code>write_ending</code> to it; removals R2 + R4.</li>
+      <li><span class="ph">Phase 3 — wiring + conformance:</span> SqliteSessionStore backend; the <code>RuntimeStores</code> bridge (P9) rewiring the production constructors; run aura's store conformance + runtime tests vs SQLite; verify the terminal path uses <code>finish_run</code>, not append-then-finish.</li>
+      <li><span class="ph">Phase 4 — land + demote:</span> rebase onto nightly after #826 merges, feature-flag <code>session-store-sqlite</code>; R5 demote in-memory stores to test-only (only after the rewire); update <code>session-storage.md</code>; record the never-prune contract amendment + capacity policy as a GH-780 follow-up.</li>
+    </ol>
+    <div class="callout"><strong>Named future workstreams (not this program):</strong> approvals-as-events; the session fence (direct-Postgres lean, lib-vault ref); HA / Postgres journal; memory/file store teardown completion; Tier B command modeling on Epoch's Decider/Evolver; a feed for cross-session projections.</div>
+  </section>
+
+  <!-- SOURCES -->
+  <section id="src">
+    <h2>Sources &amp; review</h2>
+    <ul>
+      <li>mezmo/aura PR #826 + issue GH-780 (gh, 2026-10-29) — runtime, journal, and store-trait surface at head <code>cc6fd73b</code>.</li>
+      <li>mezmo/aura issue #785 (gh, 2026-10-29) — the run-control HTTP API (commands in embryonic form).</li>
+      <li><code>crates/aura-events</code> — SessionEvent envelope, AgentEvent, LifecycleEvent, serde discipline (jakedipity's event-schema refactor, Aug–Oct 2026).</li>
+      <li>Epoch <code>epoch-journal</code> 0.1.1 (branch <code>s4/sqlite-repository</code>) — SQLite backend, traits, gaps; <code>card/e20</code> (unmerged) — RecordedEvent / EventStreams / AtomicStreams / feed.</li>
+      <li>Adversarial review: codex CLI <strong>gpt-6.1-sol</strong>, 3 rounds (2026-10-29) — 6B+2M → 3B+1M → 1B+2M; every finding closed in plan v4.</li>
+    </ul>
+    <div class="callout"><strong>What this page does not show:</strong> This is an integration <em>outline</em>, not shipped code or finished ticket prose. The terminal-write protocol (<code>finish_run</code> + amended <code>finish</code> contract) and the never-prune contract change both touch justingross's #826 code and need his sign-off. Two accepted residual risks: disk exhaustion under never-prune (mitigated by the headroom capacity guard, not eliminated), and single-instance SQLite (HA is a separate, later workstream). Review model note: you asked for "gpt 6.1 astra"; the configured codex default that actually ran is <strong>gpt-6.1-sol</strong> — recorded as-run, not as-named.</div>
+  </section>
+
+</main>
+
+<svg class="scale-rule" viewBox="0 0 980 18" preserveAspectRatio="none" aria-hidden="true">
+  <line x1="0" y1="16" x2="980" y2="16" stroke-width="1"/>
+  <g stroke-width="1">
+    <line x1="0" y1="6" x2="0" y2="16"/><line x1="98" y1="11" x2="98" y2="16"/><line x1="196" y1="6" x2="196" y2="16"/><line x1="294" y1="11" x2="294" y2="16"/><line x1="392" y1="6" x2="392" y2="16"/><line x1="490" y1="11" x2="490" y2="16"/><line x1="588" y1="6" x2="588" y2="16"/><line x1="686" y1="11" x2="686" y2="16"/><line x1="784" y1="6" x2="784" y2="16"/><line x1="882" y1="11" x2="882" y2="16"/><line x1="979" y1="6" x2="979" y2="16"/>
+  </g>
+</svg>
+
+<footer>
+  Styled by verdict-ledger v1 (design-system store)
+  &middot; As of 2026-10-30 04:34 UTC
+  &middot; <a href="https://github.com/Shearerbeard/Epoch">Epoch</a> &middot; <a href="https://github.com/mezmo/aura">mezmo/aura</a>
+</footer>
+
+<script type="application/json" id="artifact-state">
+{"as_of": "2026-10-30 04:34 UTC", "sections": ["hdr", "stats", "fig", "gaps", "removal", "pitfalls", "seq", "src"], "design_system": {"name": "verdict-ledger", "version": 1}, "scope": "journal substrate only", "plan_rev": 4, "review": {"tool": "codex cli", "model_as_run": "gpt-6.1-sol", "model_requested": "gpt 6.1 astra", "rounds": 3, "findings_by_round": ["6B+2M", "3B+1M", "1B+2M"], "verdicts": ["FAIL", "FAIL", "FAIL"], "all_closed_in": "v4"}, "targets": {"aura_issue": "GH-780", "aura_pr": 826, "run_control_api_issue": 785, "epoch_crate": "epoch-journal 0.1.1", "epoch_unmerged": "card/e20"}, "open_coordination": ["justingross sign-off on finish_run + amended RunStore::finish contract", "never-prune contract amendment as GH-780 follow-up"], "residual_risks": ["disk exhaustion under never-prune (capacity guard, not eliminated)", "single-instance SQLite (HA is later)"]}
+</script>
+
+</body>
+</html>

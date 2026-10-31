@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>aura × Epoch — journal-substrate integration</title>
+<title>aura × Epoch — lifecycle &amp; execution-loop audit</title>
 <style>
   /* verdict-ledger v1 tokens.css (design-system store) */
   :root {
@@ -50,9 +50,9 @@
   .figure svg { height:auto; display:block; }
   .figure figcaption { color:var(--muted); font-size:var(--text-s); margin-top:.6em; }
   .pill { display:inline-block; font-size:var(--text-s); padding:var(--space-1) var(--space-2); border-radius:10px; background:var(--surface); color:var(--muted); vertical-align:1px; font-family:var(--font-utility); }
-  .pill.fixed { background:var(--accent); color:var(--paper); }
-  .pill.risk  { background:var(--warn);   color:var(--paper); }
-  .pill.coord { background:var(--danger); color:var(--paper); }
+  .pill.gap  { background:var(--danger);  color:var(--paper); }
+  .pill.ok   { background:var(--accent); color:var(--paper); }
+  .pill.risk { background:var(--warn);   color:var(--paper); }
   .callout { border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:var(--radius); padding:.7em 1em; margin:1em 0; font-size:.93em; background:color-mix(in srgb, var(--accent) 5%, var(--paper)); }
   ol.timeline { list-style:none; padding-left:0; }
   ol.timeline li { border-left:2px solid var(--accent); padding:.2em 0 .8em 1em; margin-left:.4em; position:relative; }
@@ -65,10 +65,10 @@
 <body>
 
 <header id="hdr">
-  <div class="eyebrow">aura runtime · epoch event store · journal substrate</div>
-  <h1>aura × Epoch — journal-substrate integration</h1>
-  <div class="lede">Back the aura agents runtime (GH-780 / PR #826) with an event-sourced journal: Epoch-over-SQLite replaces the in-memory journal and run stores, behind the <code>JournalStore</code> / <code>RunStore</code> traits #826 already cut.</div>
-  <div class="meta">As of 2026-10-30 04:34 UTC &middot; scope: <strong>journal substrate only</strong> &middot; plan v4 (3 codex adversarial rounds applied)</div>
+  <div class="eyebrow">aura runtime · epoch event store · opencode v2 · pi · fmodel-rust</div>
+  <h1>aura × Epoch — lifecycle &amp; execution-loop audit</h1>
+  <div class="lede">Three independent investigators audited Aura, OpenCode V2, and pi against pinned sources. 308 tests passed across six suites. The evidence supports a queue/drain PoC0 without a generic saga framework — but three consequential Aura gaps need agreed boundaries before implementation.</div>
+  <div class="meta">As of 2026-10-30 20:00 UTC &middot; implementation on hold &middot; all investigation-agent dispatches finished</div>
 </header>
 
 <main>
@@ -76,11 +76,11 @@
   <!-- KEY NUMBERS -->
   <section id="stats">
     <div class="stats">
-      <div class="stat"><div class="n">2</div><div class="l">traits to back</div><p><code>JournalStore</code> (per-session event log) + <code>RunStore</code> (per-run facts). The whole seam #826 exposed.</p></div>
-      <div class="stat"><div class="n">5</div><div class="l">justin's gaps</div><p>Vetted against source; each resolved in grilling. See the disposition table.</p></div>
-      <div class="stat"><div class="n">1</div><div class="l">terminal write</div><p>Atomic journal + facts via <code>finish_run</code> → one <code>BEGIN IMMEDIATE</code> over both tables.</p></div>
-      <div class="stat"><div class="n">3</div><div class="l">codex rounds</div><p>gpt-6.1-sol, adversarial. 6B+2M → 3B+1M → 1B+2M; all closed in plan v4.</p></div>
-      <div class="stat"><div class="n">0</div><div class="l">prune</div><p>Event store is append-only, never pruned. Prune caches &amp; in-memory presence only.</p></div>
+      <div class="stat"><div class="n">308</div><div class="l">tests passed</div><p>Six suites across aura-events schema, OpenCode coordinator/execution, pi loops + durable recovery, Epoch saga golden, fmodel saga manager.</p></div>
+      <div class="stat"><div class="n">3</div><div class="l">consequential gaps</div><p>Durable canonical input · pure reconstruction boundary · external-effect outcome model.</p></div>
+      <div class="stat"><div class="n">9</div><div class="l">source snapshots</div><p>Aura (local + PR #826 + PR #840), OpenCode V2, pi, pi-durable, Epoch (2 surfaces), fmodel-rust, Rig.</p></div>
+      <div class="stat"><div class="n">6</div><div class="l">investigator sessions</div><p>Bedrock Kimi K3. Three first reports + three correction errata, retained verbatim.</p></div>
+      <div class="stat"><div class="n">0</div><div class="l">dispatches remaining</div><p>All research rounds consumed. No fourth Bedrock dispatch or hidden review round planned.</p></div>
     </div>
   </section>
 
@@ -91,124 +91,123 @@
     </g>
   </svg>
 
-  <!-- THE FIGURE -->
+  <!-- THE FIGURE: capability comparison -->
   <section id="fig">
-    <h2>The integration surface</h2>
+    <h2>What each mechanism contributes — and what it cannot supply alone</h2>
     <figure class="figure">
       <div class="scroll">
-        <svg width="900" viewBox="0 0 900 470" role="img" aria-label="aura runtime writes through JournalStore and RunStore traits, backed by Epoch over SQLite; the terminal run write is one atomic transaction">
-          <defs>
-            <marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
-          </defs>
-          <!-- aura runtime -->
-          <rect x="20" y="30" width="240" height="150" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
-          <text x="140" y="52" text-anchor="middle" font-family="var(--font-utility)" font-weight="700" font-size="14" fill="var(--ink)">AgentRuntime</text>
-          <text x="140" y="70" text-anchor="middle" font-size="11" fill="var(--muted)">owns sessions + their run</text>
-          <line x1="32" y1="80" x2="248" y2="80" stroke="var(--border)"/>
-          <text x="34" y="98" font-size="11.5" fill="var(--ink)">run task appends agent events</text>
-          <text x="34" y="116" font-size="11.5" fill="var(--ink)">runtime appends lifecycle</text>
-          <text x="34" y="134" font-size="11.5" fill="var(--ink)">SessionJournal (per-session mutex,</text>
-          <text x="34" y="150" font-size="11.5" fill="var(--ink)">watermark, fence, broadcast)</text>
-          <text x="34" y="170" font-size="11.5" fill="var(--accent)" font-family="var(--font-utility)">finish_run(&amp;dyn RunStore,…)</text>
+        <svg width="900" viewBox="0 0 900 600" role="img" aria-label="Capability comparison: eight mechanisms each contribute partial capability; none alone provides durable execution">
+          <!-- Column headers -->
+          <text x="200" y="30" text-anchor="middle" font-family="var(--font-utility)" font-weight="700" font-size="12" fill="var(--muted)">CONTRIBUTES</text>
+          <text x="560" y="30" text-anchor="middle" font-family="var(--font-utility)" font-weight="700" font-size="12" fill="var(--muted)">DOES NOT SUPPLY ALONE</text>
 
-          <!-- the seam (traits) -->
-          <rect x="330" y="30" width="230" height="150" rx="2" fill="var(--surface)" stroke="currentColor" stroke-width="1.5"/>
-          <text x="445" y="52" text-anchor="middle" font-family="var(--font-utility)" font-weight="700" font-size="14" fill="var(--ink)">the seam (#826)</text>
-          <line x1="342" y1="62" x2="548" y2="62" stroke="var(--border)"/>
-          <text x="344" y="86" font-size="12" fill="var(--ink)" font-family="var(--font-utility)">JournalStore</text>
-          <text x="344" y="102" font-size="10.5" fill="var(--muted)">append · read(from,to,limit) · latest</text>
-          <text x="344" y="132" font-size="12" fill="var(--ink)" font-family="var(--font-utility)">RunStore</text>
-          <text x="344" y="148" font-size="10.5" fill="var(--muted)">put · get · list · finish(term,facts)</text>
-          <text x="344" y="170" font-size="10.5" fill="var(--warn)">finish contract amended (see note)</text>
+          <!-- Row 1: Pure fold/projection -->
+          <rect x="20" y="45" width="160" height="50" rx="2" fill="var(--surface)" stroke="currentColor" stroke-width="1.2"/>
+          <text x="100" y="66" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)">Pure fold /</text>
+          <text x="100" y="82" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)">projection</text>
+          <text x="200" y="66" font-size="10.5" fill="var(--accent)">✓ Rebuild state/history/context</text>
+          <text x="200" y="82" font-size="10.5" fill="var(--accent)">  from facts</text>
+          <text x="560" y="66" font-size="10.5" fill="var(--danger)">✗ Scheduler, current liveness,</text>
+          <text x="560" y="82" font-size="10.5" fill="var(--danger)">  external effect execution</text>
 
-          <!-- Epoch -->
-          <rect x="630" y="30" width="250" height="150" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
-          <text x="755" y="52" text-anchor="middle" font-family="var(--font-utility)" font-weight="700" font-size="14" fill="var(--ink)">Epoch (epoch-journal)</text>
-          <text x="755" y="70" text-anchor="middle" font-size="11" fill="var(--muted)">stream_type="aura_session"</text>
-          <line x1="642" y1="80" x2="868" y2="80" stroke="var(--border)"/>
-          <text x="644" y="98" font-size="11.5" fill="var(--ink)">per-stream OCC (BEGIN IMMEDIATE)</text>
-          <text x="644" y="116" font-size="11.5" fill="var(--ink)">store mints dense seq</text>
-          <text x="644" y="134" font-size="11.5" fill="var(--ink)">store bytes, decode at boundary</text>
-          <text x="644" y="152" font-size="11.5" fill="var(--ink)">e20 surface ported to SQLite</text>
-          <text x="644" y="170" font-size="11.5" fill="var(--accent)" font-family="var(--font-utility)">append_and_finish composite</text>
+          <!-- Row 2: Explicit queue/drain -->
+          <rect x="20" y="108" width="160" height="50" rx="2" fill="var(--surface)" stroke="currentColor" stroke-width="1.2"/>
+          <text x="100" y="129" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)">Explicit queue/</text>
+          <text x="100" y="145" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)">drain</text>
+          <text x="200" y="129" font-size="10.5" fill="var(--accent)">✓ Pending-work eligibility and</text>
+          <text x="200" y="145" font-size="10.5" fill="var(--accent)">  effect boundary</text>
+          <text x="560" y="129" font-size="10.5" fill="var(--danger)">✗ Durable admission unless stored;</text>
+          <text x="560" y="145" font-size="10.5" fill="var(--danger)">  safe repeats of arbitrary tools</text>
 
-          <!-- arrows: normal + terminal -->
-          <line x1="260" y1="80" x2="330" y2="80" stroke="currentColor" stroke-width="1.5" marker-end="url(#arw)"/>
-          <line x1="560" y1="80" x2="630" y2="80" stroke="currentColor" stroke-width="1.5" marker-end="url(#arw)"/>
-          <text x="295" y="72" text-anchor="middle" font-size="10" fill="var(--muted)">append</text>
+          <!-- Row 3: fmodel reaction/manager -->
+          <rect x="20" y="171" width="160" height="50" rx="2" fill="var(--surface)" stroke="currentColor" stroke-width="1.2"/>
+          <text x="100" y="192" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)">fmodel Rust</text>
+          <text x="100" y="208" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)">reaction/manager</text>
+          <text x="200" y="192" font-size="10.5" fill="var(--accent)">✓ Result-to-action logic and</text>
+          <text x="200" y="208" font-size="10.5" fill="var(--accent)">  delegated publication</text>
+          <text x="560" y="192" font-size="10.5" fill="var(--danger)">✗ Persisted progress, delivery</text>
+          <text x="560" y="208" font-size="10.5" fill="var(--danger)">  guarantees, auto compensation</text>
 
-          <!-- SQLite file -->
-          <rect x="630" y="230" width="250" height="70" rx="2" fill="var(--surface)" stroke="currentColor" stroke-width="1.5"/>
-          <text x="755" y="256" text-anchor="middle" font-family="var(--font-utility)" font-weight="700" font-size="13" fill="var(--ink)">SQLite file (WAL)</text>
-          <text x="755" y="276" text-anchor="middle" font-size="11" fill="var(--muted)">events table + run_facts table</text>
-          <text x="755" y="292" text-anchor="middle" font-size="10.5" fill="var(--muted)">single-instance; busy_timeout 5s</text>
-          <line x1="755" y1="180" x2="755" y2="230" stroke="currentColor" stroke-width="1.5" marker-end="url(#arw)"/>
+          <!-- Row 4: fmodel orchestrating aggregate -->
+          <rect x="20" y="234" width="160" height="50" rx="2" fill="var(--surface)" stroke="currentColor" stroke-width="1.2"/>
+          <text x="100" y="255" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)">fmodel orchestrating</text>
+          <text x="100" y="271" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)">aggregate</text>
+          <text x="200" y="255" font-size="10.5" fill="var(--accent)">✓ Recursive domain decisions and</text>
+          <text x="200" y="271" font-size="10.5" fill="var(--accent)">  one final repository save</text>
+          <text x="560" y="255" font-size="10.5" fill="var(--danger)">✗ Adapter-independent atomicity or</text>
+          <text x="560" y="271" font-size="10.5" fill="var(--danger)">  external workflow scheduler</text>
 
-          <!-- terminal atomic bracket-tick motif -->
-          <path d="M330,150 L560,150 L560,210 L755,210 L755,228" fill="none" stroke="var(--accent)" stroke-width="1.8" marker-end="url(#arw)"/>
-          <path d="M545,150 h30 M560,150 v14" fill="none" stroke="var(--accent)" stroke-width="1.8"/>
-          <text x="452" y="142" text-anchor="middle" font-size="10.5" fill="var(--accent)" font-family="var(--font-utility)">terminal: ONE tx (journal row + facts row)</text>
+          <!-- Row 5: Epoch saga runner/outbox -->
+          <rect x="20" y="297" width="160" height="65" rx="2" fill="var(--surface)" stroke="currentColor" stroke-width="1.2"/>
+          <text x="100" y="318" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)">Epoch saga runner</text>
+          <text x="100" y="334" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)">+ outbox</text>
+          <text x="200" y="312" font-size="10.5" fill="var(--accent)">✓ Atomic reaction/intent batches</text>
+          <text x="200" y="328" font-size="10.5" fill="var(--accent)">✓ Feed accounting, keyed at-least-once</text>
+          <text x="200" y="344" font-size="10.5" fill="var(--accent)">✓ Failure/hook records</text>
+          <text x="560" y="312" font-size="10.5" fill="var(--danger)">✗ Canonical tool result in Done</text>
+          <text x="560" y="328" font-size="10.5" fill="var(--danger)">✗ Generic exactly-once effects</text>
+          <text x="560" y="344" font-size="10.5" fill="var(--danger)">✗ SQLite in redesigned surface</text>
 
-          <!-- legend -->
-          <rect x="20" y="330" width="860" height="118" rx="2" fill="none" stroke="var(--border)"/>
-          <text x="34" y="352" font-family="var(--font-utility)" font-weight="700" font-size="12" fill="var(--ink)">how to read it</text>
-          <text x="34" y="374" font-size="11.5" fill="var(--ink)">• Normal path: run task / runtime append events through SessionJournal → JournalStore → Epoch stream.</text>
-          <text x="34" y="394" font-size="11.5" fill="var(--accent)">• Terminal path: finish_run stamps the terminal seq under the journal mutex, calls RunStore::finish ONCE</text>
-          <text x="34" y="410" font-size="11.5" fill="var(--accent)">  → one BEGIN IMMEDIATE writes the journal row AND the facts row atomically (no crash window).</text>
-          <text x="34" y="430" font-size="11.5" fill="var(--muted)">• The store mints the sequence number; a Conflict fences the writer (OnceLock → session reopen).</text>
+          <!-- Row 6: Ordinary pi loop -->
+          <rect x="20" y="375" width="160" height="50" rx="2" fill="var(--surface)" stroke="currentColor" stroke-width="1.2"/>
+          <text x="100" y="396" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)">Ordinary pi loop</text>
+          <text x="200" y="396" font-size="10.5" fill="var(--accent)">✓ Transparent tool/context iteration</text>
+          <text x="200" y="412" font-size="10.5" fill="var(--accent)">✓ Persisted completed messages</text>
+          <text x="560" y="396" font-size="10.5" fill="var(--danger)">✗ Durable pending queue or</text>
+          <text x="560" y="412" font-size="10.5" fill="var(--danger)">  recoverable execute checkpoint</text>
+
+          <!-- Row 7: pi-durable task loop -->
+          <rect x="20" y="438" width="160" height="65" rx="2" fill="var(--surface)" stroke="currentColor" stroke-width="1.2"/>
+          <text x="100" y="459" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)">pi-durable task</text>
+          <text x="100" y="475" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)">loop</text>
+          <text x="200" y="452" font-size="10.5" fill="var(--accent)">✓ Durable submissions, pinned</text>
+          <text x="200" y="468" font-size="10.5" fill="var(--accent)">  generation cutoff, execute</text>
+          <text x="200" y="484" font-size="10.5" fill="var(--accent)">  checkpoints, read-only mode</text>
+          <text x="560" y="452" font-size="10.5" fill="var(--danger)">✗ Safe replay for unsafe tools;</text>
+          <text x="560" y="468" font-size="10.5" fill="var(--danger)">  lossless deferred progress;</text>
+          <text x="560" y="484" font-size="10.5" fill="var(--danger)">  killed-process proof from tests</text>
+
+          <!-- Row 8: OpenCode V2 coordinator -->
+          <rect x="20" y="516" width="160" height="65" rx="2" fill="var(--surface)" stroke="currentColor" stroke-width="1.2"/>
+          <text x="100" y="537" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)">OpenCode V2</text>
+          <text x="100" y="553" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)">coordinator/inbox</text>
+          <text x="200" y="530" font-size="10.5" fill="var(--accent)">✓ Commit-before-wake pending inbox</text>
+          <text x="200" y="546" font-size="10.5" fill="var(--accent)">✓ Atomic projection, local ownership</text>
+          <text x="200" y="562" font-size="10.5" fill="var(--accent)">✓ Explicit steps</text>
+          <text x="560" y="530" font-size="10.5" fill="var(--danger)">✗ Event payload persistence in</text>
+          <text x="560" y="546" font-size="10.5" fill="var(--danger)">  every profile; full-table event-only</text>
+          <text x="560" y="562" font-size="10.5" fill="var(--danger)">  reconstruction; clustered ownership</text>
         </svg>
       </div>
-      <figcaption><strong>One figure, one job:</strong> the runtime never talks to SQLite directly — it writes through the two traits #826 cut, and Epoch-over-SQLite backs them. The terminal run write is the only atomic cross-table operation, and it goes through the journal's own invariant-preserving <code>finish_run</code>, not a side channel.</figcaption>
+      <figcaption><strong>One figure, one job:</strong> each mechanism covers part of the durable execution puzzle, but none is sufficient alone. The evidence supports composing a pure fold (for reification) with an explicit queue/drain (for execution scheduling) — no generic saga framework required for PoC0.</figcaption>
     </figure>
   </section>
 
-  <!-- JUSTIN'S GAPS -->
+  <!-- THREE CONSEQUENTIAL GAPS -->
   <section id="gaps">
-    <h2>Justin's five gaps — disposition</h2>
-    <p class="meta">Surfaced on Slack; vetted line-by-line against the Epoch and aura source. All five real; each resolved in grilling.</p>
+    <h2>The three consequential Aura gaps</h2>
+    <p class="meta">Gaps 1–2 need agreed boundaries before a store adapter; gap 3 needs an honest outcome model — PoC0 can report uncertain work without solving full recovery. Each is sourced from the corrected cross-lane evidence.</p>
     <div class="tscroll">
     <table>
-      <tr><th style="width:34px">#</th><th>Gap (verified)</th><th>Disposition</th></tr>
-      <tr><td class="k">J1</td><td><code>thread::sleep</code> in <code>LoadDecideAppend</code> retry (<code>strategies/mod.rs:144</code>) blocks a tokio worker.</td><td><span class="pill fixed">fix in Epoch</span> → <code>tokio::sleep</code>. Priority fix; Tier A doesn't use LDA, but it's Epoch's own TODO.</td></tr>
-      <tr><td class="k">J2</td><td>Conflict on start-run ≠ retry blindly — LDA retries conflicts up to 20×, wrong for session fencing.</td><td><span class="pill fixed">not at LDA seam</span> Conflict belongs to a read-model + SQL session fence queried before commands (future workstream). No blind-retry wrapper around session appends.</td></tr>
-      <tr><td class="k">J3</td><td>No per-event sequence from <code>load</code> (only the final version).</td><td><span class="pill fixed">sidestepped</span> Not bound to Justin's interface; e20's <code>RecordedEvent&lt;E&gt;</code> envelope is the shape — per-event seq comes back in the recorded envelope.</td></tr>
-      <tr><td class="k">J4</td><td>No ranged/limited reads (<code>load</code> is an unbounded Vec).</td><td><span class="pill fixed">split</span> Reification (Tier B): full-Vec load is Epoch-native, no bound needed. Attach-replay (Tier A contract): <code>read(from,to,limit)</code> IS the contract → add a bounded per-stream read to Epoch.</td></tr>
-      <tr><td class="k">J5</td><td>Prune counter must survive, or never prune.</td><td><span class="pill fixed">never prune</span> Event store is append-only &amp; unbounded; prune caches/in-memory only. Dissolves J5 and GH-780's speculative "durable store by TTL" (explicit contract change — see pitfalls).</td></tr>
-    </table>
-    </div>
-  </section>
-
-  <!-- CODE REMOVAL PRIORITIES -->
-  <section id="removal">
-    <h2>Code-removal priorities (do these first — they shrink the swap)</h2>
-    <div class="tscroll">
-    <table>
-      <tr><th style="width:34px">#</th><th>Removal / simplification</th><th>Why it eases the transition</th></tr>
-      <tr><td class="k">R1</td><td>Do <strong>not</strong> wire the in-memory journal/run stores any further.</td><td>Neither is wired to the runtime yet. Build the SQLite impl as the <em>first</em> wired durable impl — no in-memory→durable migration to unwind.</td></tr>
-      <tr><td class="k">R2</td><td>Delete <code>SessionJournal::drain</code> (<code>journal.rs:202</code>).</td><td>Dead code at PR head (the run task appends itself); docs still misdescribe it. Kill the wrong abstraction before the durable impl has to support it.</td></tr>
-      <tr><td class="k">R3</td><td><span class="pill coord">descoped</span> Keep <code>JournalEntry::Undecodable</code> / <code>JournalItem::Unknown</code>.</td><td>Codex R2-3: removing them breaks replay pagination across undecodable rows. Only the <em>handling</em> is confined to the storage boundary — not a deletion.</td></tr>
-      <tr><td class="k">R4</td><td>Collapse the Redis path (<code>session-store-redis</code> + <code>redis.rs</code> journal/run accessors).</td><td>Redis is being removed from the product (dead legacy store). Delete rather than port — avoids a dead conversion.</td></tr>
-      <tr><td class="k">R5</td><td>Demote <code>InMemoryJournalStore</code>/<code>InMemoryRunStore</code> → test-only, <em>in order</em>.</td><td>Only <em>after</em> the SQLite impl + the <code>RuntimeStores</code> bridge rewire the production constructors (<code>RuntimeStores::in_memory()</code>, file-backend accessors). Then delete the "bounds itself" eviction logic a durable store makes irrelevant.</td></tr>
-      <tr><td class="k">R6</td><td>No raw-SQL-over-Epoch-schema in aura.</td><td>All store logic (append, bounded read, tolerant read, the append_and_finish composite) lives in Epoch — the conversion stays one-sided.</td></tr>
-    </table>
-    </div>
-  </section>
-
-  <!-- PITFALLS -->
-  <section id="pitfalls">
-    <h2>Pitfalls</h2>
-    <div class="tscroll">
-    <table>
-      <tr><th style="width:34px">#</th><th>Pitfall</th><th>Mitigation / status</th></tr>
-      <tr><td class="k">P1</td><td>A journal append failure <strong>cancels the run</strong> (<code>task.rs:386</code>) → a SQLite hiccup is user-visible.</td><td>migrate() installs busy_timeout(5s)+WAL; single-writer discipline; retry <code>SQLITE_BUSY</code> in the adapter — never surface BUSY as <code>Conflict</code> (Conflict fences the session permanently).</td></tr>
-      <tr><td class="k">P2</td><td>A <code>Conflict</code> fences the journal forever (<code>OnceLock</code>) → runtime reopens.</td><td>Impossible under one process + one file + the journal mutex. Two processes on one file is the multi-instance case SQLite explicitly does not serve → <span class="pill risk">SQLite = single-instance only</span> HA waits for Postgres + the fence.</td></tr>
-      <tr><td class="k">P3</td><td><code>RunStore::put</code> failures are only logged → facts can silently diverge from the journal.</td><td>Add metrics/observability; decide acceptability for V1.</td></tr>
-      <tr><td class="k">P4</td><td><code>seq</code> duplication: payload seq vs row sequence.</td><td>Agree <em>by construction</em> (§1a): stamp <code>expected.next()</code> before serializing; OCC enforces it. Never trust a client seq.</td></tr>
-      <tr><td class="k">P5</td><td><code>epoch-journal</code> is pre-1.0 (0.1.1) → API churn on the critical path.</td><td>Pin a git dep or vendor; the e20 merge will move the API further.</td></tr>
-      <tr><td class="k">P6</td><td>One tokio-rusqlite actor = write-throughput ceiling across all sessions.</td><td>Fine for single-instance; measure before assuming it scales.</td></tr>
-      <tr><td class="k">P7</td><td>Epoch has no upcasting / event_version → a field rename makes old rows unloadable.</td><td>aura's <code>Unknown</code> fallbacks mitigate reader-side; do not rename persisted fields casually.</td></tr>
-      <tr><td class="k">P8</td><td>Durability makes version-rollback visible (new binary writes variants an old binary can't parse).</td><td>Envelope-level handled by <code>Unknown</code>; payload-<code>kind</code>-level is a hard error → an aura-schema policy decision (§3), not a store feature.</td></tr>
-      <tr><td class="k">P9</td><td>No bridge from <code>SessionStore</code> to <code>RuntimeStores</code> exists (<code>in_memory()</code> is the only constructor).</td><td>Wiring must be written: hand-build <code>RuntimeStores{runs,journals,skills}</code> from the new SQLite SessionStore.</td></tr>
+      <tr><th style="width:34px">#</th><th>Gap</th><th>What the evidence shows</th><th style="width:120px">Status</th></tr>
+      <tr>
+        <td class="k">1</td>
+        <td><strong>Accepted input needs a durable canonical record</strong></td>
+        <td>PR #826 returns a run ID after local admission, not after a durable input commit. <code>Started</code> omits supplied history; fact-store failures warn. Existing File/Redis session stores still select memory-backed journals. A persistence adapter cannot recover facts never recorded.</td>
+        <td><span class="pill gap">blocking</span></td>
+      </tr>
+      <tr>
+        <td class="k">2</td>
+        <td><strong>Pure reconstruction needs its own caller boundary</strong></td>
+        <td>Session state, user-visible transcript, and next-turn context are separate read models. Partial UI output is not canonical model context. Cold admission does not rebuild previous execution state. Pure reconstruction must not instantiate a runtime that resumes work or performs tool discovery as a side effect.</td>
+        <td><span class="pill gap">blocking</span></td>
+      </tr>
+      <tr>
+        <td class="k">3</td>
+        <td><strong>Sequential external effects need an honest outcome model</strong></td>
+        <td>A genuinely dependent B is selected in a <em>later</em> model request that includes A's recorded result — same-response sequential calls do not establish that dependency. If A modifies an external system and the process dies before recording its result, history cannot determine the external outcome alone. OpenCode marks stale calls interrupted; pi-durable uses a committed phase + declared replay policy; Epoch uses stable intent keys + consumer idempotency. None makes arbitrary external effects exactly-once.</td>
+        <td><span class="pill risk">ambiguous</span></td>
+      </tr>
     </table>
     </div>
   </section>
@@ -220,30 +219,71 @@
     </g>
   </svg>
 
-  <!-- TIMELINE -->
-  <section id="seq">
-    <h2>Phased task list</h2>
-    <ol class="timeline">
-      <li><span class="ph">Phase 0 — Epoch foundation (first):</span> review + merge <code>card/e20</code> (or feedback); fix J1 (<code>thread::sleep</code>→<code>tokio::sleep</code>); write the e20-style backend-agnostic conformance suite, run vs Postgres.</li>
-      <li><span class="ph">Phase 1 — Epoch SQLite port:</span> port the e20 surface (EventStreams/RecordedEvent/ExpectedVersion) graded by the shared suite; add the bounded <code>(from,to,limit)</code> read (J4b) + the <code>append_and_finish</code> composite (§1b) + the capacity guard (§J5) — all Epoch-owned; store bytes + lazy decode, retaining the Undecodable carrier (§3).</li>
-      <li><span class="ph">Phase 2 — aura substrate impl:</span> EpochJournalStore + SqliteRunStore (or one composite EpochSessionStore) over the port, busy-retry without Conflict-mapping; add <code>SessionJournal::finish_run</code> (§1b), reroute <code>write_ending</code> to it; removals R2 + R4.</li>
-      <li><span class="ph">Phase 3 — wiring + conformance:</span> SqliteSessionStore backend; the <code>RuntimeStores</code> bridge (P9) rewiring the production constructors; run aura's store conformance + runtime tests vs SQLite; verify the terminal path uses <code>finish_run</code>, not append-then-finish.</li>
-      <li><span class="ph">Phase 4 — land + demote:</span> rebase onto nightly after #826 merges, feature-flag <code>session-store-sqlite</code>; R5 demote in-memory stores to test-only (only after the rewire); update <code>session-storage.md</code>; record the never-prune contract amendment + capacity policy as a GH-780 follow-up.</li>
-    </ol>
-    <div class="callout"><strong>Named future workstreams (not this program):</strong> approvals-as-events; the session fence (direct-Postgres lean, lib-vault ref); HA / Postgres journal; memory/file store teardown completion; Tier B command modeling on Epoch's Decider/Evolver; a feed for cross-session projections.</div>
+  <!-- KEY CORRECTIONS -->
+  <section id="corrections">
+    <h2>Material corrections from vetting</h2>
+    <p class="meta">The primary performed additional source checks that corrected or qualified investigator claims. These corrections govern the synthesis.</p>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:110px">Finding</th><th>Disposition</th><th>Vetted interpretation</th></tr>
+      <tr><td class="k">Aura A-1 / V-201</td><td><span class="pill risk">corrected</span></td><td>Journal and store interface already exist; web request wiring and persistent backend selection are separate gaps. Existing File/Redis session stores do not make journals durable.</td></tr>
+      <tr><td class="k">Aura V-204</td><td><span class="pill risk">qualified</span></td><td>Stream construction occurs before <code>Started</code>, but the exact cached Rig source shows the inspected <em>single-agent</em> provider request is inside a lazy stream body — not eagerly fired at builder await. This is source analysis, not an executed timing test; orchestrators and custom agents remain unverified.</td></tr>
+      <tr><td class="k">OpenCode O-1 / V-206</td><td><span class="pill risk">corrected</span></td><td><code>Tool.Called</code> publication completes before local execution starts. The original claim of absent intent evidence is rejected; work ownership/recovery policy remains distinct.</td></tr>
+      <tr><td class="k">OpenCode V-208</td><td><span class="pill risk">corrected</span></td><td>Managed Node persists projections by default but <em>not</em> event payloads at this pin; embedded SDK defaults to memory; Workerd forces payload persistence. Profile matters.</td></tr>
+      <tr><td class="k">pi P-1 / V-209</td><td><span class="pill risk">corrected</span></td><td>The assistant proposed call is recorded before execution; the missing piece is an <em>execute checkpoint</em>, not an absent intent record.</td></tr>
+      <tr><td class="k">Epoch V-101–104</td><td><span class="pill ok">retained</span></td><td>Pure reactions can feed queue/drain; generic outbox success lacks canonical tool result content; external-effect ambiguity remains; passing tests are fixture-specific.</td></tr>
+    </table>
+    </div>
   </section>
+
+  <!-- SMALLEST JUSTIFIED POC0 -->
+  <section id="poc0">
+    <h2>Smallest justified PoC0</h2>
+    <ol class="timeline">
+      <li><span class="ph">Step 1:</span> One configured single-instance Aura agent and disposable SQLite journal.</li>
+      <li><span class="ph">Step 2:</span> Commit the agreed accepted input and canonical output facts.</li>
+      <li><span class="ph">Step 3:</span> Stop/restart and reconstruct the agreed state, transcript, and next-turn context <strong>without</strong> provider/tool calls.</li>
+      <li><span class="ph">Step 4:</span> Request a new turn explicitly using that reconstructed context.</li>
+      <li><span class="ph">Step 5:</span> Report interrupted/uncertain work without implicit effect recovery unless the user approves that additional scope.</li>
+    </ol>
+    <div class="callout"><strong>Excluded by default:</strong> generic saga/outbox/feed · HA · snapshots · visual tooling · backend teardown · retry policy. Approval continuation and interrupted-tool recovery are user decisions, not assumed scope.</div>
+  </section>
+
+  <!-- NEXT GATES -->
+  <section id="gates">
+    <h2>Next gates before implementation</h2>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:70px">Gate</th><th>Required output</th><th style="width:120px">Blocks</th></tr>
+      <tr><td class="k">LIVE</td><td>Evidence table separating historical execution/dependency facts from current ownership observations and confirmed stop/interruption. Preserve uncertainty without inventing heartbeat intervals.</td><td>Schema design</td></tr>
+      <tr><td class="k">READ</td><td>Canonical message/state/UX fold contract and a small zero-effect caller example. Provider-neutral context separate from diagnostic request captures.</td><td>PoC0 caller</td></tr>
+      <tr><td class="k">STORE</td><td>Consumer-shaped Epoch SQLite tests for acknowledgement, OCC, sequence/order, reopen, restart. Bounded reads only if this consumer needs them.</td><td>Epoch pin</td></tr>
+      <tr><td class="k">PoC0 boundary</td><td>User chooses whether approval continuation or interrupted tool recovery is included; otherwise retain the explicit-new-turn proof.</td><td>Scope lock</td></tr>
+    </table>
+    </div>
+    <div class="callout"><strong>Also unresolved:</strong> session retirement and durable approval/checkpoint semantics remain open domain decisions. Cache retention and observer detach are not substitutes for an agreed retirement fact. The user reviews the recommendation and the remaining fact/caller boundaries before drafting exact payloads or changing producers.</div>
+  </section>
+
+  <svg class="scale-rule" viewBox="0 0 980 18" preserveAspectRatio="none" aria-hidden="true">
+    <line x1="0" y1="16" x2="980" y2="16" stroke-width="1"/>
+    <g stroke-width="1">
+      <line x1="0" y1="6" x2="0" y2="16"/><line x1="98" y1="11" x2="98" y2="16"/><line x1="196" y1="6" x2="196" y2="16"/><line x1="294" y1="11" x2="294" y2="16"/><line x1="392" y1="6" x2="392" y2="16"/><line x1="490" y1="11" x2="490" y2="16"/><line x1="588" y1="6" x2="588" y2="16"/><line x1="686" y1="11" x2="686" y2="16"/><line x1="784" y1="6" x2="784" y2="16"/><line x1="882" y1="11" x2="882" y2="16"/><line x1="979" y1="6" x2="979" y2="16"/>
+    </g>
+  </svg>
 
   <!-- SOURCES -->
   <section id="src">
-    <h2>Sources &amp; review</h2>
+    <h2>Sources &amp; evidence</h2>
     <ul>
-      <li>mezmo/aura PR #826 + issue GH-780 (gh, 2026-10-29) — runtime, journal, and store-trait surface at head <code>cc6fd73b</code>.</li>
-      <li>mezmo/aura issue #785 (gh, 2026-10-29) — the run-control HTTP API (commands in embryonic form).</li>
-      <li><code>crates/aura-events</code> — SessionEvent envelope, AgentEvent, LifecycleEvent, serde discipline (jakedipity's event-schema refactor, Aug–Oct 2026).</li>
-      <li>Epoch <code>epoch-journal</code> 0.1.1 (branch <code>s4/sqlite-repository</code>) — SQLite backend, traits, gaps; <code>card/e20</code> (unmerged) — RecordedEvent / EventStreams / AtomicStreams / feed.</li>
-      <li>Adversarial review: codex CLI <strong>gpt-6.1-sol</strong>, 3 rounds (2026-10-29) — 6B+2M → 3B+1M → 1B+2M; every finding closed in plan v4.</li>
+      <li>Aura local <code>01ebb739</code> + PR #826 <code>cc6fd73b</code> + PR #840 <code>038048da</code> — lifecycle trace, event schema, admission boundaries.</li>
+      <li>OpenCode V2 <code>958f965d</code> (<code>@opencode/core</code> 2.2.4) — inbox/bus/coordinator/projector source; 95 tests passed.</li>
+      <li>pi <code>918c6ffc</code> — ordinary agent loop (38 tests) + pi-durable recovery (88 tests); close/reopen fixtures, not OS-killed.</li>
+      <li>Epoch redesign <code>eee66d0f</code> + SQLite branch <code>d869a4f6</code> — saga runner, outbox, OCC via <code>BEGIN IMMEDIATE</code>; 19 golden tests passed.</li>
+      <li>fmodel-rust <code>6903a4f7</code> (0.9.2) — SagaManager + orchestrating aggregate; 3 tests passed.</li>
+      <li>Rig <code>097d08d6</code> — inspected single-agent path: provider request inside lazy stream body, not builder await (SOURCE, not a timing test; orchestrators/custom agents unverified).</li>
+      <li>Independent investigators: Bedrock Kimi K3 (<code>amazon-bedrock/us.moonshotai.kimi-k3</code>), 3 lanes × 2 rounds (report + errata), all retained verbatim.</li>
     </ul>
-    <div class="callout"><strong>What this page does not show:</strong> This is an integration <em>outline</em>, not shipped code or finished ticket prose. The terminal-write protocol (<code>finish_run</code> + amended <code>finish</code> contract) and the never-prune contract change both touch justingross's #826 code and need his sign-off. Two accepted residual risks: disk exhaustion under never-prune (mitigated by the headroom capacity guard, not eliminated), and single-instance SQLite (HA is a separate, later workstream). Review model note: you asked for "gpt 6.1 astra"; the configured codex default that actually ran is <strong>gpt-6.1-sol</strong> — recorded as-run, not as-named.</div>
+    <div class="callout"><strong>What the evidence does not prove:</strong> killed-process dependent A-to-B continuation · power-loss durability · complete Aura runtime behavior · minimum Epoch SQLite consumer contract · provider-wire traces (investigator transcripts are projected session exports, not raw provider data). pi tests cleaned up their databases; no independent DB export or OTel span dump was captured. Implementation remains on hold.</div>
   </section>
 
 </main>
@@ -257,12 +297,12 @@
 
 <footer>
   Styled by verdict-ledger v1 (design-system store)
-  &middot; As of 2026-10-30 04:34 UTC
+  &middot; As of 2026-10-30 20:00 UTC
   &middot; <a href="https://github.com/Shearerbeard/Epoch">Epoch</a> &middot; <a href="https://github.com/mezmo/aura">mezmo/aura</a>
 </footer>
 
 <script type="application/json" id="artifact-state">
-{"as_of": "2026-10-30 04:34 UTC", "sections": ["hdr", "stats", "fig", "gaps", "removal", "pitfalls", "seq", "src"], "design_system": {"name": "verdict-ledger", "version": 1}, "scope": "journal substrate only", "plan_rev": 4, "review": {"tool": "codex cli", "model_as_run": "gpt-6.1-sol", "model_requested": "gpt 6.1 astra", "rounds": 3, "findings_by_round": ["6B+2M", "3B+1M", "1B+2M"], "verdicts": ["FAIL", "FAIL", "FAIL"], "all_closed_in": "v4"}, "targets": {"aura_issue": "GH-780", "aura_pr": 826, "run_control_api_issue": 785, "epoch_crate": "epoch-journal 0.1.1", "epoch_unmerged": "card/e20"}, "open_coordination": ["justingross sign-off on finish_run + amended RunStore::finish contract", "never-prune contract amendment as GH-780 follow-up"], "residual_risks": ["disk exhaustion under never-prune (capacity guard, not eliminated)", "single-instance SQLite (HA is later)"]}
+{"as_of": "2026-10-30 20:00 UTC", "sections": ["hdr", "stats", "fig", "gaps", "corrections", "poc0", "gates", "src"], "design_system": {"name": "verdict-ledger", "version": 1}, "phase": "research complete, implementation on hold", "tests_passed": 308, "test_suites": 6, "source_snapshots": 9, "investigator_sessions": 6, "investigator_model": "amazon-bedrock/us.moonshotai.kimi-k3", "lanes": ["aura", "opencode", "pi"], "gaps": ["durable canonical input", "pure reconstruction caller boundary", "external-effect outcome model"], "poc0_excludes": ["generic saga/outbox/feed", "HA", "snapshots", "visual tooling", "backend teardown", "retry policy"], "next_gates": ["LIVE", "READ", "STORE", "PoC0 boundary"]}
 </script>
 
 </body>

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Zen sync — connect your browsers to the self-hosted store</title>
+<style>
+  :root { --ink:#1a1a1a; --paper:#fdfdfd; --accent:#0a7d4a; --accent2:#1d4ed8; --warn:#b45309; --danger:#b91c1c; --muted:#666; --border:#ddd; --surface:#f5f5f5; --radius:8px;
+          --font-display:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-body:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --font-utility:ui-monospace,SFMono-Regular,Menlo,monospace;
+          --weight-display:600; --weight-body:400; --weight-utility:500;
+          --text-s:13px; --text-m:16px; --text-l:20px; --text-xl:25px; --text-xxl:31px;
+          --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-6:24px; --space-8:32px; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink:#e4e4e4; --paper:#1a1a1a; --accent:#4ade80; --accent2:#60a5fa; --warn:#fbbf24; --danger:#f87171; --muted:#999; --border:#333; --surface:#262626; }
+  }
+  * { box-sizing:border-box; }
+  body { font:var(--text-m)/1.6 var(--font-body); font-weight:var(--weight-body); color:var(--ink); background:var(--paper); max-width:980px; margin:1.5em auto; padding:0 var(--space-6) var(--space-8); }
+  h1,h2,h3 { font-family:var(--font-display); font-weight:var(--weight-display); line-height:1.25; margin:1.4em 0 .4em; }
+  h1 { font-size:var(--text-xxl); margin-bottom:.1em; }
+  h2 { font-size:var(--text-xl); border-bottom:1px solid var(--border); padding-bottom:.2em; }
+  h3 { font-size:var(--text-l); }
+  a { color:var(--accent2); overflow-wrap:anywhere; }
+  code { background:var(--surface); padding:.15em .35em; border-radius:3px; font-size:.92em; font-family:var(--font-utility); font-weight:var(--weight-utility); overflow-wrap:anywhere; }
+  .tscroll { overflow-x:auto; margin:.8em 0; }
+  .tscroll table { margin:0; }
+  table { border-collapse:collapse; width:100%; font-size:var(--text-s); }
+  th,td { border:1px solid var(--border); padding:.45em .7em; vertical-align:top; text-align:left; overflow-wrap:anywhere; }
+  th { font-weight:600; background:var(--surface); }
+  .meta { color:var(--muted); font-size:var(--text-s); }
+  .lede { font-size:var(--text-l); color:var(--muted); margin:.3em 0 1em; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:var(--space-3); margin:var(--space-4) 0; }
+  .stat { border:1px solid var(--border); border-radius:var(--radius); padding:var(--space-3) var(--space-4); }
+  .stat .n { font-size:1.9em; font-weight:var(--weight-display); line-height:1.1; color:var(--accent); }
+  .stat .l { font-size:.8em; font-family:var(--font-utility); text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+  .stat p { margin:.3em 0 0; font-size:.85em; }
+  .pill { display:inline-block; font-size:var(--text-s); padding:var(--space-1) var(--space-2); border-radius:10px; background:var(--surface); color:var(--muted); vertical-align:1px; }
+  .pill.done { background:var(--accent); color:var(--paper); }
+  .pill.now  { background:var(--warn);   color:var(--paper); }
+  .pill.warn { background:var(--danger); color:var(--paper); }
+  .callout { border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:4px; padding:.7em 1em; margin:1em 0; font-size:.93em; background:color-mix(in srgb, var(--accent) 5%, var(--paper)); }
+  ol.timeline { list-style:none; padding-left:0; }
+  ol.timeline li { border-left:2px solid var(--accent); padding:.2em 0 .8em 1em; margin-left:.4em; position:relative; }
+  ol.timeline li::before { content:""; position:absolute; left:-6px; top:.55em; width:10px; height:10px; border-radius:50%; background:var(--accent); }
+  footer { border-top:1px solid var(--border); margin-top:2.5em; padding-top:.8em; color:var(--muted); font-size:.85em; }
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <h1>Zen sync — connect your browsers</h1>
+  <div class="lede">Point your Zen browsers at the self-hosted sync store on fedora-cube. One pref per device, ~5 minutes each, no LAN ports, no firewall changes.</div>
+  <div class="meta">As of 2026-10-28 13:42 UTC &middot; status: <span class="pill done">backend live &middot; deploy verified</span> &middot; <a href="https://shearerbeard.github.io/artifacts/cube-sync-workflow/">execution walkthrough</a></div>
+</header>
+
+<main>
+
+  <section id="stats">
+    <div class="stats">
+      <div class="stat"><div class="n">3</div><div class="l">Zen devices</div><p>Nobara workstation, T14, MacBook Pro 16 — all on Zen 1.23.4b.</p></div>
+      <div class="stat"><div class="n">1</div><div class="l">pref per device</div><p><code>identity.sync.tokenserver.uri</code> — the only change.</p></div>
+      <div class="stat"><div class="n">0</div><div class="l">LAN ports</div><p>Everything rides the tailnet over HTTPS 443 (tailscale serve).</p></div>
+      <div class="stat"><div class="n">0</div><div class="l">cost</div><p>Mozilla account is free; auth stays with Mozilla.</p></div>
+    </div>
+  </section>
+
+  <section id="detail">
+    <h2>Breakdown — what each piece is</h2>
+    <div class="tscroll">
+    <table>
+      <tr><th style="width:170px">Piece</th><th>What it is / key facts</th><th style="width:160px">Watch for</th></tr>
+      <tr><td><b>The one pref</b></td><td><code>identity.sync.tokenserver.uri</code> in <code>about:config</code> → <code>https://fedora-cube.&lt;tailnet&gt;/1.0/sync/1.5</code>. Points Zen at the cube's tokenserver instead of Mozilla's.</td><td>Set it <b>before</b> signing in, or sign out/in to re-upload.</td></tr>
+      <tr><td><b>Mozilla account</b></td><td>Free account at accounts.firefox.com. Auth + the account key bundle stay with Mozilla (E2EE key derivation is theirs); the encrypted blobs never go there.</td><td>Old Mozilla-hosted data stays until deleted from the account.</td></tr>
+      <tr><td><b>notanton (Nobara)</b></td><td>Device 1 — establishes the baseline. Zen Flatpak 1.23.4b. Set the pref, sign out/in, <code>about:sync</code> must show the fedora-cube node, then create a test bookmark.</td><td>Node still "mozilla" = pref set after sign-in (wrong order).</td></tr>
+      <tr><td><b>T14 (CachyOS)</b></td><td>Device 2 — the round-trip proof. Zen 1.23.4b (<code>zen-browser-bin</code>). Same pref + sign-in; notanton's bookmark should arrive; cube row count grows.</td><td>Bookmark not arriving = check <code>about:sync</code> on both devices.</td></tr>
+      <tr><td><b>MacBook Pro 16</b></td><td>Device 3 — <b>fallback decision only.</b> Onboard the Mac only if you've decided it should sync (it's a work machine; outbound HTTPS to the cube is fine, no inbound change). Same steps if you do.</td><td>Don't onboard silently — the Mac's inbound posture is intentional.</td></tr>
+      <tr><td><b>fedora-cube (tailnet)</b></td><td>The sync backend: syncstorage-rs (storage + tokenserver) in one container, shared Postgres, TLS via tailscale serve 443. Deployed and verified (heartbeat 200, unauth 401).</td><td>Nothing — verification is unauthenticated.</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <section id="seq">
+    <h2>Connect your Zen browsers</h2>
+    <ol class="timeline">
+      <li><b>Before you start</b> <span class="pill done">prereq</span><br/>Be on the tailnet (MagicDNS resolves <code>fedora-cube.&lt;tailnet&gt;</code> → the cube's tailnet IP). Have a Mozilla account (existing or free new one). Zen 1.23.4b on all three devices — already verified.</li>
+      <li><b>Device 1 — notanton</b> <span class="pill now">do first</span><br/>Set the pref → if it ever synced to Mozilla, sign out, then sign back in → <code>about:sync</code> must show the fedora-cube node → create a test bookmark. This establishes the baseline everything else round-trips against.</li>
+      <li><b>Device 2 — T14</b> <span class="pill">do second</span><br/>Same pref + sign-in. Expected: notanton's test bookmark arrives within seconds; the cube's <code>bso</code> row count grows. That arrival is the proof the backend stores and redistributes correctly.</li>
+      <li><b>Device 3 — Mac</b> <span class="pill">optional</span><br/>Same steps, <b>only if</b> you've decided the Mac syncs. Otherwise leave it on Mozilla cloud or no sync — its inbound posture stays untouched either way.</li>
+      <li><b>If it goes wrong</b> <span class="pill warn">revert</span><br/>Node still "mozilla" → pref set after sign-in (wrong order): revert the pref, sign out, set it, sign in. 401s in <code>about:sync-log</code> → tokenserver/FxA env (not a device problem — report it). TLS errors → tailnet HTTPS not enabled on the cube. Revert any device: set the pref back to <code>https://token.services.mozilla.com/1.0/sync/1.5</code>, sign out/in.</li>
+    </ol>
+  </section>
+
+  <section id="src">
+    <h2>Sources &amp; caveats</h2>
+    <ul>
+      <li>Execution plan <code>~/.opencode/plan/zen-browser-sync-and-wiki-livesync.md</code> (single source) — Stage 2 deploy record and the Stage 2 Gate T handout.</li>
+      <li>ADR-0011 — self-hosted Zen sync via syncstorage-rs; FxA auth stays Mozilla; tailnet-only.</li>
+      <li>Upstream: Zen + self-hosted sync (zen-browser/desktop#9135); tailscale serve multi-port HTTPS; syncstorage-rs self-hosting guide at the pinned tag.</li>
+      <li>Backend verification: heartbeat 200 + unauth tokenserver 401 over the tailnet (2026-10-28), plus the scratch-network smoke test that proved the env shape before deploy.</li>
+    </ul>
+    <div class="callout">What this page deliberately does not show: secrets or env values (server-only), the exact image pin (soaked-release policy; see the execution plan), and the Mac onboarding decision itself (committed in direction, deferred in execution). Nothing here writes to the cube — the only change is one pref per browser. Old data synced to Mozilla stays there until you delete it from the account; test data written during onboarding is disposable.</div>
+  </section>
+
+</main>
+
+<footer>
+  Default theme &middot; As of 2026-10-28 13:42 UTC &middot; companion to the execution plan at <code>~/.opencode/plan/zen-browser-sync-and-wiki-livesync.md</code> &middot; <a href="https://shearerbeard.github.io/artifacts/">shearerbeard.github.io/artifacts</a>
+</footer>
+
+<script type="application/json" id="artifact-state">
+{"as_of": "2026-10-28 13:42 UTC", "sections": ["hdr", "stats", "detail", "seq", "src"], "design_system": null, "slug": "zen-sync-onboard", "status": "backend live; onboarding pending", "devices": ["notanton", "T14", "Mac (fallback decision)"], "pref": "identity.sync.tokenserver.uri", "new_lan_ports": 0}
+</script>
+
+</body>
+</html>
